@@ -5,6 +5,7 @@ const CONFIG = {
   contact: { whatsapp: "+1 (305) 000-0000", email: "hello@kash.solutions", calendly: "" },
   checkout: { stripeUrl: "" },
   brand: { legal: "KASH CORPORATE SOLUTION", trade: "KA$H Solutions" },
+  endpoints: { formspree: "https://formspree.io/f/xblawgpk" },
 };
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -14,9 +15,19 @@ function classNames(...cls) { return cls.filter(Boolean).join(" "); }
 function calcAgeFullDate(birthdateStr) {
   const dob = new Date(birthdateStr); if (Number.isNaN(dob.getTime())) return -1;
   const t = new Date(); let age = t.getFullYear() - dob.getFullYear();
-  const m = t.getMonth() - dob.getMonth(); if (m < 0 || (m === 0 && t.getDate() < dob.getDate())) age--; return age;
+  const m = t.getMonth() - dob.getMonth(); if (m < 0 || (m === 0 && t.getDate() < dob.getDate())) age--;
+  return age;
 }
 function isPercentTotalValid(members) { const total = members.reduce((s, m) => s + (Number(m.share) || 0), 0); return Math.abs(total - 100) <= 0.01; }
+
+function genProtocol(prefix = "KASH") {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `${prefix}-${y}${m}${day}-${rand}`;
+}
 
 function KLogo({ size = 40 }) {
   return (
@@ -41,14 +52,14 @@ function SectionTitle({ eyebrow, title, subtitle }) {
     </div>
   );
 }
-function CTAButton({ children, onClick, variant = "primary", type = "button" }) {
-  const base = "px-5 py-3 rounded-2xl font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition";
+function CTAButton({ children, onClick, variant = "primary", type = "button", disabled = false }) {
+  const base = "px-5 py-3 rounded-2xl font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition disabled:opacity-60 disabled:cursor-not-allowed";
   const styles = variant === "primary"
     ? "bg-emerald-500 hover:bg-emerald-400 text-slate-900 focus:ring-emerald-300"
     : variant === "ghost"
     ? "bg-transparent ring-1 ring-slate-700 hover:bg-slate-800 text-slate-200"
     : "bg-slate-200 hover:bg-white text-slate-900";
-  return <button type={type} className={classNames(base, styles)} onClick={onClick}>{children}</button>;
+  return <button type={type} className={classNames(base, styles)} onClick={onClick} disabled={disabled}>{children}</button>;
 }
 
 function DemoCalculator() {
@@ -191,6 +202,7 @@ const initialForm = {
     { fullName: "", passport: "", issuer: "", expiry: "", share: "", phone: "", email: "", birthdate: "" },
   ],
   accept: { responsibility: false, limitations: false },
+  honeypot: "", // honeypot anti-spam (deve ficar vazio)
 };
 function formReducer(state, action) {
   switch (action.type) {
@@ -212,6 +224,9 @@ function formReducer(state, action) {
     }
     case "TOGGLE_ACCEPT": {
       const { key, value } = action; return { ...state, accept: { ...state.accept, [key]: value } };
+    }
+    case "SET_HONEYPOT": {
+      return { ...state, honeypot: action.value };
     }
     default: return state;
   }
@@ -247,9 +262,11 @@ function FormWizard({ open, onClose }) {
   const addMember = useCallback(() => dispatch({ type: "ADD_MEMBER" }), []);
   const removeMember = useCallback((index) => dispatch({ type: "REMOVE_MEMBER", index }), []);
   const toggleAccept = useCallback((key, value) => dispatch({ type: "TOGGLE_ACCEPT", key, value }), []);
+  const setHoneypot = useCallback((value) => dispatch({ type: "SET_HONEYPOT", value }), []);
 
   function validate() {
-    const { company, members, accept } = form;
+    const { company, members, accept, honeypot } = form;
+    if (honeypot?.trim()) return "Falha na validação.";
     if (!company.companyName || company.companyName.trim().length < 3) return "Informe o nome da empresa (mín. 3).";
     if (!emailRe.test(company.email || "")) return "E-mail principal da empresa inválido.";
     if (!phoneRe.test(company.phone || "")) return "Telefone principal da empresa inválido.";
@@ -270,14 +287,46 @@ function FormWizard({ open, onClose }) {
     if (!accept.responsibility || !accept.limitations) return "É necessário aceitar as declarações de responsabilidade e limitações.";
     return "";
   }
+
   async function submit() {
-    const err = validate(); if (err) { alert(err); return; }
-    setLoading(true); await new Promise((r) => setTimeout(r, 600));
-    const mock = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase(); setTracking(mock);
-    setLoading(false); setStep(3);
+    const err = validate();
+    if (err) { alert(err); return; }
+
+    setLoading(true);
+    try {
+      const protocol = genProtocol();
+      const payload = {
+        ...form,
+        protocol,
+        _subject: "Novo pedido: Abertura de LLC (KASH)",
+        _origin: typeof window !== "undefined" ? window.location.href : "",
+      };
+
+      // Envio JSON para Formspree
+      const res = await fetch(CONFIG.endpoints.formspree, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        const msg = Array.isArray(data?.errors) ? data.errors.map(e => e.message).join("; ") : `Erro ${res.status}`;
+        throw new Error(msg);
+      }
+
+      setTracking(protocol);
+      setStep(3);
+    } catch (e) {
+      alert("Falha ao enviar formulário: " + (e?.message || "erro desconhecido"));
+    } finally {
+      setLoading(false);
+    }
   }
+
   if (!open) return null;
-  const { company, members, accept } = form;
+  const { company, members, accept, honeypot } = form;
+
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="w-full max-w-3xl rounded-2xl bg-slate-900 border border-slate-800 shadow-xl max-h-[90vh] overflow-y-auto">
@@ -285,19 +334,30 @@ function FormWizard({ open, onClose }) {
           <div className="text-slate-100 font-semibold">Onboarding de abertura</div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-200">Fechar</button>
         </div>
+
         {step === 1 && (
           <div className="p-6">
             <h4 className="text-slate-100 font-medium">1/2 — Dados iniciais da LLC</h4>
+
+            {/* honeypot invisível para bots */}
+            <label className="sr-only" htmlFor="website">Website</label>
+            <input id="website" name="website" autoComplete="off" tabIndex={-1}
+              className="absolute opacity-0 pointer-events-none"
+              value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
+
             <div className="mt-4 grid gap-4">
               <div><label className="block text-sm text-slate-400" htmlFor="companyName">Nome da LLC</label><input id="companyName" className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100" value={company.companyName} onChange={(e) => updateCompany("companyName", e.target.value)} /></div>
               <div><label className="block text-sm text-slate-400" htmlFor="companyEmail">E-mail principal</label><input id="companyEmail" type="email" autoComplete="email" className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100" value={company.email} onChange={(e) => updateCompany("email", e.target.value)} /></div>
               <div><label className="block text-sm text-slate-400" htmlFor="companyPhone">Telefone principal</label><input id="companyPhone" type="tel" inputMode="tel" className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100" value={company.phone} onChange={(e) => updateCompany("phone", e.target.value)} /></div>
               <div><label className="block text-sm text-slate-400" htmlFor="companyAddr">Endereço no Brasil</label><input id="companyAddr" className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100" value={company.address} onChange={(e) => updateCompany("address", e.target.value)} /></div>
             </div>
+
             <h4 className="mt-6 text-slate-100 font-medium">Sócios (mínimo 2)</h4>
             <div className="mt-2 space-y-4">
               {members.map((m, i) => (
-                <MemberCard key={i} index={i} data={m} canRemove={members.length > 2} onChange={(field, value) => updateMember(i, field, value)} onRemove={() => removeMember(i)} />
+                <MemberCard key={i} index={i} data={m} canRemove={members.length > 2}
+                  onChange={(field, value) => updateMember(i, field, value)}
+                  onRemove={() => removeMember(i)} />
               ))}
             </div>
             <button onClick={addMember} className="mt-4 text-emerald-400 hover:underline">+ Adicionar sócio</button>
@@ -305,34 +365,38 @@ function FormWizard({ open, onClose }) {
             <div className="mt-6 space-y-3 text-sm text-slate-300">
               <label className="flex items-start gap-2">
                 <input type="checkbox" checked={accept.responsibility} onChange={(e) => toggleAccept("responsibility", e.target.checked)} />
-                <span>
-                  Declaro, sob minha responsabilidade, que todas as informações prestadas são verdadeiras e assumo total responsabilidade civil e legal por elas.
-                </span>
+                <span>Declaro, sob minha responsabilidade, que todas as informações prestadas são verdadeiras e assumo total responsabilidade civil e legal por elas.</span>
               </label>
               <label className="flex items-start gap-2">
                 <input type="checkbox" checked={accept.limitations} onChange={(e) => toggleAccept("limitations", e.target.checked)} />
-                <span>
-                  Estou ciente de que (i) o registro da LLC <strong>não</strong> implica contratação automática de serviços mensais de contabilidade; (ii) licenças/permissões especiais <strong>não</strong> fazem parte deste processo; e (iii) o mau uso da empresa poderá resultar em medidas judiciais.
-                </span>
+                <span>Estou ciente de que (i) o registro da LLC <strong>não</strong> implica contratação automática de serviços mensais de contabilidade; (ii) licenças/permissões especiais <strong>não</strong> fazem parte deste processo; e (iii) o mau uso da empresa poderá resultar em medidas judiciais.</span>
               </label>
             </div>
 
-            <div className="mt-6 flex justify-end gap-3"><CTAButton variant="ghost" onClick={() => setStep(1)}>Revisar</CTAButton><CTAButton onClick={() => setStep(2)}>Continuar</CTAButton></div>
+            <div className="mt-6 flex justify-end gap-3">
+              <CTAButton variant="ghost" onClick={() => setStep(1)}>Revisar</CTAButton>
+              <CTAButton onClick={() => setStep(2)}>Continuar</CTAButton>
+            </div>
           </div>
         )}
+
         {step === 2 && (
           <div className="p-6">
-            <h4 className="text-slate-100 font-medium">2/2 — Revisão e pagamento</h4>
+            <h4 className="text-slate-100 font-medium">2/2 — Revisão e envio</h4>
             <pre className="bg-slate-950 p-4 rounded-xl text-slate-300 text-xs overflow-x-auto max-h-64">{JSON.stringify(form, null, 2)}</pre>
-            <div className="mt-6 flex justify-end gap-3"><CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton><CTAButton onClick={submit}>{loading ? "Processando..." : "Confirmar & gerar tracking"}</CTAButton></div>
+            <div className="mt-6 flex justify-end gap-3">
+              <CTAButton variant="ghost" onClick={() => setStep(1)} disabled={loading}>Voltar</CTAButton>
+              <CTAButton onClick={submit} disabled={loading}>{loading ? "Enviando..." : "Confirmar & gerar tracking"}</CTAButton>
+            </div>
           </div>
         )}
+
         {step === 3 && (
           <div className="p-6 text-center">
             <div className="mx-auto w-16 h-16 rounded-full bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center"><span className="text-2xl">✅</span></div>
             <h4 className="mt-4 text-slate-100 font-semibold">Pedido iniciado</h4>
             <div className="mt-2 text-emerald-400 text-xl font-bold">{tracking}</div>
-            <p className="text-slate-500 text-xs mt-2">Guarde este código para consultar o status.</p>
+            <p className="text-slate-500 text-xs mt-2">Guarde este código para acompanhar o status (checar e-mail de confirmação do envio).</p>
             <div className="mt-6"><CTAButton onClick={onClose}>Concluir</CTAButton></div>
           </div>
         )}
