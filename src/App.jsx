@@ -19,14 +19,9 @@ function calcAgeFullDate(birthdateStr) {
   return age;
 }
 function isPercentTotalValid(members) { const total = members.reduce((s, m) => s + (Number(m.share) || 0), 0); return Math.abs(total - 100) <= 0.01; }
-
 function genProtocol(prefix = "KASH") {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  const rand = Math.random().toString(36).substring(2, 6).toUpperCase();
-  return `${prefix}-${y}${m}${day}-${rand}`;
+  const d = new Date(); const y = d.getFullYear(); const m = String(d.getMonth()+1).padStart(2,"0"); const day = String(d.getDate()).padStart(2,"0");
+  const rand = Math.random().toString(36).substring(2,6).toUpperCase(); return `${prefix}-${y}${m}${day}-${rand}`;
 }
 
 function KLogo({ size = 40 }) {
@@ -195,6 +190,7 @@ function HowItWorks() {
   );
 }
 
+/* ---------- Form state ---------- */
 const initialForm = {
   company: { companyName: "", email: "", phone: "", address: "" },
   members: [
@@ -202,7 +198,7 @@ const initialForm = {
     { fullName: "", passport: "", issuer: "", expiry: "", share: "", phone: "", email: "", birthdate: "" },
   ],
   accept: { responsibility: false, limitations: false },
-  honeypot: "", // honeypot anti-spam (deve ficar vazio)
+  honeypot: "",
 };
 function formReducer(state, action) {
   switch (action.type) {
@@ -225,90 +221,145 @@ function formReducer(state, action) {
     case "TOGGLE_ACCEPT": {
       const { key, value } = action; return { ...state, accept: { ...state.accept, [key]: value } };
     }
-    case "SET_HONEYPOT": {
-      return { ...state, honeypot: action.value };
-    }
+    case "SET_HONEYPOT": return { ...state, honeypot: action.value };
     default: return state;
   }
 }
-function MemberCard({ index, data, onChange, onRemove, canRemove }) {
+
+/* ---------- Error helpers ---------- */
+const emptyErrors = (membersLen=2) => ({
+  company: { companyName: "", email: "", phone: "", address: "" },
+  members: Array.from({length: membersLen}, () => ({
+    fullName: "", passport: "", issuer: "", expiry: "", share: "", phone: "", email: "", birthdate: ""
+  })),
+  accept: { responsibility: "", limitations: "" },
+  global: "",
+});
+function FieldError({ msg }) { return msg ? <p className="text-red-400 text-xs mt-1">{msg}</p> : null; }
+
+function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
+  const e = errors?.members?.[index] || {};
+  const inputCls = (hasErr) => classNames("rounded bg-slate-900 px-3 py-2 text-slate-100", hasErr && "border border-red-500 focus:ring-red-400", !hasErr && "border border-slate-700 focus:ring-emerald-400");
   return (
     <div className="p-4 border border-slate-700 rounded-xl bg-slate-800 space-y-2">
-      <div className="flex items-center justify-between mb-1"><div className="text-slate-400 text-sm">Sócio {index + 1}</div>{canRemove && (<button onClick={onRemove} className="text-slate-400 hover:text-slate-200 text-xs">Remover</button>)}</div>
-      <input className="w-full rounded bg-slate-900 px-3 py-2 text-slate-100" placeholder="Nome completo" value={data.fullName} onChange={(e) => onChange("fullName", e.target.value)} />
-      <div className="grid md:grid-cols-2 gap-2">
-        <input className="rounded bg-slate-900 px-3 py-2 text-slate-100" placeholder="Passaporte" value={data.passport} onChange={(e) => onChange("passport", e.target.value)} />
-        <input className="rounded bg-slate-900 px-3 py-2 text-slate-100" placeholder="Emissor" value={data.issuer} onChange={(e) => onChange("issuer", e.target.value)} />
+      <div className="flex items-center justify-between mb-1">
+        <div className="text-slate-400 text-sm">Sócio {index + 1}</div>
+        {canRemove && (<button onClick={onRemove} className="text-slate-400 hover:text-slate-200 text-xs">Remover</button>)}
       </div>
+
+      <input className={classNames("w-full", inputCls(e.fullName))} placeholder="Nome completo" value={data.fullName} onChange={(ev) => onChange("fullName", ev.target.value)} />
+      <FieldError msg={e.fullName} />
+
       <div className="grid md:grid-cols-2 gap-2">
-        <input type="date" className="rounded bg-slate-900 px-3 py-2 text-slate-100" value={data.expiry} onChange={(e) => onChange("expiry", e.target.value)} />
-        <input type="number" min={0} max={100} step={0.01} className="rounded bg-slate-900 px-3 py-2 text-slate-100" placeholder="% Participação" value={data.share} onChange={(e) => onChange("share", e.target.value)} />
+        <div>
+          <input className={inputCls(e.passport)} placeholder="Passaporte" value={data.passport} onChange={(ev) => onChange("passport", ev.target.value)} />
+          <FieldError msg={e.passport} />
+        </div>
+        <div>
+          <input className={inputCls(e.issuer)} placeholder="Emissor" value={data.issuer} onChange={(ev) => onChange("issuer", ev.target.value)} />
+          <FieldError msg={e.issuer} />
+        </div>
       </div>
+
       <div className="grid md:grid-cols-2 gap-2">
-        <input type="tel" inputMode="tel" className="rounded bg-slate-900 px-3 py-2 text-slate-100" placeholder="Telefone" value={data.phone} onChange={(e) => onChange("phone", e.target.value)} />
-        <input type="email" autoComplete="email" className="rounded bg-slate-900 px-3 py-2 text-slate-100" placeholder="E-mail" value={data.email} onChange={(e) => onChange("email", e.target.value)} />
+        <div>
+          <input type="date" className={inputCls(e.expiry)} value={data.expiry} onChange={(ev) => onChange("expiry", ev.target.value)} />
+          <FieldError msg={e.expiry} />
+        </div>
+        <div>
+          <input type="number" min={0} max={100} step={0.01} className={inputCls(e.share)} placeholder="% Participação" value={data.share} onChange={(ev) => onChange("share", ev.target.value)} />
+          <FieldError msg={e.share} />
+        </div>
       </div>
-      <div><label className="block text-sm text-slate-400">Data de nascimento</label><input type="date" className="w-full rounded bg-slate-900 px-3 py-2 text-slate-100" value={data.birthdate} onChange={(e) => onChange("birthdate", e.target.value)} /></div>
+
+      <div className="grid md:grid-cols-2 gap-2">
+        <div>
+          <input type="tel" inputMode="tel" className={inputCls(e.phone)} placeholder="Telefone" value={data.phone} onChange={(ev) => onChange("phone", ev.target.value)} />
+          <FieldError msg={e.phone} />
+        </div>
+        <div>
+          <input type="email" autoComplete="email" className={inputCls(e.email)} placeholder="E-mail" value={data.email} onChange={(ev) => onChange("email", ev.target.value)} />
+          <FieldError msg={e.email} />
+        </div>
+      </div>
+
+      <div>
+        <label className="block text-sm text-slate-400">Data de nascimento</label>
+        <input type="date" className={inputCls(e.birthdate)} value={data.birthdate} onChange={(ev) => onChange("birthdate", ev.target.value)} />
+        <FieldError msg={e.birthdate} />
+      </div>
     </div>
   );
 }
+
 function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
   const [form, dispatch] = useReducer(formReducer, initialForm);
-  const updateCompany = useCallback((field, value) => dispatch({ type: "UPDATE_COMPANY", field, value }), []);
-  const updateMember = useCallback((index, field, value) => dispatch({ type: "UPDATE_MEMBER", index, field, value }), []);
-  const addMember = useCallback(() => dispatch({ type: "ADD_MEMBER" }), []);
-  const removeMember = useCallback((index) => dispatch({ type: "REMOVE_MEMBER", index }), []);
-  const toggleAccept = useCallback((key, value) => dispatch({ type: "TOGGLE_ACCEPT", key, value }), []);
-  const setHoneypot = useCallback((value) => dispatch({ type: "SET_HONEYPOT", value }), []);
+  const [errors, setErrors] = useState(emptyErrors(initialForm.members.length));
 
-  function validate() {
+  const updateCompany = useCallback((field, value) => dispatch({ type: "UPDATE_COMPANY", field, value }), []);
+  const updateMember  = useCallback((index, field, value) => dispatch({ type: "UPDATE_MEMBER", index, field, value }), []);
+  const addMember     = useCallback(() => { dispatch({ type: "ADD_MEMBER" }); setErrors((e) => ({ ...e, members: [...e.members, { fullName:"",passport:"",issuer:"",expiry:"",share:"",phone:"",email:"",birthdate:""}] })); }, []);
+  const removeMember  = useCallback((index) => { dispatch({ type: "REMOVE_MEMBER", index }); setErrors((e) => ({ ...e, members: e.members.filter((_,i)=>i!==index) })); }, []);
+  const toggleAccept  = useCallback((key, value) => dispatch({ type: "TOGGLE_ACCEPT", key, value }), []);
+  const setHoneypot   = useCallback((value) => dispatch({ type: "SET_HONEYPOT", value }), []);
+
+  function validateAndCollect() {
+    const e = emptyErrors(form.members.length);
     const { company, members, accept, honeypot } = form;
-    if (honeypot?.trim()) return "Falha na validação.";
-    if (!company.companyName || company.companyName.trim().length < 3) return "Informe o nome da empresa (mín. 3).";
-    if (!emailRe.test(company.email || "")) return "E-mail principal da empresa inválido.";
-    if (!phoneRe.test(company.phone || "")) return "Telefone principal da empresa inválido.";
-    if (!Array.isArray(members) || members.length < 2) return "É necessário ao menos 2 sócios.";
-    for (let i = 0; i < members.length; i++) {
-      const m = members[i];
-      if (!m.fullName || m.fullName.trim().length < 5) return `Sócio ${i + 1}: informe o nome completo.`;
-      if (!m.passport) return `Sócio ${i + 1}: informe o número do passaporte.`;
-      if (!m.issuer) return `Sócio ${i + 1}: informe o emissor do passaporte.`;
-      if (!m.expiry) return `Sócio ${i + 1}: informe a validade do passaporte.`;
-      const p = Number(m.share); if (!Number.isFinite(p) || p <= 0) return `Sócio ${i + 1}: percentual de participação inválido.`;
-      if (!phoneRe.test(m.phone || "")) return `Sócio ${i + 1}: telefone inválido.`;
-      if (!emailRe.test(m.email || "")) return `Sócio ${i + 1}: e-mail inválido.`;
-      if (!m.birthdate) return `Sócio ${i + 1}: informe a data de nascimento.`;
-      if (calcAgeFullDate(m.birthdate) < 18) return `Sócio ${i + 1} deve ter 18 anos ou mais.`;
-    }
-    if (!isPercentTotalValid(members)) return "A soma dos percentuais de participação deve ser 100%.";
-    if (!accept.responsibility || !accept.limitations) return "É necessário aceitar as declarações de responsabilidade e limitações.";
-    return "";
+
+    if (honeypot?.trim()) { e.global = "Falha na validação."; return { ok:false, errors:e }; }
+
+    if (!company.companyName || company.companyName.trim().length < 3) e.company.companyName = "Informe o nome (mín. 3).";
+    if (!emailRe.test(company.email || "")) e.company.email = "E-mail inválido.";
+    if (!phoneRe.test(company.phone || "")) e.company.phone = "Telefone inválido.";
+    if (!company.address) e.company.address = "Informe o endereço.";
+
+    if (!Array.isArray(members) || members.length < 2) e.global = "É necessário ao menos 2 sócios.";
+
+    members.forEach((m, i) => {
+      const em = e.members[i];
+      if (!m.fullName || m.fullName.trim().length < 5) em.fullName = "Nome completo (mín. 5).";
+      if (!m.passport) em.passport = "Informe o passaporte.";
+      if (!m.issuer) em.issuer = "Informe o emissor.";
+      if (!m.expiry) em.expiry = "Informe a validade.";
+      const p = Number(m.share); if (!Number.isFinite(p) || p <= 0) em.share = "Percentual inválido.";
+      if (!phoneRe.test(m.phone || "")) em.phone = "Telefone inválido.";
+      if (!emailRe.test(m.email || "")) em.email = "E-mail inválido.";
+      if (!m.birthdate) em.birthdate = "Informe a data de nascimento.";
+      else if (calcAgeFullDate(m.birthdate) < 18) em.birthdate = "Sócio deve ter 18+.";
+    });
+
+    if (!isPercentTotalValid(members)) e.global = "A soma dos percentuais deve ser 100%.";
+    if (!accept.responsibility) e.accept.responsibility = "Necessário aceitar.";
+    if (!accept.limitations)    e.accept.limitations    = "Necessário aceitar.";
+
+    const ok = !(
+      e.global ||
+      Object.values(e.company).some(Boolean) ||
+      e.members.some((m) => Object.values(m).some(Boolean)) ||
+      Object.values(e.accept).some(Boolean)
+    );
+    return { ok, errors: e };
   }
 
   async function submit() {
-    const err = validate();
-    if (err) { alert(err); return; }
+    const { ok, errors: e } = validateAndCollect();
+    setErrors(e);
+    if (!ok) { setStep(1); alert(e.global || "Existem campos com erro. Revise os campos em vermelho."); return; }
 
     setLoading(true);
     try {
       const protocol = genProtocol();
-      const payload = {
-        ...form,
-        protocol,
-        _subject: "Novo pedido: Abertura de LLC (KASH)",
-        _origin: typeof window !== "undefined" ? window.location.href : "",
-      };
+      const payload = { ...form, protocol, _subject: "Novo pedido: Abertura de LLC (KASH)", _origin: typeof window !== "undefined" ? window.location.href : "" };
 
-      // Envio JSON para Formspree
       const res = await fetch(CONFIG.endpoints.formspree, {
         method: "POST",
         headers: { "Content-Type": "application/json", "Accept": "application/json" },
         body: JSON.stringify(payload),
       });
-
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         const msg = Array.isArray(data?.errors) ? data.errors.map(e => e.message).join("; ") : `Erro ${res.status}`;
@@ -317,8 +368,8 @@ function FormWizard({ open, onClose }) {
 
       setTracking(protocol);
       setStep(3);
-    } catch (e) {
-      alert("Falha ao enviar formulário: " + (e?.message || "erro desconhecido"));
+    } catch (err) {
+      alert("Falha ao enviar formulário: " + (err?.message || "erro desconhecido"));
     } finally {
       setLoading(false);
     }
@@ -326,6 +377,8 @@ function FormWizard({ open, onClose }) {
 
   if (!open) return null;
   const { company, members, accept, honeypot } = form;
+
+  const companyInputCls = (hasErr) => classNames("w-full rounded-xl px-3 py-2 text-slate-100 bg-slate-800", hasErr ? "border border-red-500 focus:ring-2 focus:ring-red-400" : "border border-slate-700 focus:ring-2 focus:ring-emerald-400");
 
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
@@ -337,27 +390,51 @@ function FormWizard({ open, onClose }) {
 
         {step === 1 && (
           <div className="p-6">
+            {errors.global && <div className="mb-4 rounded-lg border border-red-500/40 bg-red-500/10 text-red-200 text-sm px-3 py-2">{errors.global}</div>}
+
             <h4 className="text-slate-100 font-medium">1/2 — Dados iniciais da LLC</h4>
 
-            {/* honeypot invisível para bots */}
+            {/* honeypot invisível */}
             <label className="sr-only" htmlFor="website">Website</label>
             <input id="website" name="website" autoComplete="off" tabIndex={-1}
               className="absolute opacity-0 pointer-events-none"
               value={honeypot} onChange={(e) => setHoneypot(e.target.value)} />
 
             <div className="mt-4 grid gap-4">
-              <div><label className="block text-sm text-slate-400" htmlFor="companyName">Nome da LLC</label><input id="companyName" className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100" value={company.companyName} onChange={(e) => updateCompany("companyName", e.target.value)} /></div>
-              <div><label className="block text-sm text-slate-400" htmlFor="companyEmail">E-mail principal</label><input id="companyEmail" type="email" autoComplete="email" className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100" value={company.email} onChange={(e) => updateCompany("email", e.target.value)} /></div>
-              <div><label className="block text-sm text-slate-400" htmlFor="companyPhone">Telefone principal</label><input id="companyPhone" type="tel" inputMode="tel" className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100" value={company.phone} onChange={(e) => updateCompany("phone", e.target.value)} /></div>
-              <div><label className="block text-sm text-slate-400" htmlFor="companyAddr">Endereço no Brasil</label><input id="companyAddr" className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100" value={company.address} onChange={(e) => updateCompany("address", e.target.value)} /></div>
+              <div>
+                <label className="block text-sm text-slate-400" htmlFor="companyName">Nome da LLC</label>
+                <input id="companyName" className={companyInputCls(errors.company.companyName)} value={company.companyName} onChange={(e) => updateCompany("companyName", e.target.value)} />
+                <FieldError msg={errors.company.companyName} />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400" htmlFor="companyEmail">E-mail principal</label>
+                <input id="companyEmail" type="email" autoComplete="email" className={companyInputCls(errors.company.email)} value={company.email} onChange={(e) => updateCompany("email", e.target.value)} />
+                <FieldError msg={errors.company.email} />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400" htmlFor="companyPhone">Telefone principal</label>
+                <input id="companyPhone" type="tel" inputMode="tel" className={companyInputCls(errors.company.phone)} value={company.phone} onChange={(e) => updateCompany("phone", e.target.value)} />
+                <FieldError msg={errors.company.phone} />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400" htmlFor="companyAddr">Endereço no Brasil</label>
+                <input id="companyAddr" className={companyInputCls(errors.company.address)} value={company.address} onChange={(e) => updateCompany("address", e.target.value)} />
+                <FieldError msg={errors.company.address} />
+              </div>
             </div>
 
             <h4 className="mt-6 text-slate-100 font-medium">Sócios (mínimo 2)</h4>
             <div className="mt-2 space-y-4">
               {members.map((m, i) => (
-                <MemberCard key={i} index={i} data={m} canRemove={members.length > 2}
+                <MemberCard
+                  key={i}
+                  index={i}
+                  data={m}
+                  errors={errors}
+                  canRemove={members.length > 2}
                   onChange={(field, value) => updateMember(i, field, value)}
-                  onRemove={() => removeMember(i)} />
+                  onRemove={() => removeMember(i)}
+                />
               ))}
             </div>
             <button onClick={addMember} className="mt-4 text-emerald-400 hover:underline">+ Adicionar sócio</button>
@@ -367,10 +444,13 @@ function FormWizard({ open, onClose }) {
                 <input type="checkbox" checked={accept.responsibility} onChange={(e) => toggleAccept("responsibility", e.target.checked)} />
                 <span>Declaro, sob minha responsabilidade, que todas as informações prestadas são verdadeiras e assumo total responsabilidade civil e legal por elas.</span>
               </label>
+              <FieldError msg={errors.accept.responsibility} />
+
               <label className="flex items-start gap-2">
                 <input type="checkbox" checked={accept.limitations} onChange={(e) => toggleAccept("limitations", e.target.checked)} />
                 <span>Estou ciente de que (i) o registro da LLC <strong>não</strong> implica contratação automática de serviços mensais de contabilidade; (ii) licenças/permissões especiais <strong>não</strong> fazem parte deste processo; e (iii) o mau uso da empresa poderá resultar em medidas judiciais.</span>
               </label>
+              <FieldError msg={errors.accept.limitations} />
             </div>
 
             <div className="mt-6 flex justify-end gap-3">
@@ -383,7 +463,33 @@ function FormWizard({ open, onClose }) {
         {step === 2 && (
           <div className="p-6">
             <h4 className="text-slate-100 font-medium">2/2 — Revisão e envio</h4>
-            <pre className="bg-slate-950 p-4 rounded-xl text-slate-300 text-xs overflow-x-auto max-h-64">{JSON.stringify(form, null, 2)}</pre>
+
+            {/* Prévia resumida e legível */}
+            <div className="bg-slate-950 p-4 rounded-xl text-slate-300 text-sm space-y-4">
+              <div>
+                <div className="font-semibold text-slate-100">Empresa</div>
+                <div>Nome: {form.company.companyName || "—"}</div>
+                <div>E-mail: {form.company.email || "—"}</div>
+                <div>Telefone: {form.company.phone || "—"}</div>
+                <div>Endereço: {form.company.address || "—"}</div>
+              </div>
+              <div>
+                <div className="font-semibold text-slate-100">Sócios</div>
+                <ol className="list-decimal ml-5 space-y-1">
+                  {form.members.map((m, i) => (
+                    <li key={i}>
+                      {m.fullName || "—"} — Passaporte: {m.passport || "—"} ({m.issuer || "—"}), Validade: {m.expiry || "—"}, %: {m.share || "—"}, Tel: {m.phone || "—"}, E-mail: {m.email || "—"}, Nasc.: {m.birthdate || "—"}
+                    </li>
+                  ))}
+                </ol>
+              </div>
+              <div>
+                <div className="font-semibold text-slate-100">Declarações</div>
+                <div>Responsabilidade: {form.accept.responsibility ? "Aceita" : "Não"}</div>
+                <div>Limitações: {form.accept.limitations ? "Aceita" : "Não"}</div>
+              </div>
+            </div>
+
             <div className="mt-6 flex justify-end gap-3">
               <CTAButton variant="ghost" onClick={() => setStep(1)} disabled={loading}>Voltar</CTAButton>
               <CTAButton onClick={submit} disabled={loading}>{loading ? "Enviando..." : "Confirmar & gerar tracking"}</CTAButton>
@@ -396,7 +502,7 @@ function FormWizard({ open, onClose }) {
             <div className="mx-auto w-16 h-16 rounded-full bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center"><span className="text-2xl">✅</span></div>
             <h4 className="mt-4 text-slate-100 font-semibold">Pedido iniciado</h4>
             <div className="mt-2 text-emerald-400 text-xl font-bold">{tracking}</div>
-            <p className="text-slate-500 text-xs mt-2">Guarde este código para acompanhar o status (checar e-mail de confirmação do envio).</p>
+            <p className="text-slate-500 text-xs mt-2">Guarde este código para acompanhar o status.</p>
             <div className="mt-6"><CTAButton onClick={onClose}>Concluir</CTAButton></div>
           </div>
         )}
@@ -404,6 +510,7 @@ function FormWizard({ open, onClose }) {
     </div>
   );
 }
+
 function Footer() {
   return (
     <footer className="py-10 border-t border-slate-800">
@@ -437,13 +544,18 @@ export default function KashWebsite() {
             <a className="hover:text-emerald-400" href="#planos">Planos</a>
             <a className="hover:text-emerald-400" href="#como-funciona">Como funciona</a>
           </nav>
-          <div className="flex items-center gap-3"><CTAButton variant="ghost" onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}>Contato</CTAButton><CTAButton onClick={onStart}>Começar</CTAButton></div>
+          <div className="flex items-center gap-3">
+            <CTAButton variant="ghost" onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}>Contato</CTAButton>
+            <CTAButton onClick={onStart}>Começar</CTAButton>
+          </div>
         </div>
       </header>
+
       <Hero onStart={onStart} />
       <Services />
       <Pricing onBuy={onBuy} onBook={onBook} />
       <HowItWorks />
+
       <section id="contato" className="py-16 border-t border-slate-800">
         <div className="max-w-6xl mx-auto px-4">
           <SectionTitle title="Fale com a KA$H" subtitle="Tire dúvidas sobre o enquadramento ideal para o seu caso." />
@@ -466,6 +578,7 @@ export default function KashWebsite() {
           </div>
         </div>
       </section>
+
       <Footer />
       <FormWizard open={openWizard} onClose={() => setOpenWizard(false)} />
     </div>
