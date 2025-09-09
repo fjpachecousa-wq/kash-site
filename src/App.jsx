@@ -96,8 +96,8 @@ function Hero({ onStart }) {
               <a href="#como-funciona" className="inline-flex"><CTAButton variant="ghost">Como funciona</CTAButton></a>
             </div>
             <div className="mt-6 flex items-center gap-4 text-slate-400 text-sm">
-              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Agente registrado incluso</div>
-              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Endereço físico 12 meses</div>
+              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Agente registrado (até 12 meses, se necessário)*</div>
+              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Endereço físico (até 12 meses, se necessário)*</div>
               <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Abertura + Operação</div>
             </div>
           </div>
@@ -110,7 +110,7 @@ function Hero({ onStart }) {
 function Services() {
   const items = [
     { title: "Abertura de LLC (Florida)", desc: "Registro estatal, EIN, Operating Agreement e documentos digitais prontos para download." },
-    { title: "Agente Registrado + Endereço físico", desc: "Recepção de correspondências por 12 meses, repasse digital e alertas de compliance." },
+    { title: "Agente Registrado + Endereço físico", desc: "Recepção de correspondências por até 12 meses (quando necessário); após esse período, renovação cobrada. Repasse digital e alertas de compliance." },
     { title: "Onboarding legal & fiscal", desc: "Checklist, KYC/AML, enquadramento e orientações operacionais para plataformas." },
     { title: "Bookkeeping mensal (KASH FLOW 30)", desc: "Classificação contábil contínua. (Não inclui gestão de contratos.)" },
     { title: "Suporte contratual (KASH SCALE 5)", desc: "Até 5 contratos/mês. Operações com terceiros no Brasil." },
@@ -133,7 +133,7 @@ function Services() {
 }
 function Pricing({ onBuy, onBook }) {
   const plans = [
-    { name: "Abertura de LLC", price: CONFIG.prices.llc, features: ["Registro Florida + Filing", "EIN + Operating Agreement", "Agente Registrado 12 meses", "Endereço físico 12 meses"], cta: "Comprar agora", onClick: onBuy, highlight: true },
+    { name: "Abertura de LLC", price: CONFIG.prices.llc, features: ["Registro Florida + Filing", "EIN + Operating Agreement", "Agente Registrado (até 12 meses, se necessário)", "Endereço físico (até 12 meses, se necessário)"], cta: "Comprar agora", onClick: onBuy, highlight: true },
     { name: "KASH FLOW 30 (Mensal)", price: CONFIG.prices.flow30, features: ["Classificação contábil contínua", "Relatórios mensais", "Suporte fiscal de rotina"], cta: "Assinar", onClick: onBuy },
     { name: "KASH SCALE 5 (Mensal)", price: CONFIG.prices.scale5, features: ["Até 5 contratos/mês", "Operações com terceiros no Brasil", "Prioridade de suporte"], cta: "Falar com especialista", onClick: onBook },
   ];
@@ -151,6 +151,9 @@ function Pricing({ onBuy, onBook }) {
             </div>
           ))}
         </div>
+        <p className="mt-4 text-xs text-slate-400">
+          * Agente registrado e endereço físico incluídos por até 12 meses, quando necessários. Após esse período, os serviços são cobrados.
+        </p>
       </div>
     </section>
   );
