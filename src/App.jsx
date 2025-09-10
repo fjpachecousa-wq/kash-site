@@ -1,41 +1,50 @@
-import React, { useCallback, useMemo, useReducer, useState } from "react";
+import React, { useCallback, useMemo, useReducer, useState, useEffect } from "react";
 
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
-  contact: { whatsapp: "+1 (305) 000-0000", email: "hello@kash.solutions", calendly: "" },
-  checkout: { stripeUrl: "" },
-  brand: { legal: "KASH CORPORATE SOLUTION", trade: "KA$H Solutions" },
-  endpoints: {
-    // ← Envio dos dados do formulário (backup/alerta)
-    formspree: "https://formspree.io/f/xblawgpk",
-  },
+  contact: { whatsapp: "+1 (305) 000-0000", email: "contato@kashsolutions.us", calendly: "" },
+  brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KA$H Solutions" },
+  formspreeEndpoint: "https://formspree.io/f/xblawgpk",
 };
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
-
-function classNames(...cls) { return cls.filter(Boolean).join(" "); }
+function classNames(...c) { return c.filter(Boolean).join(" "); }
 function calcAgeFullDate(birthdateStr) {
-  const dob = new Date(birthdateStr); if (Number.isNaN(dob.getTime())) return -1;
-  const t = new Date(); let age = t.getFullYear() - dob.getFullYear();
-  const m = t.getMonth() - dob.getMonth(); if (m < 0 || (m === 0 && t.getDate() < dob.getDate())) age--; return age;
+  const dob = new Date(birthdateStr);
+  if (Number.isNaN(dob.getTime())) return -1;
+  const t = new Date();
+  let age = t.getFullYear() - dob.getFullYear();
+  const m = t.getMonth() - dob.getMonth();
+  if (m < 0 || (m === 0 && t.getDate() < dob.getDate())) age--;
+  return age;
 }
-function isPercentTotalValid(members) { const total = members.reduce((s, m) => s + (Number(m.share) || 0), 0); return Math.abs(total - 100) <= 0.01; }
+function isPercentTotalValid(members) {
+  const total = members.reduce((s, m) => s + (Number(m.share) || 0), 0);
+  return Math.abs(total - 100) <= 0.01;
+}
 
+/* ---------- UI bits ---------- */
 function KLogo({ size = 40 }) {
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
       <div className="absolute inset-0 rounded-2xl bg-slate-900" />
       <div className="absolute inset-[3px] rounded-xl bg-slate-800 shadow-inner" />
       <svg width={size * 0.7} height={size * 0.7} viewBox="0 0 64 64" className="absolute">
-        <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#34d399" /><stop offset="100%" stopColor="#10b981" /></linearGradient></defs>
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#34d399" /><stop offset="100%" stopColor="#10b981" />
+          </linearGradient>
+        </defs>
         <path d="M14 8h8v48h-8z" fill="url(#g)" />
         <path d="M26 32l22-24h10L42 32l16 24H48L26 32z" fill="url(#g)" />
       </svg>
     </div>
   );
 }
-function Pill({ children }) { return <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-emerald-300 text-xs">{children}</span>; }
+function Pill({ children }) {
+  return <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-emerald-300 text-xs">{children}</span>;
+}
 function SectionTitle({ eyebrow, title, subtitle }) {
   return (
     <div className="max-w-3xl mx-auto text-center">
@@ -45,16 +54,15 @@ function SectionTitle({ eyebrow, title, subtitle }) {
     </div>
   );
 }
-function CTAButton({ children, onClick, variant = "primary", type = "button", disabled = false }) {
-  const base = "px-5 py-3 rounded-2xl font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition disabled:opacity-60";
+function CTAButton({ children, onClick, variant = "primary", type = "button", disabled }) {
+  const base = "px-5 py-3 rounded-2xl font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition";
   const styles = variant === "primary"
     ? "bg-emerald-500 hover:bg-emerald-400 text-slate-900 focus:ring-emerald-300"
     : variant === "ghost"
     ? "bg-transparent ring-1 ring-slate-700 hover:bg-slate-800 text-slate-200"
     : "bg-slate-200 hover:bg-white text-slate-900";
-  return <button type={type} className={classNames(base, styles)} onClick={onClick} disabled={disabled}>{children}</button>;
+  return <button type={type} disabled={disabled} className={classNames(base, styles, disabled && "opacity-60 cursor-not-allowed")} onClick={onClick}>{children}</button>;
 }
-
 function DemoCalculator() {
   const [gross, setGross] = useState(5000);
   const withholding = useMemo(() => Math.max(0, (gross || 0) * 0.3), [gross]);
@@ -100,11 +108,10 @@ function Hero({ onStart }) {
               <a href="#como-funciona" className="inline-flex"><CTAButton variant="ghost">Como funciona</CTAButton></a>
             </div>
             <div className="mt-6 flex items-center gap-4 text-slate-400 text-sm">
-              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Agente registrado 12 meses*</div>
-              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Endereço virtual 12 meses*</div>
+              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Agente registrado incluso (12 meses, se necessário)</div>
+              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Endereço físico (12 meses, se necessário)</div>
               <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Abertura + Operação</div>
             </div>
-            <p className="text-[11px] text-slate-500 mt-2">*Serviços cobrados após 12 meses, se mantidos.</p>
           </div>
           <div className="md:justify-self-end"><DemoCalculator /></div>
         </div>
@@ -115,7 +122,7 @@ function Hero({ onStart }) {
 function Services() {
   const items = [
     { title: "Abertura de LLC (Florida)", desc: "Registro estatal, EIN, Operating Agreement e documentos digitais prontos para download." },
-    { title: "Agente Registrado + Endereço virtual", desc: "Recepção de correspondências por 12 meses, repasse digital e alertas de compliance. Renovação cobrada após o período." },
+    { title: "Agente Registrado + Endereço físico", desc: "Incluso por 12 meses, se necessário. Após esse período, serviços passam a ser cobrados." },
     { title: "Onboarding legal & fiscal", desc: "Checklist, KYC/AML, enquadramento e orientações operacionais para plataformas." },
     { title: "Bookkeeping mensal (KASH FLOW 30)", desc: "Classificação contábil contínua. (Não inclui gestão de contratos.)" },
     { title: "Suporte contratual (KASH SCALE 5)", desc: "Até 5 contratos/mês. Operações com terceiros no Brasil." },
@@ -138,7 +145,7 @@ function Services() {
 }
 function Pricing({ onBuy, onBook }) {
   const plans = [
-    { name: "Abertura de LLC", price: CONFIG.prices.llc, features: ["Registro Florida + Filing", "EIN + Operating Agreement", "Agente Registrado 12 meses*", "Endereço virtual 12 meses*"], cta: "Comprar agora", onClick: onBuy, highlight: true },
+    { name: "Abertura de LLC", price: CONFIG.prices.llc, features: ["Registro Florida + Filing", "EIN + Operating Agreement", "Agente Registrado 12 meses (se necessário)", "Endereço físico 12 meses (se necessário)"], cta: "Comprar agora", onClick: onBuy, highlight: true },
     { name: "KASH FLOW 30 (Mensal)", price: CONFIG.prices.flow30, features: ["Classificação contábil contínua", "Relatórios mensais", "Suporte fiscal de rotina"], cta: "Assinar", onClick: onBuy },
     { name: "KASH SCALE 5 (Mensal)", price: CONFIG.prices.scale5, features: ["Até 5 contratos/mês", "Operações com terceiros no Brasil", "Prioridade de suporte"], cta: "Falar com especialista", onClick: onBook },
   ];
@@ -156,7 +163,6 @@ function Pricing({ onBuy, onBook }) {
             </div>
           ))}
         </div>
-        <p className="text-[11px] text-slate-500 mt-3">*Após 12 meses, agente registrado e endereço virtual são cobrados se mantidos.</p>
       </div>
     </section>
   );
@@ -187,6 +193,7 @@ function HowItWorks() {
   );
 }
 
+/* ---------- Form State ---------- */
 const initialForm = {
   company: { companyName: "", email: "", phone: "", address: "" },
   members: [
@@ -194,17 +201,19 @@ const initialForm = {
     { fullName: "", passport: "", issuer: "", expiry: "", share: "", phone: "", email: "", birthdate: "" },
   ],
   accept: { responsibility: false, limitations: false },
+  honeypot: "",
 };
 function formReducer(state, action) {
   switch (action.type) {
     case "UPDATE_COMPANY": {
       const { field, value } = action; if (!(field in state.company)) return state;
-      if (state.company[field] === value) return state;
       return { ...state, company: { ...state.company, [field]: value } };
     }
     case "UPDATE_MEMBER": {
-      const { index, field, value } = action; const members = state.members.slice();
-      members[index] = { ...members[index], [field]: value }; return { ...state, members };
+      const { index, field, value } = action;
+      const members = state.members.slice();
+      members[index] = { ...members[index], [field]: value };
+      return { ...state, members };
     }
     case "ADD_MEMBER": {
       return { ...state, members: [...state.members, { fullName: "", passport: "", issuer: "", expiry: "", share: "", phone: "", email: "", birthdate: "" }] };
@@ -216,6 +225,7 @@ function formReducer(state, action) {
     case "TOGGLE_ACCEPT": {
       const { key, value } = action; return { ...state, accept: { ...state.accept, [key]: value } };
     }
+    case "SET_HONEYPOT": return { ...state, honeypot: action.value || "" };
     default: return state;
   }
 }
@@ -240,13 +250,105 @@ function MemberCard({ index, data, onChange, onRemove, canRemove }) {
     </div>
   );
 }
+
+/* ---------- Revisão bonita ---------- */
+function ReviewCard({ form }) {
+  const { company, members, accept } = form;
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 space-y-5">
+      <div>
+        <h5 className="text-slate-100 font-semibold">Dados da empresa</h5>
+        <div className="mt-2 grid md:grid-cols-2 gap-3 text-sm text-slate-300">
+          <div><span className="text-slate-400">Nome: </span>{company.companyName || "—"}</div>
+          <div><span className="text-slate-400">E-mail: </span>{company.email || "—"}</div>
+          <div><span className="text-slate-400">Telefone: </span>{company.phone || "—"}</div>
+          <div className="md:col-span-2"><span className="text-slate-400">Endereço: </span>{company.address || "—"}</div>
+        </div>
+      </div>
+      <div>
+        <h5 className="text-slate-100 font-semibold">Sócios</h5>
+        <div className="mt-2 grid gap-4">
+          {members.map((m, i) => (
+            <div key={i} className="rounded-xl bg-slate-800 border border-slate-700 p-4 text-sm">
+              <div className="text-slate-400 mb-2">Sócio {i + 1}</div>
+              <div className="grid md:grid-cols-2 gap-3 text-slate-300">
+                <div><span className="text-slate-400">Nome: </span>{m.fullName || "—"}</div>
+                <div><span className="text-slate-400">Passaporte: </span>{m.passport || "—"}</div>
+                <div><span className="text-slate-400">Emissor: </span>{m.issuer || "—"}</div>
+                <div><span className="text-slate-400">Validade: </span>{m.expiry || "—"}</div>
+                <div><span className="text-slate-400">% Participação: </span>{m.share || "—"}</div>
+                <div><span className="text-slate-400">Telefone: </span>{m.phone || "—"}</div>
+                <div className="md:col-span-2"><span className="text-slate-400">E-mail: </span>{m.email || "—"}</div>
+                <div className="md:col-span-2"><span className="text-slate-400">Nascimento: </span>{m.birthdate || "—"}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="text-sm text-slate-300">
+        <span className="text-slate-400">Declarações: </span>
+        {accept.responsibility ? "Responsabilidade aceita" : "Responsabilidade não marcada"} ·{" "}
+        {accept.limitations ? "Limitações aceitas" : "Limitações não marcadas"}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Tracking (consulta) ---------- */
+function TrackingLookup() {
+  const [code, setCode] = useState("");
+  const [result, setResult] = useState(null);
+  const [loading, setLoading] = useState(false);
+  async function check() {
+    if (!code.trim()) return;
+    setLoading(true);
+    try {
+      const r = await fetch(`/api/tracking/${encodeURIComponent(code.trim())}`);
+      const j = await r.json(); setResult(j);
+    } catch { setResult({ error: "Falha ao consultar" }); }
+    finally { setLoading(false); }
+  }
+  return (
+    <section className="py-16 border-t border-slate-800" id="tracking">
+      <div className="max-w-6xl mx-auto px-4">
+        <SectionTitle title="Acompanhar pedido" subtitle="Digite seu código de Tracking para ver o andamento." />
+        <div className="mt-6 flex flex-col md:flex-row gap-3">
+          <input className="flex-1 rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100" placeholder="Ex.: KASH-AB12CD" value={code} onChange={(e) => setCode(e.target.value)} />
+          <CTAButton onClick={check} disabled={loading}>{loading ? "Consultando..." : "Consultar"}</CTAButton>
+        </div>
+        {result && (
+          <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-5">
+            {result.error ? (
+              <div className="text-rose-400">{result.error}</div>
+            ) : (
+              <>
+                <div className="text-slate-300 text-sm">Tracking: <span className="text-emerald-400 font-semibold">{result.protocol}</span></div>
+                <ul className="mt-4 space-y-2">
+                  {result.steps?.map((s) => (
+                    <li key={s.key} className="flex items-center gap-2 text-sm">
+                      <span className={`h-2 w-2 rounded-full ${s.done ? "bg-emerald-400" : "bg-slate-600"}`} />
+                      <span className={s.done ? "text-slate-200" : "text-slate-400"}>{s.label}</span>
+                    </li>
+                  ))}
+                </ul>
+                <div className="text-slate-500 text-xs mt-3">Atualizado em: {new Date(result.updatedAt).toLocaleString()}</div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/* ---------- Form Wizard ---------- */
 function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
-  const [signUrl, setSignUrl] = useState("");       // ← NOVO
-  const [pdfUrl, setPdfUrl] = useState("");         // ← NOVO
+  const [pdfUrl, setPdfUrl] = useState(""); // link do contrato
   const [form, dispatch] = useReducer(formReducer, initialForm);
+
   const updateCompany = useCallback((field, value) => dispatch({ type: "UPDATE_COMPANY", field, value }), []);
   const updateMember = useCallback((index, field, value) => dispatch({ type: "UPDATE_MEMBER", index, field, value }), []);
   const addMember = useCallback(() => dispatch({ type: "ADD_MEMBER" }), []);
@@ -254,7 +356,8 @@ function FormWizard({ open, onClose }) {
   const toggleAccept = useCallback((key, value) => dispatch({ type: "TOGGLE_ACCEPT", key, value }), []);
 
   function validate() {
-    const { company, members, accept } = form;
+    const { company, members, accept, honeypot } = form;
+    if (honeypot) return "Erro de validação.";
     if (!company.companyName || company.companyName.trim().length < 3) return "Informe o nome da empresa (mín. 3).";
     if (!emailRe.test(company.email || "")) return "E-mail principal da empresa inválido.";
     if (!phoneRe.test(company.phone || "")) return "Telefone principal da empresa inválido.";
@@ -276,61 +379,82 @@ function FormWizard({ open, onClose }) {
     return "";
   }
 
-  // ← NOVO: inicia pagamento (Stripe ou mock)
-  async function payNow(product = "llc") {
+  // Gera PDF simples com jsPDF (contrato)
+  function generatePdf() {
     try {
-      const res = await fetch("/api/stripe/checkout", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ protocol: tracking, product }),
+      // @ts-ignore
+      const { jsPDF } = window.jspdf || {};
+      if (!jsPDF) return "";
+      const doc = new jsPDF({ unit: "pt" });
+      const { company, members } = form;
+
+      const line = (t, y) => doc.text(t, 48, y);
+      let y = 64;
+      doc.setFontSize(16); line("CONTRATO DE PRESTAÇÃO DE SERVIÇOS — KA$H Solutions", y); y += 28;
+      doc.setFontSize(11);
+      line(`Empresa: ${company.companyName}`, y); y += 16;
+      line(`E-mail: ${company.email} | Telefone: ${company.phone}`, y); y += 16;
+      line(`Endereço: ${company.address}`, y); y += 24;
+
+      members.forEach((m, i) => {
+        line(`Sócio ${i + 1}: ${m.fullName} — Passaporte: ${m.passport} — %: ${m.share}`, y); y += 16;
       });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json.error || "Erro ao iniciar pagamento");
-      if (json.url) window.location.href = json.url;
+      y += 16;
+      const clause = "A aprovação de registros e emissões (Florida State/IRS) depende exclusivamente dos órgãos públicos competentes.";
+      const text = doc.splitTextToSize(clause, 520);
+      text.forEach(t => { line(t, y); y += 14; });
+
+      return URL.createObjectURL(doc.output("blob"));
     } catch (e) {
-      alert("Falha ao iniciar pagamento: " + (e?.message || "erro"));
+      console.warn("Falha ao gerar PDF", e); return "";
     }
   }
 
-  // ← SUBSTITUI a versão antiga do submit()
+  // Download automático ao gerar o link
+  useEffect(() => {
+    if (!pdfUrl) return;
+    try {
+      const a = document.createElement("a");
+      a.href = pdfUrl;
+      a.download = `Contrato_KASH_${tracking || Date.now()}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    } catch (e) {
+      console.warn("Falha ao baixar automático. Use o link na tela.", e);
+    }
+  }, [pdfUrl, tracking]);
+
   async function submit() {
     const err = validate(); if (err) { alert(err); return; }
-
     setLoading(true);
+
+    // 1) Gera Tracking
+    const mock = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+
+    // 2) Gera PDF
+    const url = generatePdf();
+    setPdfUrl(url);
+    setTracking(mock);
+
+    // 3) Envia para o Formspree
     try {
-      // (Opcional) Envia para Formspree (backup alerta)
-      if (CONFIG.endpoints?.formspree) {
-        try {
-          await fetch(CONFIG.endpoints.formspree, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "Accept": "application/json" },
-            body: JSON.stringify({ ...form, _subject: "Novo pedido: Abertura de LLC (KASH)" }),
-          });
-        } catch {}
-      }
-
-      // Geração do contrato + protocolo (mock até configurar provedor)
-      const res = await fetch("/api/contract", {
+      await fetch(CONFIG.formspreeEndpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ form }),
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        body: JSON.stringify({ ...form, tracking: mock }),
       });
-      const data = await res.json();
-      if (!res.ok || !data.ok) throw new Error(data.error || "Falha ao gerar contrato");
-
-      setTracking(data.protocol);
-      setSignUrl(data.signUrl || "");
-      setPdfUrl(data.pdfUrl || "");
-      setStep(3);
     } catch (e) {
-      alert("Falha ao enviar: " + (e?.message || "erro desconhecido"));
-    } finally {
-      setLoading(false);
+      console.warn("Falha ao enviar para Formspree", e);
     }
+
+    setLoading(false);
+    setStep(3);
   }
 
   if (!open) return null;
   const { company, members, accept } = form;
+
   return (
     <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
       <div className="w-full max-w-3xl rounded-2xl bg-slate-900 border border-slate-800 shadow-xl max-h-[90vh] overflow-y-auto">
@@ -338,6 +462,7 @@ function FormWizard({ open, onClose }) {
           <div className="text-slate-100 font-semibold">Onboarding de abertura</div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-200">Fechar</button>
         </div>
+
         {step === 1 && (
           <div className="p-6">
             <h4 className="text-slate-100 font-medium">1/2 — Dados iniciais da LLC</h4>
@@ -347,6 +472,7 @@ function FormWizard({ open, onClose }) {
               <div><label className="block text-sm text-slate-400" htmlFor="companyPhone">Telefone principal</label><input id="companyPhone" type="tel" inputMode="tel" className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100" value={company.phone} onChange={(e) => updateCompany("phone", e.target.value)} /></div>
               <div><label className="block text-sm text-slate-400" htmlFor="companyAddr">Endereço no Brasil</label><input id="companyAddr" className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100" value={company.address} onChange={(e) => updateCompany("address", e.target.value)} /></div>
             </div>
+
             <h4 className="mt-6 text-slate-100 font-medium">Sócios (mínimo 2)</h4>
             <div className="mt-2 space-y-4">
               {members.map((m, i) => (
@@ -355,52 +481,43 @@ function FormWizard({ open, onClose }) {
             </div>
             <button onClick={addMember} className="mt-4 text-emerald-400 hover:underline">+ Adicionar sócio</button>
 
+            {/* declarações */}
             <div className="mt-6 space-y-3 text-sm text-slate-300">
               <label className="flex items-start gap-2">
                 <input type="checkbox" checked={accept.responsibility} onChange={(e) => toggleAccept("responsibility", e.target.checked)} />
-                <span>
-                  Declaro, sob minha responsabilidade, que todas as informações prestadas são verdadeiras e assumo total responsabilidade civil e legal por elas.
-                </span>
+                <span>Declaro, sob minha responsabilidade, que todas as informações prestadas são verdadeiras e assumo total responsabilidade civil e legal por elas.</span>
               </label>
               <label className="flex items-start gap-2">
                 <input type="checkbox" checked={accept.limitations} onChange={(e) => toggleAccept("limitations", e.target.checked)} />
-                <span>
-                  Estou ciente de que (i) o registro da LLC <strong>não</strong> implica contratação automática de serviços mensais de contabilidade; (ii) licenças/permissões especiais <strong>não</strong> fazem parte deste processo; e (iii) o mau uso da empresa poderá resultar em medidas judiciais.
-                </span>
+                <span>Estou ciente de que (i) o registro da LLC <strong>não</strong> implica contratação automática de serviços mensais de contabilidade; (ii) licenças/permissões especiais <strong>não</strong> fazem parte deste processo; e (iii) o mau uso da empresa poderá resultar em medidas judiciais.</span>
               </label>
+              <input type="text" className="hidden" autoComplete="off" tabIndex="-1" value={form.honeypot} onChange={(e) => dispatch({ type: "SET_HONEYPOT", value: e.target.value })} />
             </div>
 
             <div className="mt-6 flex justify-end gap-3"><CTAButton variant="ghost" onClick={() => setStep(1)}>Revisar</CTAButton><CTAButton onClick={() => setStep(2)}>Continuar</CTAButton></div>
           </div>
         )}
+
         {step === 2 && (
           <div className="p-6">
             <h4 className="text-slate-100 font-medium">2/2 — Revisão e envio</h4>
-            <pre className="bg-slate-950 p-4 rounded-xl text-slate-300 text-xs overflow-x-auto max-h-64">{JSON.stringify(form, null, 2)}</pre>
-            <div className="mt-6 flex justify-end gap-3"><CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton><CTAButton onClick={submit}>{loading ? "Processando..." : "Confirmar & gerar tracking"}</CTAButton></div>
+            <ReviewCard form={form} />
+            <div className="mt-6 flex justify-end gap-3">
+              <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
+              <CTAButton onClick={submit}>{loading ? "Processando..." : "Confirmar & gerar tracking"}</CTAButton>
+            </div>
           </div>
         )}
+
         {step === 3 && (
           <div className="p-6 text-center">
             <div className="mx-auto w-16 h-16 rounded-full bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center"><span className="text-2xl">✅</span></div>
             <h4 className="mt-4 text-slate-100 font-semibold">Pedido iniciado</h4>
-
             <div className="mt-2 text-emerald-400 text-xl font-bold">{tracking}</div>
-            <p className="text-slate-500 text-xs mt-2">Guarde este código para acompanhar o status.</p>
-
-            <div className="mt-6 space-y-3">
-              {pdfUrl && <a className="text-emerald-400 underline" href={pdfUrl} target="_blank" rel="noreferrer">Visualizar contrato (PDF)</a>}
-              {signUrl
-                ? <div className="flex justify-center"><CTAButton onClick={() => window.open(signUrl, "_blank")}>Assinar contrato</CTAButton></div>
-                : <p className="text-slate-400 text-sm">Link de assinatura será habilitado após configuração do provedor.</p>
-              }
-              <div className="flex gap-3 justify-center">
-                <CTAButton onClick={() => payNow("llc")}>Pagar Abertura LLC</CTAButton>
-                <CTAButton variant="ghost" onClick={() => payNow("flow30")}>Assinar FLOW 30</CTAButton>
-                <CTAButton variant="ghost" onClick={() => payNow("scale5")}>Assinar SCALE 5</CTAButton>
-              </div>
-            </div>
-
+            {pdfUrl
+              ? <div className="mt-3"><a className="text-emerald-400 underline" href={pdfUrl} target="_blank" rel="noreferrer">Visualizar/baixar contrato (PDF)</a></div>
+              : <p className="text-slate-400 text-sm mt-3">Gerando contrato...</p>}
+            <p className="text-slate-500 text-xs mt-2">Guarde este código para consultar o status.</p>
             <div className="mt-6"><CTAButton onClick={onClose}>Concluir</CTAButton></div>
           </div>
         )}
@@ -408,6 +525,8 @@ function FormWizard({ open, onClose }) {
     </div>
   );
 }
+
+/* ---------- Footer & Page ---------- */
 function Footer() {
   return (
     <footer className="py-10 border-t border-slate-800">
@@ -424,7 +543,7 @@ function Footer() {
   );
 }
 
-export default function KashWebsite() {
+export default function App() {
   const [openWizard, setOpenWizard] = useState(false);
   const onStart = useCallback(() => setOpenWizard(true), []);
   const onBuy = useCallback(() => setOpenWizard(true), []);
@@ -440,14 +559,21 @@ export default function KashWebsite() {
             <a className="hover:text-emerald-400" href="#servicos">Serviços</a>
             <a className="hover:text-emerald-400" href="#planos">Planos</a>
             <a className="hover:text-emerald-400" href="#como-funciona">Como funciona</a>
+            <a className="hover:text-emerald-400" href="#tracking">Tracking</a>
           </nav>
-          <div className="flex items-center gap-3"><CTAButton variant="ghost" onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}>Contato</CTAButton><CTAButton onClick={onStart}>Começar</CTAButton></div>
+          <div className="flex items-center gap-3">
+            <CTAButton variant="ghost" onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}>Contato</CTAButton>
+            <CTAButton onClick={onStart}>Começar</CTAButton>
+          </div>
         </div>
       </header>
+
       <Hero onStart={onStart} />
       <Services />
       <Pricing onBuy={onBuy} onBook={onBook} />
       <HowItWorks />
+      <TrackingLookup />
+
       <section id="contato" className="py-16 border-t border-slate-800">
         <div className="max-w-6xl mx-auto px-4">
           <SectionTitle title="Fale com a KA$H" subtitle="Tire dúvidas sobre o enquadramento ideal para o seu caso." />
@@ -470,13 +596,14 @@ export default function KashWebsite() {
           </div>
         </div>
       </section>
+
       <Footer />
       <FormWizard open={openWizard} onClose={() => setOpenWizard(false)} />
     </div>
   );
 }
 
-// Dev tests (console)
+/* Dev tests (console) */
 (function runDevTests(){
   try {
     console.assert(calcAgeFullDate('2010-01-01') < 18, 'Age: under 18 invalid');
