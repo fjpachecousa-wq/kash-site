@@ -1,24 +1,23 @@
-import React, { useCallback, useMemo, useReducer, useState, useEffect } from "react";
+import React, { useCallback, useMemo, useReducer, useState } from "react";
 
-/* ===================== CONFIG ===================== */
+/* ================== CONFIGURAÇÃO ================== */
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "+1 (305) 000-0000", email: "contato@kashsolutions.us", calendly: "" },
-  brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KA$H Solutions" },
+  checkout: { stripeUrl: "" }, // (futuro)
+  brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
   formspreeEndpoint: "https://formspree.io/f/xblawgpk",
 };
 
-/* ===================== HELPERS ===================== */
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
-function classNames(...c) { return c.filter(Boolean).join(" "); }
+function classNames(...cls) { return cls.filter(Boolean).join(" "); }
+
+/* Idade exata pela data completa */
 function calcAgeFullDate(birthdateStr) {
-  const dob = new Date(birthdateStr);
-  if (Number.isNaN(dob.getTime())) return -1;
-  const t = new Date();
-  let age = t.getFullYear() - dob.getFullYear();
-  const m = t.getMonth() - dob.getMonth();
-  if (m < 0 || (m === 0 && t.getDate() < dob.getDate())) age--;
+  const dob = new Date(birthdateStr); if (Number.isNaN(dob.getTime())) return -1;
+  const t = new Date(); let age = t.getFullYear() - dob.getFullYear();
+  const m = t.getMonth() - dob.getMonth(); if (m < 0 || (m === 0 && t.getDate() < dob.getDate())) age--;
   return age;
 }
 function isPercentTotalValid(members) {
@@ -26,27 +25,21 @@ function isPercentTotalValid(members) {
   return Math.abs(total - 100) <= 0.01;
 }
 
-/* ===================== UI PRIMITIVES ===================== */
+/* ================== UI BÁSICOS ================== */
 function KLogo({ size = 40 }) {
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
       <div className="absolute inset-0 rounded-2xl bg-slate-900" />
       <div className="absolute inset-[3px] rounded-xl bg-slate-800 shadow-inner" />
       <svg width={size * 0.7} height={size * 0.7} viewBox="0 0 64 64" className="absolute">
-        <defs>
-          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#34d399" /><stop offset="100%" stopColor="#10b981" />
-          </linearGradient>
-        </defs>
+        <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#34d399" /><stop offset="100%" stopColor="#10b981" /></linearGradient></defs>
         <path d="M14 8h8v48h-8z" fill="url(#g)" />
         <path d="M26 32l22-24h10L42 32l16 24H48L26 32z" fill="url(#g)" />
       </svg>
     </div>
   );
 }
-function Pill({ children }) {
-  return <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-emerald-300 text-xs">{children}</span>;
-}
+function Pill({ children }) { return <span className="inline-flex items-center gap-1 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-emerald-300 text-xs">{children}</span>; }
 function SectionTitle({ eyebrow, title, subtitle }) {
   return (
     <div className="max-w-3xl mx-auto text-center">
@@ -56,17 +49,17 @@ function SectionTitle({ eyebrow, title, subtitle }) {
     </div>
   );
 }
-function CTAButton({ children, onClick, variant = "primary", type = "button", disabled }) {
+function CTAButton({ children, onClick, variant = "primary", type = "button" }) {
   const base = "px-5 py-3 rounded-2xl font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition";
   const styles = variant === "primary"
     ? "bg-emerald-500 hover:bg-emerald-400 text-slate-900 focus:ring-emerald-300"
     : variant === "ghost"
     ? "bg-transparent ring-1 ring-slate-700 hover:bg-slate-800 text-slate-200"
     : "bg-slate-200 hover:bg-white text-slate-900";
-  return <button type={type} disabled={disabled} className={classNames(base, styles, disabled && "opacity-60 cursor-not-allowed")} onClick={onClick}>{children}</button>;
+  return <button type={type} className={classNames(base, styles)} onClick={onClick}>{children}</button>;
 }
 
-/* ===================== HERO & SEÇÕES ===================== */
+/* ================== PÁGINA: HERO/SEÇÕES ================== */
 function DemoCalculator() {
   const [gross, setGross] = useState(5000);
   const withholding = useMemo(() => Math.max(0, (gross || 0) * 0.3), [gross]);
@@ -102,7 +95,7 @@ function Hero({ onStart }) {
             <div className="flex items-center gap-3">
               <KLogo size={48} />
               <div>
-                <h1 className="text-3xl md:text-4xl font-bold text-slate-100 tracking-tight">KA$H Solutions</h1>
+                <h1 className="text-3xl md:text-4xl font-bold text-slate-100 tracking-tight">KASH Solutions</h1>
                 <p className="text-slate-400 text-sm">{CONFIG.brand.legal} · Florida LLC</p>
               </div>
             </div>
@@ -112,10 +105,11 @@ function Hero({ onStart }) {
               <a href="#como-funciona" className="inline-flex"><CTAButton variant="ghost">Como funciona</CTAButton></a>
             </div>
             <div className="mt-6 flex items-center gap-4 text-slate-400 text-sm">
-              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Agente registrado incluso (12 meses, se necessário)</div>
-              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Endereço físico (12 meses, se necessário)</div>
+              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Agente registrado 12 meses*</div>
+              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Endereço virtual 12 meses*</div>
               <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" /> Abertura + Operação</div>
             </div>
+            <p className="text-xs text-slate-500 mt-2">*Após 12 meses, os serviços podem ser renovados mediante cobrança.</p>
           </div>
           <div className="md:justify-self-end"><DemoCalculator /></div>
         </div>
@@ -125,16 +119,16 @@ function Hero({ onStart }) {
 }
 function Services() {
   const items = [
-    { title: "Abertura de LLC (Florida)", desc: "Registro estatal, EIN, Operating Agreement e documentos digitais prontos para download." },
-    { title: "Agente Registrado + Endereço físico", desc: "Incluso por 12 meses, se necessário. Após esse período, serviços passam a ser cobrados." },
-    { title: "Onboarding legal & fiscal", desc: "Checklist, KYC/AML, enquadramento e orientações operacionais." },
-    { title: "Bookkeeping mensal (KASH FLOW 30)", desc: "Classificação contábil contínua." },
+    { title: "Abertura de LLC (Florida)", desc: "Registro estatal, EIN, Operating Agreement e documentos digitais." },
+    { title: "Agente Registrado + Endereço virtual (12 meses)", desc: "Após este período, renovação com cobrança. Recepção e repasse digital." },
+    { title: "Onboarding legal & fiscal", desc: "Checklist, KYC/AML, enquadramento e orientações para plataformas." },
+    { title: "Bookkeeping mensal (KASH FLOW 30)", desc: "Classificação contábil contínua (sem gestão de contratos)." },
     { title: "Suporte contratual (KASH SCALE 5)", desc: "Até 5 contratos/mês. Operações com terceiros no Brasil." },
   ];
   return (
     <section className="py-16 border-t border-slate-800" id="servicos">
       <div className="max-w-6xl mx-auto px-4">
-        <SectionTitle eyebrow="Serviços KA$H" title="Tudo do registro à operação" subtitle="Feito para criadores brasileiros." />
+        <SectionTitle eyebrow="Serviços KASH" title="Do registro à operação" subtitle="Feito para criadores brasileiros." />
         <div className="mt-10 grid md:grid-cols-2 lg:grid-cols-3 gap-5">
           {items.map((it) => (
             <div key={it.title} className="rounded-2xl border border-slate-800 bg-slate-900 p-5 shadow-sm">
@@ -149,7 +143,7 @@ function Services() {
 }
 function Pricing({ onBuy, onBook }) {
   const plans = [
-    { name: "Abertura de LLC", price: CONFIG.prices.llc, features: ["Registro Florida + Filing", "EIN + Operating Agreement", "Agente Registrado 12 meses (se necessário)", "Endereço físico 12 meses (se necessário)"], cta: "Comprar agora", onClick: onBuy, highlight: true },
+    { name: "Abertura de LLC", price: CONFIG.prices.llc, features: ["Registro Florida + Filing", "EIN + Operating Agreement", "Agente Registrado 12 meses", "Endereço virtual 12 meses"], cta: "Comprar agora", onClick: onBuy, highlight: true },
     { name: "KASH FLOW 30 (Mensal)", price: CONFIG.prices.flow30, features: ["Classificação contábil contínua", "Relatórios mensais", "Suporte fiscal de rotina"], cta: "Assinar", onClick: onBuy },
     { name: "KASH SCALE 5 (Mensal)", price: CONFIG.prices.scale5, features: ["Até 5 contratos/mês", "Operações com terceiros no Brasil", "Prioridade de suporte"], cta: "Falar com especialista", onClick: onBook },
   ];
@@ -197,7 +191,7 @@ function HowItWorks() {
   );
 }
 
-/* ===================== FORM STATE ===================== */
+/* ================== FORM & WIZARD ================== */
 const initialForm = {
   company: { companyName: "", email: "", phone: "", address: "" },
   members: [
@@ -211,13 +205,12 @@ function formReducer(state, action) {
   switch (action.type) {
     case "UPDATE_COMPANY": {
       const { field, value } = action; if (!(field in state.company)) return state;
+      if (state.company[field] === value) return state;
       return { ...state, company: { ...state.company, [field]: value } };
     }
     case "UPDATE_MEMBER": {
-      const { index, field, value } = action;
-      const members = state.members.slice();
-      members[index] = { ...members[index], [field]: value };
-      return { ...state, members };
+      const { index, field, value } = action; const members = state.members.slice();
+      members[index] = { ...members[index], [field]: value }; return { ...state, members };
     }
     case "ADD_MEMBER": {
       return { ...state, members: [...state.members, { fullName: "", passport: "", issuer: "", expiry: "", share: "", phone: "", email: "", birthdate: "" }] };
@@ -229,130 +222,68 @@ function formReducer(state, action) {
     case "TOGGLE_ACCEPT": {
       const { key, value } = action; return { ...state, accept: { ...state.accept, [key]: value } };
     }
-    case "SET_HONEYPOT": return { ...state, honeypot: action.value || "" };
     default: return state;
   }
 }
-
-/* ===================== CARDS ===================== */
-function MemberCard({ index, data, onChange, onRemove, canRemove }) {
+function FieldError({ msg }) {
+  if (!msg) return null;
+  return <div className="text-red-400 text-xs mt-1">{msg}</div>;
+}
+function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
   return (
     <div className="p-4 border border-slate-700 rounded-xl bg-slate-800 space-y-2">
       <div className="flex items-center justify-between mb-1"><div className="text-slate-400 text-sm">Sócio {index + 1}</div>{canRemove && (<button onClick={onRemove} className="text-slate-400 hover:text-slate-200 text-xs">Remover</button>)}</div>
-      <input className="w-full rounded bg-slate-900 px-3 py-2 text-slate-100" placeholder="Nome completo" value={data.fullName} onChange={(e) => onChange("fullName", e.target.value)} />
-      <div className="grid md:grid-cols-2 gap-2">
-        <input className="rounded bg-slate-900 px-3 py-2 text-slate-100" placeholder="Passaporte" value={data.passport} onChange={(e) => onChange("passport", e.target.value)} />
-        <input className="rounded bg-slate-900 px-3 py-2 text-slate-100" placeholder="Emissor" value={data.issuer} onChange={(e) => onChange("issuer", e.target.value)} />
-      </div>
-      <div className="grid md:grid-cols-2 gap-2">
-        <input type="date" className="rounded bg-slate-900 px-3 py-2 text-slate-100" value={data.expiry} onChange={(e) => onChange("expiry", e.target.value)} />
-        <input type="number" min={0} max={100} step={0.01} className="rounded bg-slate-900 px-3 py-2 text-slate-100" placeholder="% Participação" value={data.share} onChange={(e) => onChange("share", e.target.value)} />
-      </div>
-      <div className="grid md:grid-cols-2 gap-2">
-        <input type="tel" inputMode="tel" className="rounded bg-slate-900 px-3 py-2 text-slate-100" placeholder="Telefone" value={data.phone} onChange={(e) => onChange("phone", e.target.value)} />
-        <input type="email" autoComplete="email" className="rounded bg-slate-900 px-3 py-2 text-slate-100" placeholder="E-mail" value={data.email} onChange={(e) => onChange("email", e.target.value)} />
-      </div>
-      <div><label className="block text-sm text-slate-400">Data de nascimento</label><input type="date" className="w-full rounded bg-slate-900 px-3 py-2 text-slate-100" value={data.birthdate} onChange={(e) => onChange("birthdate", e.target.value)} /></div>
-    </div>
-  );
-}
-function ReviewCard({ form }) {
-  const { company, members, accept } = form;
-  return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5 space-y-5">
       <div>
-        <h5 className="text-slate-100 font-semibold">Dados da empresa</h5>
-        <div className="mt-2 grid md:grid-cols-2 gap-3 text-sm text-slate-300">
-          <div><span className="text-slate-400">Nome: </span>{company.companyName || "—"}</div>
-          <div><span className="text-slate-400">E-mail: </span>{company.email || "—"}</div>
-          <div><span className="text-slate-400">Telefone: </span>{company.phone || "—"}</div>
-          <div className="md:col-span-2"><span className="text-slate-400">Endereço: </span>{company.address || "—"}</div>
+        <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-slate-100", errors.fullName && "ring-1 ring-red-400")} placeholder="Nome completo" value={data.fullName} onChange={(e) => onChange("fullName", e.target.value)} />
+        <FieldError msg={errors.fullName} />
+      </div>
+      <div className="grid md:grid-cols-2 gap-2">
+        <div>
+          <input className={classNames("rounded bg-slate-900 px-3 py-2 text-slate-100", errors.passport && "ring-1 ring-red-400")} placeholder="Passaporte" value={data.passport} onChange={(e) => onChange("passport", e.target.value)} />
+          <FieldError msg={errors.passport} />
+        </div>
+        <div>
+          <input className={classNames("rounded bg-slate-900 px-3 py-2 text-slate-100", errors.issuer && "ring-1 ring-red-400")} placeholder="Emissor" value={data.issuer} onChange={(e) => onChange("issuer", e.target.value)} />
+          <FieldError msg={errors.issuer} />
+        </div>
+      </div>
+      <div className="grid md:grid-cols-2 gap-2">
+        <div>
+          <input type="date" className={classNames("rounded bg-slate-900 px-3 py-2 text-slate-100", errors.expiry && "ring-1 ring-red-400")} value={data.expiry} onChange={(e) => onChange("expiry", e.target.value)} />
+          <FieldError msg={errors.expiry} />
+        </div>
+        <div>
+          <input type="number" min={0} max={100} step={0.01} className={classNames("rounded bg-slate-900 px-3 py-2 text-slate-100", errors.share && "ring-1 ring-red-400")} placeholder="% Participação" value={data.share} onChange={(e) => onChange("share", e.target.value)} />
+          <FieldError msg={errors.share} />
+        </div>
+      </div>
+      <div className="grid md:grid-cols-2 gap-2">
+        <div>
+          <input type="tel" inputMode="tel" className={classNames("rounded bg-slate-900 px-3 py-2 text-slate-100", errors.phone && "ring-1 ring-red-400")} placeholder="Telefone" value={data.phone} onChange={(e) => onChange("phone", e.target.value)} />
+          <FieldError msg={errors.phone} />
+        </div>
+        <div>
+          <input type="email" autoComplete="email" className={classNames("rounded bg-slate-900 px-3 py-2 text-slate-100", errors.email && "ring-1 ring-red-400")} placeholder="E-mail" value={data.email} onChange={(e) => onChange("email", e.target.value)} />
+          <FieldError msg={errors.email} />
         </div>
       </div>
       <div>
-        <h5 className="text-slate-100 font-semibold">Sócios</h5>
-        <div className="mt-2 grid gap-4">
-          {members.map((m, i) => (
-            <div key={i} className="rounded-xl bg-slate-800 border border-slate-700 p-4 text-sm">
-              <div className="text-slate-400 mb-2">Sócio {i + 1}</div>
-              <div className="grid md:grid-cols-2 gap-3 text-slate-300">
-                <div><span className="text-slate-400">Nome: </span>{m.fullName || "—"}</div>
-                <div><span className="text-slate-400">Passaporte: </span>{m.passport || "—"}</div>
-                <div><span className="text-slate-400">Emissor: </span>{m.issuer || "—"}</div>
-                <div><span className="text-slate-400">Validade: </span>{m.expiry || "—"}</div>
-                <div><span className="text-slate-400">% Participação: </span>{m.share || "—"}</div>
-                <div><span className="text-slate-400">Telefone: </span>{m.phone || "—"}</div>
-                <div className="md:col-span-2"><span className="text-slate-400">E-mail: </span>{m.email || "—"}</div>
-                <div className="md:col-span-2"><span className="text-slate-400">Nascimento: </span>{m.birthdate || "—"}</div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      <div className="text-sm text-slate-300">
-        <span className="text-slate-400">Declarações: </span>
-        {accept.responsibility ? "Responsabilidade aceita" : "Responsabilidade não marcada"} ·{" "}
-        {accept.limitations ? "Limitações aceitas" : "Limitações não marcadas"}
+        <label className="block text-sm text-slate-400">Data de nascimento</label>
+        <input type="date" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-slate-100", errors.birthdate && "ring-1 ring-red-400")} value={data.birthdate} onChange={(e) => onChange("birthdate", e.target.value)} />
+        <FieldError msg={errors.birthdate} />
       </div>
     </div>
   );
 }
 
-/* ===================== TRACKING (consulta) ===================== */
-function TrackingLookup() {
-  const [code, setCode] = useState("");
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-  async function check() {
-    if (!code.trim()) return;
-    setLoading(true);
-    try {
-      const r = await fetch(`/api/tracking/${encodeURIComponent(code.trim())}`);
-      const j = await r.json(); setResult(j);
-    } catch { setResult({ error: "Falha ao consultar" }); }
-    finally { setLoading(false); }
-  }
-  return (
-    <section className="py-16 border-t border-slate-800" id="tracking">
-      <div className="max-w-6xl mx-auto px-4">
-        <SectionTitle title="Acompanhar pedido" subtitle="Digite seu código de Tracking para ver o andamento." />
-        <div className="mt-6 flex flex-col md:flex-row gap-3">
-          <input className="flex-1 rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100" placeholder="Ex.: KASH-AB12CD" value={code} onChange={(e) => setCode(e.target.value)} />
-          <CTAButton onClick={check} disabled={loading}>{loading ? "Consultando..." : "Consultar"}</CTAButton>
-        </div>
-        {result && (
-          <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-5">
-            {result.error ? (
-              <div className="text-rose-400">{result.error}</div>
-            ) : (
-              <>
-                <div className="text-slate-300 text-sm">Tracking: <span className="text-emerald-400 font-semibold">{result.protocol}</span></div>
-                <ul className="mt-4 space-y-2">
-                  {result.steps?.map((s) => (
-                    <li key={s.key} className="flex items-center gap-2 text-sm">
-                      <span className={`h-2 w-2 rounded-full ${s.done ? "bg-emerald-400" : "bg-slate-600"}`} />
-                      <span className={s.done ? "text-slate-200" : "text-slate-400"}>{s.label}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="text-slate-500 text-xs mt-3">Atualizado em: {new Date(result.updatedAt).toLocaleString()}</div>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-/* ===================== FORM WIZARD ===================== */
+/* ================== WIZARD ================== */
 function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
-  const [pdfUrl, setPdfUrl] = useState("");
-
   const [form, dispatch] = useReducer(formReducer, initialForm);
+  const [errors, setErrors] = useState({ company: {}, members: [], accept: {} });
+
   const updateCompany = useCallback((field, value) => dispatch({ type: "UPDATE_COMPANY", field, value }), []);
   const updateMember = useCallback((index, field, value) => dispatch({ type: "UPDATE_MEMBER", index, field, value }), []);
   const addMember = useCallback(() => dispatch({ type: "ADD_MEMBER" }), []);
@@ -360,136 +291,153 @@ function FormWizard({ open, onClose }) {
   const toggleAccept = useCallback((key, value) => dispatch({ type: "TOGGLE_ACCEPT", key, value }), []);
 
   function validate() {
-    const { company, members, accept, honeypot } = form;
-    if (honeypot) return "Erro de validação.";
-    if (!company.companyName || company.companyName.trim().length < 3) return "Informe o nome da empresa (mín. 3).";
-    if (!emailRe.test(company.email || "")) return "E-mail principal da empresa inválido.";
-    if (!phoneRe.test(company.phone || "")) return "Telefone principal da empresa inválido.";
-    if (!Array.isArray(members) || members.length < 2) return "É necessário ao menos 2 sócios.";
+    const { company, members, accept } = form;
+    const errs = { company: {}, members: members.map(() => ({})), accept: {} };
+
+    if (!company.companyName || company.companyName.trim().length < 3) errs.company.companyName = "Informe o nome da empresa (mín. 3).";
+    if (!emailRe.test(company.email || "")) errs.company.email = "E-mail inválido.";
+    if (!phoneRe.test(company.phone || "")) errs.company.phone = "Telefone inválido.";
+    if (!company.address || company.address.trim().length < 5) errs.company.address = "Informe o endereço.";
+
+    if (!Array.isArray(members) || members.length < 2) {
+      alert("É necessário ao menos 2 sócios.");
+      return { ok: false, errs };
+    }
     for (let i = 0; i < members.length; i++) {
       const m = members[i];
-      if (!m.fullName || m.fullName.trim().length < 5) return `Sócio ${i + 1}: informe o nome completo.`;
-      if (!m.passport) return `Sócio ${i + 1}: informe o número do passaporte.`;
-      if (!m.issuer) return `Sócio ${i + 1}: informe o emissor do passaporte.`;
-      if (!m.expiry) return `Sócio ${i + 1}: informe a validade do passaporte.`;
-      const p = Number(m.share); if (!Number.isFinite(p) || p <= 0) return `Sócio ${i + 1}: percentual de participação inválido.`;
-      if (!phoneRe.test(m.phone || "")) return `Sócio ${i + 1}: telefone inválido.`;
-      if (!emailRe.test(m.email || "")) return `Sócio ${i + 1}: e-mail inválido.`;
-      if (!m.birthdate) return `Sócio ${i + 1}: informe a data de nascimento.`;
-      if (calcAgeFullDate(m.birthdate) < 18) return `Sócio ${i + 1} deve ter 18 anos ou mais.`;
+      if (!m.fullName || m.fullName.trim().length < 5) errs.members[i].fullName = "Nome completo.";
+      if (!m.passport) errs.members[i].passport = "Passaporte.";
+      if (!m.issuer) errs.members[i].issuer = "Emissor do passaporte.";
+      if (!m.expiry) errs.members[i].expiry = "Validade do passaporte.";
+      const p = Number(m.share); if (!Number.isFinite(p) || p <= 0) errs.members[i].share = "% inválido.";
+      if (!phoneRe.test(m.phone || "")) errs.members[i].phone = "Telefone inválido.";
+      if (!emailRe.test(m.email || "")) errs.members[i].email = "E-mail inválido.";
+      if (!m.birthdate) errs.members[i].birthdate = "Data de nascimento.";
+      if (m.birthdate && calcAgeFullDate(m.birthdate) < 18) errs.members[i].birthdate = "Precisa ter 18+.";
     }
-    if (!isPercentTotalValid(members)) return "A soma dos percentuais de participação deve ser 100%.";
-    if (!accept.responsibility || !accept.limitations) return "É necessário aceitar as declarações de responsabilidade e limitações.";
-    return "";
+    if (!isPercentTotalValid(members)) alert("A soma dos percentuais deve ser 100%.");
+    if (!accept.responsibility || !accept.limitations) errs.accept.base = "Aceite as declarações.";
+
+    const ok = !errs.company.companyName && !errs.company.email && !errs.company.phone && !errs.company.address
+      && errs.members.every((m) => Object.keys(m).length === 0) && accept.responsibility && accept.limitations && isPercentTotalValid(members);
+
+    setErrors(errs);
+    return { ok, errs };
   }
 
-  // --------- PDF (contrato PT) com jsPDF ---------
+  // ===== PDF do contrato (estilo norte-americano) =====
   function generatePdf() {
     try {
-      // @ts-ignore
       const { jsPDF } = window.jspdf || {};
       if (!jsPDF) return "";
 
       const doc = new jsPDF({ unit: "pt", format: "a4" });
       const { company, members } = form;
 
-      const M = { l: 48, r: 48, t: 64, b: 64, width: 595.28 - 48 - 48 };
+      const M = { l: 48, r: 48, t: 64, b: 64, width: 595.28 - 96 };
       let y = M.t;
+
       const line = (t, yy) => doc.text(t, M.l, yy);
       const writeBlock = (text, opts = {}) => {
-        const size = opts.size || 11; const gap = opts.gap ?? 14;
+        const size = opts.size || 11;
+        const gap = opts.gap ?? 14;
         doc.setFontSize(size);
         const parts = doc.splitTextToSize(text, M.width);
         for (const p of parts) {
-          if (y > (doc.internal.pageSize.getHeight() - M.b)) { doc.addPage(); y = M.t; }
-          line(p, y); y += gap;
+          if (y > doc.internal.pageSize.getHeight() - M.b) {
+            doc.addPage();
+            y = M.t;
+          }
+          line(p, y);
+          y += gap;
         }
       };
 
       doc.setFont("Helvetica", "normal");
-      doc.setFontSize(16); line("CONTRATO DE PRESTAÇÃO DE SERVIÇOS — KA$H Solutions", y); y += 28;
+      doc.setFontSize(16);
+      line("SERVICE AGREEMENT – KASH Solutions", y);
+      y += 28;
 
       doc.setFontSize(11);
-      writeBlock(`CONTRATANTE: ${company.companyName || "[NOME COMPLETO]"}, portador(a) dos documentos e dados informados no formulário eletrônico, doravante denominado(a) simplesmente CLIENTE.`);
-      writeBlock("CONTRATADA: KASH CORPORATE SOLUTIONS LLC, sociedade de responsabilidade limitada registrada no Estado da Flórida, Estados Unidos da América, doravante denominada simplesmente KASH CORPORATE.");
-      writeBlock(`E-mail: ${company.email || "—"}  |  Telefone: ${company.phone || "—"}`);
-      writeBlock(`Endereço: ${company.address || "—"}`);
-      members.forEach((m, i) => {
-        writeBlock(`Sócio ${i + 1}: ${m.fullName || "—"} — Passaporte: ${m.passport || "—"} — Emissor: ${m.issuer || "—"} — Validade: ${m.expiry || "—"} — %: ${m.share || "—"} — E-mail: ${m.email || "—"} — Telefone: ${m.phone || "—"}`);
-      });
+      writeBlock(`CLIENT: ${company.companyName || "[CLIENT NAME]"}, identified by the information provided in the electronic form, hereinafter referred to as CLIENT.`);
+      writeBlock("CONTRACTOR: KASH CORPORATE SOLUTIONS LLC, a limited liability company registered in the State of Florida, United States of America, hereinafter referred to as KASH CORPORATE.");
 
-      const CLAUSULAS_PT = [
-        { t: "CLÁUSULA 1ª – OBJETO", c: "O presente contrato tem por objeto a prestação de serviços de registro de empresa (LLC) no Estado da Flórida, bem como a subsequente aplicação junto ao Internal Revenue Service (IRS) para obtenção do Employer Identification Number – EIN, após a aprovação da constituição da empresa." },
-        { t: "CLÁUSULA 2ª – ENDEREÇO E AGENTE REGISTRADO", c: "A CONTRATADA fornecerá: (a) endereço comercial virtual pelo prazo de 12 (doze) meses, contados da assinatura deste contrato, sem direito a uso físico do espaço; (b) agente registrado no Estado da Flórida, igualmente pelo prazo de 12 (doze) meses, para cumprimento das obrigações legais da empresa." },
-        { t: "CLÁUSULA 3ª – RESPONSABILIDADE DAS INFORMAÇÕES", c: "Todas as informações fornecidas pelo CONTRATANTE para instrução dos processos de registro são de sua exclusiva responsabilidade, respondendo civil e criminalmente por eventuais incorreções, omissões ou declarações falsas." },
-        { t: "CLÁUSULA 4ª – LIMITAÇÕES DOS SERVIÇOS", c: "Não estão incluídos no escopo deste contrato: I. Requerimento de permissões, licenças ou alvarás de qualquer natureza. II. Serviços de contabilidade, declarações fiscais, preenchimento de formulários adicionais ou pagamento de tributos. III. Abertura de conta bancária nos Estados Unidos ou em qualquer outro país. IV. Qualquer outro serviço não expressamente previsto na Cláusula 1ª." },
-        { t: "CLÁUSULA 5ª – REMUNERAÇÃO E FORMA DE PAGAMENTO", c: "Pelos serviços objeto deste contrato, o CONTRATANTE pagará à CONTRATADA o valor de US$ 1.360,00 (um mil trezentos e sessenta dólares norte-americanos), em parcela única e imediata, no ato da contratação, exclusivamente pelos meios de pagamento disponibilizados no site oficial da CONTRATADA." },
-        { t: "CLÁUSULA 6ª – ENCERRAMENTO DOS SERVIÇOS", c: "A obrigação da CONTRATADA se encerra após a emissão do EIN e a entrega dos documentos digitais comprobatórios ao CONTRATANTE." },
-        { t: "CLÁUSULA 7ª – VIGÊNCIA", c: "Este contrato entra em vigor na data de sua assinatura e permanecerá válido até a conclusão dos serviços contratados, conforme a Cláusula 6ª, ressalvada a manutenção do endereço e do agente registrado pelo prazo estipulado na Cláusula 2ª." },
-        { t: "CLÁUSULA 8ª – CONDIÇÃO DE VALIDADE", c: "O presente contrato somente terá validade e produzirá efeitos após o pagamento integral do valor previsto na Cláusula 5ª." },
-        { t: "CLÁUSULA 9ª – ACOMPANHAMENTO DO CASO", c: "Após a confirmação do pagamento, a CONTRATADA disponibilizará ao CONTRATANTE um Track Number exclusivo, que permitirá acompanhar o andamento do processo por meio da plataforma digital da CONTRATADA." },
-        { t: "CLÁUSULA 10ª – APROVAÇÃO DEPENDE DE ÓRGÃOS PÚBLICOS", c: "A aprovação de registros e emissões perante o Estado da Flórida e o IRS depende exclusivamente dos órgãos públicos competentes. A CONTRATADA não garante prazos ou deferimentos, comprometendo-se, entretanto, a adotar as melhores práticas para a correta instrução dos pedidos." },
-        { t: "CLÁUSULA 11ª – FORO", c: "Para dirimir quaisquer conflitos decorrentes deste contrato, fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, sem prejuízo da possibilidade de opção pelo foro da Cidade de Orlando, Estado da Flórida, Estados Unidos da América, a critério do CONTRATANTE." },
+      const CLAUSES = [
+        { t: "SECTION 1 – PURPOSE", c: "This Agreement covers the registration of a limited liability company (LLC) in Florida, followed by the application with the IRS for issuance of the Employer Identification Number (EIN), upon approval of the company formation." },
+        { t: "SECTION 2 – REGISTERED AGENT AND ADDRESS", c: "KASH CORPORATE will provide: (a) a virtual business address in Florida for twelve (12) months; (b) a registered agent in Florida for twelve (12) months. After this period, services may be renewed with additional fees." },
+        { t: "SECTION 3 – INFORMATION RESPONSIBILITY", c: "All information provided by CLIENT is of his/her sole responsibility, including legal and civil liability for inaccuracies or false statements." },
+        { t: "SECTION 4 – LIMITATIONS", c: "This Agreement does not include: licenses/permits, tax filings, bookkeeping, or banking services." },
+        { t: "SECTION 5 – COMPENSATION", c: "CLIENT shall pay KASH CORPORATE the amount of US$ 1,360.00, in one single installment, at the time of hiring, through the official payment methods available on KASH CORPORATE’s website." },
+        { t: "SECTION 6 – TERMINATION", c: "KASH CORPORATE's obligations end after issuance of the EIN and delivery of digital documents to CLIENT." },
+        { t: "SECTION 7 – TERM", c: "This Agreement is effective on the signing date and remains valid until completion of services described herein." },
+        { t: "SECTION 8 – VALIDITY CONDITION", c: "This Agreement only becomes valid after full payment as per Section 5." },
+        { t: "SECTION 9 – CASE TRACKING", c: "After payment, CLIENT will receive a unique Tracking Number to monitor the process progress via KASH CORPORATE’s platform." },
+        { t: "SECTION 10 – PUBLIC AGENCIES", c: "Approval of company formation and EIN issuance depends exclusively on the respective government agencies (State of Florida and IRS). KASH CORPORATE does not guarantee timelines or approvals." },
+        { t: "SECTION 11 – JURISDICTION", c: "For disputes, the forum elected is Rio de Janeiro, Brazil, with optional jurisdiction in Orlando, Florida, USA, at CLIENT’s discretion." }
       ];
 
       y += 6;
-      CLAUSULAS_PT.forEach(({ t, c }) => {
-        doc.setFontSize(12); writeBlock(t, { size: 12, gap: 16 });
-        writeBlock(c, { size: 11, gap: 14 }); y += 6;
+      CLAUSES.forEach(({ t, c }) => {
+        doc.setFontSize(12);
+        writeBlock(t, { size: 12, gap: 14 });
+        writeBlock(c, { size: 11, gap: 14 });
+        y += 4;
       });
 
-      writeBlock("E, por estarem assim justos e contratados, firmam o presente contrato em meio eletrônico, após ciência e aceite digital, para que produza seus devidos efeitos legais.", { size: 11 });
-      writeBlock(`[Local]: ______________________   [Data]: ____/____/________`, { size: 11, gap: 18 });
-      writeBlock(`CONTRATANTE: ${company.companyName || "______________________"}`, { size: 11 });
+      // Linha em branco antes da assinatura
+      y += 20;
+
+      const now = new Date();
+      const dateStr = now.toLocaleDateString("en-US");
+      const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+
+      writeBlock(`Place: ______________________   Date: ${dateStr} ${timeStr}`, { size: 11, gap: 16 });
+
+      // Sócios (cada um em uma linha)
+      form.members.forEach((m) => {
+        writeBlock(`${m.fullName || "______________________"}`, { size: 11, gap: 16 });
+      });
+
+      // Contratada
       writeBlock(`KASH CORPORATE SOLUTIONS LLC`, { size: 11 });
 
       return URL.createObjectURL(doc.output("blob"));
     } catch (e) {
-      console.warn("Falha ao gerar PDF", e);
+      console.warn("Failed to generate PDF", e);
       return "";
     }
   }
 
-  // download automático quando o pdfUrl é criado
-  useEffect(() => {
-    if (!pdfUrl) return;
-    try {
-      const a = document.createElement("a");
-      a.href = pdfUrl;
-      a.download = `Contrato_KASH_${tracking || Date.now()}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-    } catch (e) {
-      console.warn("Falha ao baixar automático. Use o link na tela.", e);
-    }
-  }, [pdfUrl, tracking]);
-
   async function submit() {
-    const err = validate(); if (err) { alert(err); return; }
+    const result = validate(); if (!result.ok) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     setLoading(true);
 
-    // 1) gera tracking
-    const mock = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-
-    // 2) gera PDF
-    const url = generatePdf();
-    setPdfUrl(url);
-    setTracking(mock);
-
-    // 3) envia dados ao Formspree
+    // 1) Enviar ao Formspree (JSON)
     try {
       await fetch(CONFIG.formspreeEndpoint, {
         method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({ ...form, tracking: mock }),
+        headers: { "Accept": "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, source: "kashsolutions.us" }),
       });
     } catch (e) {
-      console.warn("Falha ao enviar para Formspree", e);
+      console.warn("Formspree error (seguimos mesmo assim)", e);
     }
 
-    setLoading(false);
-    setStep(3);
+    // 2) Gerar Tracking
+    const mock = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase(); setTracking(mock);
+
+    // 3) Gerar/baixar contrato PDF
+    const url = generatePdf();
+    if (url) {
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `KASH_Contract_${mock}.pdf`;
+      document.body.appendChild(a);
+      a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+
+    setLoading(false); setStep(3);
   }
 
   if (!open) return null;
@@ -506,41 +454,105 @@ function FormWizard({ open, onClose }) {
         {step === 1 && (
           <div className="p-6">
             <h4 className="text-slate-100 font-medium">1/2 — Dados iniciais da LLC</h4>
+
+            {/* Empresa */}
             <div className="mt-4 grid gap-4">
-              <div><label className="block text-sm text-slate-400" htmlFor="companyName">Nome da LLC</label><input id="companyName" className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100" value={company.companyName} onChange={(e) => updateCompany("companyName", e.target.value)} /></div>
-              <div><label className="block text-sm text-slate-400" htmlFor="companyEmail">E-mail principal</label><input id="companyEmail" type="email" autoComplete="email" className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100" value={company.email} onChange={(e) => updateCompany("email", e.target.value)} /></div>
-              <div><label className="block text-sm text-slate-400" htmlFor="companyPhone">Telefone principal</label><input id="companyPhone" type="tel" inputMode="tel" className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100" value={company.phone} onChange={(e) => updateCompany("phone", e.target.value)} /></div>
-              <div><label className="block text-sm text-slate-400" htmlFor="companyAddr">Endereço no Brasil</label><input id="companyAddr" className="w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100" value={company.address} onChange={(e) => updateCompany("address", e.target.value)} /></div>
+              <div>
+                <label className="block text-sm text-slate-400" htmlFor="companyName">Nome da LLC</label>
+                <input id="companyName" className={classNames("w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100", errors.company.companyName && "ring-1 ring-red-400")} value={company.companyName} onChange={(e) => updateCompany("companyName", e.target.value)} />
+                <FieldError msg={errors.company.companyName} />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400" htmlFor="companyEmail">E-mail principal</label>
+                <input id="companyEmail" type="email" className={classNames("w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100", errors.company.email && "ring-1 ring-red-400")} value={company.email} onChange={(e) => updateCompany("email", e.target.value)} />
+                <FieldError msg={errors.company.email} />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400" htmlFor="companyPhone">Telefone principal</label>
+                <input id="companyPhone" type="tel" inputMode="tel" className={classNames("w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100", errors.company.phone && "ring-1 ring-red-400")} value={company.phone} onChange={(e) => updateCompany("phone", e.target.value)} />
+                <FieldError msg={errors.company.phone} />
+              </div>
+              <div>
+                <label className="block text-sm text-slate-400" htmlFor="companyAddr">Endereço no Brasil</label>
+                <input id="companyAddr" className={classNames("w-full rounded-xl bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100", errors.company.address && "ring-1 ring-red-400")} value={company.address} onChange={(e) => updateCompany("address", e.target.value)} />
+                <FieldError msg={errors.company.address} />
+              </div>
             </div>
 
+            {/* Sócios */}
             <h4 className="mt-6 text-slate-100 font-medium">Sócios (mínimo 2)</h4>
             <div className="mt-2 space-y-4">
               {members.map((m, i) => (
-                <MemberCard key={i} index={i} data={m} canRemove={members.length > 2} onChange={(field, value) => updateMember(i, field, value)} onRemove={() => removeMember(i)} />
+                <MemberCard
+                  key={i}
+                  index={i}
+                  data={m}
+                  canRemove={members.length > 2}
+                  onChange={(field, value) => updateMember(i, field, value)}
+                  onRemove={() => removeMember(i)}
+                  errors={errors.members[i] || {}}
+                />
               ))}
             </div>
             <button onClick={addMember} className="mt-4 text-emerald-400 hover:underline">+ Adicionar sócio</button>
 
+            {/* Aceites */}
             <div className="mt-6 space-y-3 text-sm text-slate-300">
               <label className="flex items-start gap-2">
                 <input type="checkbox" checked={accept.responsibility} onChange={(e) => toggleAccept("responsibility", e.target.checked)} />
-                <span>Declaro, sob minha responsabilidade, que todas as informações prestadas são verdadeiras e assumo total responsabilidade civil e legal por elas.</span>
+                <span>Declaro que todas as informações prestadas são verdadeiras e assumo total responsabilidade civil e legal por elas.</span>
               </label>
               <label className="flex items-start gap-2">
                 <input type="checkbox" checked={accept.limitations} onChange={(e) => toggleAccept("limitations", e.target.checked)} />
-                <span>Estou ciente de que (i) o registro da LLC <strong>não</strong> implica contratação automática de serviços mensais de contabilidade; (ii) licenças/permissões especiais <strong>não</strong> fazem parte deste processo; e (iii) o mau uso da empresa poderá resultar em medidas judiciais.</span>
+                <span>Estou ciente de que (i) o registro da LLC <strong>não</strong> implica contratação automática de serviços mensais; (ii) licenças/permissões especiais <strong>não</strong> fazem parte deste processo; (iii) o mau uso da empresa pode resultar em medidas judiciais. Agente registrado e endereço virtual incluídos por 12 meses, com possibilidade de renovação mediante cobrança.</span>
               </label>
-              <input type="text" className="hidden" autoComplete="off" tabIndex="-1" value={form.honeypot} onChange={(e) => dispatch({ type: "SET_HONEYPOT", value: e.target.value })} />
+              {errors.accept.base && <div className="text-red-400 text-xs">{errors.accept.base}</div>}
             </div>
 
-            <div className="mt-6 flex justify-end gap-3"><CTAButton variant="ghost" onClick={() => setStep(1)}>Revisar</CTAButton><CTAButton onClick={() => setStep(2)}>Continuar</CTAButton></div>
+            <div className="mt-6 flex justify-end gap-3">
+              <CTAButton variant="ghost" onClick={() => setStep(1)}>Revisar</CTAButton>
+              <CTAButton onClick={() => { const v = validate(); if (v.ok) setStep(2); }}>Continuar</CTAButton>
+            </div>
           </div>
         )}
 
         {step === 2 && (
           <div className="p-6">
             <h4 className="text-slate-100 font-medium">2/2 — Revisão e envio</h4>
-            <ReviewCard form={form} />
+
+            {/* Revisão bonita (sem JSON cru) */}
+            <div className="mt-4 grid gap-4">
+              <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+                <div className="text-slate-300 font-medium">Empresa</div>
+                <div className="mt-2 grid md:grid-cols-2 gap-x-6 gap-y-2 text-sm text-slate-400">
+                  <div><span className="text-slate-500">Nome: </span>{company.companyName || "—"}</div>
+                  <div><span className="text-slate-500">E-mail: </span>{company.email || "—"}</div>
+                  <div><span className="text-slate-500">Telefone: </span>{company.phone || "—"}</div>
+                  <div className="md:col-span-2"><span className="text-slate-500">Endereço: </span>{company.address || "—"}</div>
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+                <div className="text-slate-300 font-medium">Sócios</div>
+                <div className="mt-2 space-y-3">
+                  {members.map((m, i) => (
+                    <div key={i} className="text-sm text-slate-400 border-t border-slate-800 pt-3 first:border-t-0 first:pt-0">
+                      <div className="font-medium text-slate-300">Sócio {i + 1}: {m.fullName || "—"}</div>
+                      <div className="grid md:grid-cols-2 gap-x-6 gap-y-1">
+                        <div><span className="text-slate-500">Passaporte: </span>{m.passport || "—"}</div>
+                        <div><span className="text-slate-500">Emissor: </span>{m.issuer || "—"}</div>
+                        <div><span className="text-slate-500">Validade: </span>{m.expiry || "—"}</div>
+                        <div><span className="text-slate-500">% Participação: </span>{m.share || "—"}</div>
+                        <div><span className="text-slate-500">Telefone: </span>{m.phone || "—"}</div>
+                        <div><span className="text-slate-500">E-mail: </span>{m.email || "—"}</div>
+                        <div><span className="text-slate-500">Nascimento: </span>{m.birthdate || "—"}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
             <div className="mt-6 flex justify-end gap-3">
               <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
               <CTAButton onClick={submit}>{loading ? "Processando..." : "Confirmar & gerar tracking"}</CTAButton>
@@ -553,9 +565,6 @@ function FormWizard({ open, onClose }) {
             <div className="mx-auto w-16 h-16 rounded-full bg-emerald-500/15 border border-emerald-400/30 flex items-center justify-center"><span className="text-2xl">✅</span></div>
             <h4 className="mt-4 text-slate-100 font-semibold">Pedido iniciado</h4>
             <div className="mt-2 text-emerald-400 text-xl font-bold">{tracking}</div>
-            {pdfUrl
-              ? <div className="mt-3"><a className="text-emerald-400 underline" href={pdfUrl} target="_blank" rel="noreferrer">Visualizar/baixar contrato (PDF)</a></div>
-              : <p className="text-slate-400 text-sm mt-3">Gerando contrato...</p>}
             <p className="text-slate-500 text-xs mt-2">Guarde este código para consultar o status.</p>
             <div className="mt-6"><CTAButton onClick={onClose}>Concluir</CTAButton></div>
           </div>
@@ -565,12 +574,12 @@ function FormWizard({ open, onClose }) {
   );
 }
 
-/* ===================== FOOTER & APP ===================== */
+/* ================== FOOTER & APP ================== */
 function Footer() {
   return (
     <footer className="py-10 border-t border-slate-800">
       <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4 text-slate-400 text-sm">
-        <div className="flex items-center gap-3"><KLogo size={28} /> <span>© {new Date().getFullYear()} {CONFIG.brand.trade} — {CONFIG.brand.legal}</span></div>
+        <div className="flex items-center gap-3"><KLogo size={28} /> <span>© {new Date().getFullYear()} KASH Solutions — {CONFIG.brand.legal}</span></div>
         <div className="flex items-center gap-4">
           <a className="hover:text-slate-200" href="#servicos">Serviços</a>
           <a className="hover:text-slate-200" href="#planos">Planos</a>
@@ -593,17 +602,13 @@ export default function App() {
     <div className="min-h-screen bg-slate-950 text-slate-200">
       <header className="sticky top-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-slate-950/70 border-b border-slate-800">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-3"><KLogo size={32} /><div className="font-semibold text-slate-100">KA$H Solutions</div></div>
+          <div className="flex items-center gap-3"><KLogo size={32} /><div className="font-semibold text-slate-100">KASH Solutions</div></div>
           <nav className="hidden md:flex items-center gap-6 text-sm">
             <a className="hover:text-emerald-400" href="#servicos">Serviços</a>
             <a className="hover:text-emerald-400" href="#planos">Planos</a>
             <a className="hover:text-emerald-400" href="#como-funciona">Como funciona</a>
-            <a className="hover:text-emerald-400" href="#tracking">Tracking</a>
           </nav>
-          <div className="flex items-center gap-3">
-            <CTAButton variant="ghost" onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}>Contato</CTAButton>
-            <CTAButton onClick={onStart}>Começar</CTAButton>
-          </div>
+          <div className="flex items-center gap-3"><CTAButton variant="ghost" onClick={() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' })}>Contato</CTAButton><CTAButton onClick={onStart}>Começar</CTAButton></div>
         </div>
       </header>
 
@@ -611,11 +616,10 @@ export default function App() {
       <Services />
       <Pricing onBuy={onBuy} onBook={onBook} />
       <HowItWorks />
-      <TrackingLookup />
 
       <section id="contato" className="py-16 border-t border-slate-800">
         <div className="max-w-6xl mx-auto px-4">
-          <SectionTitle title="Fale com a KA$H" subtitle="Tire dúvidas sobre o enquadramento ideal para o seu caso." />
+          <SectionTitle title="Fale com a KASH" subtitle="Tire dúvidas sobre o enquadramento ideal para o seu caso." />
           <div className="mt-8 grid md:grid-cols-3 gap-5">
             <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
               <div className="text-slate-100 font-medium">Consulta inicial</div>
@@ -642,7 +646,7 @@ export default function App() {
   );
 }
 
-/* ===================== DEV TESTS ===================== */
+/* ===== Dev sanity tests ===== */
 (function runDevTests(){
   try {
     console.assert(calcAgeFullDate('2010-01-01') < 18, 'Age: under 18 invalid');
