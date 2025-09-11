@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useReducer, useState, useEffect } from "react";
 
+/* ===================== CONFIG ===================== */
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "+1 (305) 000-0000", email: "contato@kashsolutions.us", calendly: "" },
@@ -7,6 +8,7 @@ const CONFIG = {
   formspreeEndpoint: "https://formspree.io/f/xblawgpk",
 };
 
+/* ===================== HELPERS ===================== */
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
 function classNames(...c) { return c.filter(Boolean).join(" "); }
@@ -24,7 +26,7 @@ function isPercentTotalValid(members) {
   return Math.abs(total - 100) <= 0.01;
 }
 
-/* ---------- UI bits ---------- */
+/* ===================== UI PRIMITIVES ===================== */
 function KLogo({ size = 40 }) {
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
@@ -63,6 +65,8 @@ function CTAButton({ children, onClick, variant = "primary", type = "button", di
     : "bg-slate-200 hover:bg-white text-slate-900";
   return <button type={type} disabled={disabled} className={classNames(base, styles, disabled && "opacity-60 cursor-not-allowed")} onClick={onClick}>{children}</button>;
 }
+
+/* ===================== HERO & SEÇÕES ===================== */
 function DemoCalculator() {
   const [gross, setGross] = useState(5000);
   const withholding = useMemo(() => Math.max(0, (gross || 0) * 0.3), [gross]);
@@ -123,8 +127,8 @@ function Services() {
   const items = [
     { title: "Abertura de LLC (Florida)", desc: "Registro estatal, EIN, Operating Agreement e documentos digitais prontos para download." },
     { title: "Agente Registrado + Endereço físico", desc: "Incluso por 12 meses, se necessário. Após esse período, serviços passam a ser cobrados." },
-    { title: "Onboarding legal & fiscal", desc: "Checklist, KYC/AML, enquadramento e orientações operacionais para plataformas." },
-    { title: "Bookkeeping mensal (KASH FLOW 30)", desc: "Classificação contábil contínua. (Não inclui gestão de contratos.)" },
+    { title: "Onboarding legal & fiscal", desc: "Checklist, KYC/AML, enquadramento e orientações operacionais." },
+    { title: "Bookkeeping mensal (KASH FLOW 30)", desc: "Classificação contábil contínua." },
     { title: "Suporte contratual (KASH SCALE 5)", desc: "Até 5 contratos/mês. Operações com terceiros no Brasil." },
   ];
   return (
@@ -193,7 +197,7 @@ function HowItWorks() {
   );
 }
 
-/* ---------- Form State ---------- */
+/* ===================== FORM STATE ===================== */
 const initialForm = {
   company: { companyName: "", email: "", phone: "", address: "" },
   members: [
@@ -229,6 +233,8 @@ function formReducer(state, action) {
     default: return state;
   }
 }
+
+/* ===================== CARDS ===================== */
 function MemberCard({ index, data, onChange, onRemove, canRemove }) {
   return (
     <div className="p-4 border border-slate-700 rounded-xl bg-slate-800 space-y-2">
@@ -250,8 +256,6 @@ function MemberCard({ index, data, onChange, onRemove, canRemove }) {
     </div>
   );
 }
-
-/* ---------- Revisão bonita ---------- */
 function ReviewCard({ form }) {
   const { company, members, accept } = form;
   return (
@@ -294,7 +298,7 @@ function ReviewCard({ form }) {
   );
 }
 
-/* ---------- Tracking (consulta) ---------- */
+/* ===================== TRACKING (consulta) ===================== */
 function TrackingLookup() {
   const [code, setCode] = useState("");
   const [result, setResult] = useState(null);
@@ -341,14 +345,14 @@ function TrackingLookup() {
   );
 }
 
-/* ---------- Form Wizard ---------- */
+/* ===================== FORM WIZARD ===================== */
 function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
-  const [pdfUrl, setPdfUrl] = useState(""); // link do contrato
-  const [form, dispatch] = useReducer(formReducer, initialForm);
+  const [pdfUrl, setPdfUrl] = useState("");
 
+  const [form, dispatch] = useReducer(formReducer, initialForm);
   const updateCompany = useCallback((field, value) => dispatch({ type: "UPDATE_COMPANY", field, value }), []);
   const updateMember = useCallback((index, field, value) => dispatch({ type: "UPDATE_MEMBER", index, field, value }), []);
   const addMember = useCallback(() => dispatch({ type: "ADD_MEMBER" }), []);
@@ -379,38 +383,74 @@ function FormWizard({ open, onClose }) {
     return "";
   }
 
-  // Gera PDF simples com jsPDF (contrato)
+  // --------- PDF (contrato PT) com jsPDF ---------
   function generatePdf() {
     try {
       // @ts-ignore
       const { jsPDF } = window.jspdf || {};
       if (!jsPDF) return "";
-      const doc = new jsPDF({ unit: "pt" });
+
+      const doc = new jsPDF({ unit: "pt", format: "a4" });
       const { company, members } = form;
 
-      const line = (t, y) => doc.text(t, 48, y);
-      let y = 64;
-      doc.setFontSize(16); line("CONTRATO DE PRESTAÇÃO DE SERVIÇOS — KA$H Solutions", y); y += 28;
-      doc.setFontSize(11);
-      line(`Empresa: ${company.companyName}`, y); y += 16;
-      line(`E-mail: ${company.email} | Telefone: ${company.phone}`, y); y += 16;
-      line(`Endereço: ${company.address}`, y); y += 24;
+      const M = { l: 48, r: 48, t: 64, b: 64, width: 595.28 - 48 - 48 };
+      let y = M.t;
+      const line = (t, yy) => doc.text(t, M.l, yy);
+      const writeBlock = (text, opts = {}) => {
+        const size = opts.size || 11; const gap = opts.gap ?? 14;
+        doc.setFontSize(size);
+        const parts = doc.splitTextToSize(text, M.width);
+        for (const p of parts) {
+          if (y > (doc.internal.pageSize.getHeight() - M.b)) { doc.addPage(); y = M.t; }
+          line(p, y); y += gap;
+        }
+      };
 
+      doc.setFont("Helvetica", "normal");
+      doc.setFontSize(16); line("CONTRATO DE PRESTAÇÃO DE SERVIÇOS — KA$H Solutions", y); y += 28;
+
+      doc.setFontSize(11);
+      writeBlock(`CONTRATANTE: ${company.companyName || "[NOME COMPLETO]"}, portador(a) dos documentos e dados informados no formulário eletrônico, doravante denominado(a) simplesmente CLIENTE.`);
+      writeBlock("CONTRATADA: KASH CORPORATE SOLUTIONS LLC, sociedade de responsabilidade limitada registrada no Estado da Flórida, Estados Unidos da América, doravante denominada simplesmente KASH CORPORATE.");
+      writeBlock(`E-mail: ${company.email || "—"}  |  Telefone: ${company.phone || "—"}`);
+      writeBlock(`Endereço: ${company.address || "—"}`);
       members.forEach((m, i) => {
-        line(`Sócio ${i + 1}: ${m.fullName} — Passaporte: ${m.passport} — %: ${m.share}`, y); y += 16;
+        writeBlock(`Sócio ${i + 1}: ${m.fullName || "—"} — Passaporte: ${m.passport || "—"} — Emissor: ${m.issuer || "—"} — Validade: ${m.expiry || "—"} — %: ${m.share || "—"} — E-mail: ${m.email || "—"} — Telefone: ${m.phone || "—"}`);
       });
-      y += 16;
-      const clause = "A aprovação de registros e emissões (Florida State/IRS) depende exclusivamente dos órgãos públicos competentes.";
-      const text = doc.splitTextToSize(clause, 520);
-      text.forEach(t => { line(t, y); y += 14; });
+
+      const CLAUSULAS_PT = [
+        { t: "CLÁUSULA 1ª – OBJETO", c: "O presente contrato tem por objeto a prestação de serviços de registro de empresa (LLC) no Estado da Flórida, bem como a subsequente aplicação junto ao Internal Revenue Service (IRS) para obtenção do Employer Identification Number – EIN, após a aprovação da constituição da empresa." },
+        { t: "CLÁUSULA 2ª – ENDEREÇO E AGENTE REGISTRADO", c: "A CONTRATADA fornecerá: (a) endereço comercial virtual pelo prazo de 12 (doze) meses, contados da assinatura deste contrato, sem direito a uso físico do espaço; (b) agente registrado no Estado da Flórida, igualmente pelo prazo de 12 (doze) meses, para cumprimento das obrigações legais da empresa." },
+        { t: "CLÁUSULA 3ª – RESPONSABILIDADE DAS INFORMAÇÕES", c: "Todas as informações fornecidas pelo CONTRATANTE para instrução dos processos de registro são de sua exclusiva responsabilidade, respondendo civil e criminalmente por eventuais incorreções, omissões ou declarações falsas." },
+        { t: "CLÁUSULA 4ª – LIMITAÇÕES DOS SERVIÇOS", c: "Não estão incluídos no escopo deste contrato: I. Requerimento de permissões, licenças ou alvarás de qualquer natureza. II. Serviços de contabilidade, declarações fiscais, preenchimento de formulários adicionais ou pagamento de tributos. III. Abertura de conta bancária nos Estados Unidos ou em qualquer outro país. IV. Qualquer outro serviço não expressamente previsto na Cláusula 1ª." },
+        { t: "CLÁUSULA 5ª – REMUNERAÇÃO E FORMA DE PAGAMENTO", c: "Pelos serviços objeto deste contrato, o CONTRATANTE pagará à CONTRATADA o valor de US$ 1.360,00 (um mil trezentos e sessenta dólares norte-americanos), em parcela única e imediata, no ato da contratação, exclusivamente pelos meios de pagamento disponibilizados no site oficial da CONTRATADA." },
+        { t: "CLÁUSULA 6ª – ENCERRAMENTO DOS SERVIÇOS", c: "A obrigação da CONTRATADA se encerra após a emissão do EIN e a entrega dos documentos digitais comprobatórios ao CONTRATANTE." },
+        { t: "CLÁUSULA 7ª – VIGÊNCIA", c: "Este contrato entra em vigor na data de sua assinatura e permanecerá válido até a conclusão dos serviços contratados, conforme a Cláusula 6ª, ressalvada a manutenção do endereço e do agente registrado pelo prazo estipulado na Cláusula 2ª." },
+        { t: "CLÁUSULA 8ª – CONDIÇÃO DE VALIDADE", c: "O presente contrato somente terá validade e produzirá efeitos após o pagamento integral do valor previsto na Cláusula 5ª." },
+        { t: "CLÁUSULA 9ª – ACOMPANHAMENTO DO CASO", c: "Após a confirmação do pagamento, a CONTRATADA disponibilizará ao CONTRATANTE um Track Number exclusivo, que permitirá acompanhar o andamento do processo por meio da plataforma digital da CONTRATADA." },
+        { t: "CLÁUSULA 10ª – APROVAÇÃO DEPENDE DE ÓRGÃOS PÚBLICOS", c: "A aprovação de registros e emissões perante o Estado da Flórida e o IRS depende exclusivamente dos órgãos públicos competentes. A CONTRATADA não garante prazos ou deferimentos, comprometendo-se, entretanto, a adotar as melhores práticas para a correta instrução dos pedidos." },
+        { t: "CLÁUSULA 11ª – FORO", c: "Para dirimir quaisquer conflitos decorrentes deste contrato, fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, sem prejuízo da possibilidade de opção pelo foro da Cidade de Orlando, Estado da Flórida, Estados Unidos da América, a critério do CONTRATANTE." },
+      ];
+
+      y += 6;
+      CLAUSULAS_PT.forEach(({ t, c }) => {
+        doc.setFontSize(12); writeBlock(t, { size: 12, gap: 16 });
+        writeBlock(c, { size: 11, gap: 14 }); y += 6;
+      });
+
+      writeBlock("E, por estarem assim justos e contratados, firmam o presente contrato em meio eletrônico, após ciência e aceite digital, para que produza seus devidos efeitos legais.", { size: 11 });
+      writeBlock(`[Local]: ______________________   [Data]: ____/____/________`, { size: 11, gap: 18 });
+      writeBlock(`CONTRATANTE: ${company.companyName || "______________________"}`, { size: 11 });
+      writeBlock(`KASH CORPORATE SOLUTIONS LLC`, { size: 11 });
 
       return URL.createObjectURL(doc.output("blob"));
     } catch (e) {
-      console.warn("Falha ao gerar PDF", e); return "";
+      console.warn("Falha ao gerar PDF", e);
+      return "";
     }
   }
 
-  // Download automático ao gerar o link
+  // download automático quando o pdfUrl é criado
   useEffect(() => {
     if (!pdfUrl) return;
     try {
@@ -429,15 +469,15 @@ function FormWizard({ open, onClose }) {
     const err = validate(); if (err) { alert(err); return; }
     setLoading(true);
 
-    // 1) Gera Tracking
+    // 1) gera tracking
     const mock = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
 
-    // 2) Gera PDF
+    // 2) gera PDF
     const url = generatePdf();
     setPdfUrl(url);
     setTracking(mock);
 
-    // 3) Envia para o Formspree
+    // 3) envia dados ao Formspree
     try {
       await fetch(CONFIG.formspreeEndpoint, {
         method: "POST",
@@ -481,7 +521,6 @@ function FormWizard({ open, onClose }) {
             </div>
             <button onClick={addMember} className="mt-4 text-emerald-400 hover:underline">+ Adicionar sócio</button>
 
-            {/* declarações */}
             <div className="mt-6 space-y-3 text-sm text-slate-300">
               <label className="flex items-start gap-2">
                 <input type="checkbox" checked={accept.responsibility} onChange={(e) => toggleAccept("responsibility", e.target.checked)} />
@@ -526,7 +565,7 @@ function FormWizard({ open, onClose }) {
   );
 }
 
-/* ---------- Footer & Page ---------- */
+/* ===================== FOOTER & APP ===================== */
 function Footer() {
   return (
     <footer className="py-10 border-t border-slate-800">
@@ -603,7 +642,7 @@ export default function App() {
   );
 }
 
-/* Dev tests (console) */
+/* ===================== DEV TESTS ===================== */
 (function runDevTests(){
   try {
     console.assert(calcAgeFullDate('2010-01-01') < 18, 'Age: under 18 invalid');
