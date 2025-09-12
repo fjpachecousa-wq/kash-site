@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useCallback, useReducer, useState } from "react";
 
 /* ================== CONFIG ================== */
 const CONFIG = {
@@ -9,8 +9,11 @@ const CONFIG = {
   formspreeEndpoint: "https://formspree.io/f/xblawgpk",
 };
 
+const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const phoneRe = /^[0-9+()\-\s]{8,}$/;
 function classNames(...cls) { return cls.filter(Boolean).join(" "); }
 
+/* ================== UI BÁSICOS ================== */
 function CTAButton({ children, variant = "primary", onClick, type = "button", disabled = false }) {
   const base = "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed";
   const styles = variant === "primary"
@@ -60,7 +63,7 @@ function Pricing({ onStart }) {
 export default function App() {
   const [open, setOpen] = useState(false);
   return (
-    <div className=\"min-h-screen bg-slate-950 text-slate-200\">
+    <div className="min-h-screen bg-slate-950 text-slate-200">
       <Pricing onStart={() => setOpen(true)} />
     </div>
   );
