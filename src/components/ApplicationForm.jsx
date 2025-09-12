@@ -1,3 +1,4 @@
+import ApplicationForm from "./components/ApplicationForm.jsx";
 import React, { useMemo, useState } from "react";
 
 const FORMSPREE_ENDPOINT = "https://formspree.io/f/xblawgpk";
