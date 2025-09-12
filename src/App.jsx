@@ -1,10 +1,10 @@
 import React, { useCallback, useMemo, useReducer, useState } from "react";
 
-/* ================== CONFIGURAÇÃO ================== */
+/* ================== CONFIG ================== */
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "+1 (305) 000-0000", email: "contato@kashsolutions.us", calendly: "" },
-  checkout: { stripeUrl: "" }, // (futuro)
+  checkout: { stripeUrl: "" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
   formspreeEndpoint: "https://formspree.io/f/xblawgpk",
 };
@@ -59,7 +59,7 @@ function CTAButton({ children, onClick, variant = "primary", type = "button" }) 
   return <button type={type} className={classNames(base, styles)} onClick={onClick}>{children}</button>;
 }
 
-/* ================== PÁGINA: HERO/SEÇÕES ================== */
+/* ================== SEÇÕES DA HOME ================== */
 function DemoCalculator() {
   const [gross, setGross] = useState(5000);
   const withholding = useMemo(() => Math.max(0, (gross || 0) * 0.3), [gross]);
@@ -300,8 +300,7 @@ function FormWizard({ open, onClose }) {
     if (!company.address || company.address.trim().length < 5) errs.company.address = "Informe o endereço.";
 
     if (!Array.isArray(members) || members.length < 2) {
-      alert("É necessário ao menos 2 sócios.");
-      return { ok: false, errs };
+      alert("É necessário ao menos 2 sócios."); return { ok: false, errs };
     }
     for (let i = 0; i < members.length; i++) {
       const m = members[i];
@@ -325,8 +324,8 @@ function FormWizard({ open, onClose }) {
     return { ok, errs };
   }
 
-  // ===== PDF do contrato (estilo norte-americano) =====
-  function generatePdf() {
+  /* ===== PDF bilíngue com paginação e tracking ===== */
+  function generatePdf(trackingCode) {
     try {
       const { jsPDF } = window.jspdf || {};
       if (!jsPDF) return "";
@@ -334,35 +333,45 @@ function FormWizard({ open, onClose }) {
       const doc = new jsPDF({ unit: "pt", format: "a4" });
       const { company, members } = form;
 
-      const M = { l: 48, r: 48, t: 64, b: 64, width: 595.28 - 96 };
+      // Margens / helpers
+      const pageW = doc.internal.pageSize.getWidth();
+      const pageH = doc.internal.pageSize.getHeight();
+      const M = { l: 48, r: 48, t: 64, b: 64, width: pageW - 96 };
       let y = M.t;
+      const centerX = pageW / 2;
 
-      const line = (t, yy) => doc.text(t, M.l, yy);
-      const writeBlock = (text, opts = {}) => {
+      const text = (t, yy, opt = {}) => doc.text(t, M.l, yy, opt);
+      const writeBlock = (content, opts = {}) => {
         const size = opts.size || 11;
         const gap = opts.gap ?? 14;
         doc.setFontSize(size);
-        const parts = doc.splitTextToSize(text, M.width);
+        const parts = doc.splitTextToSize(content, M.width);
         for (const p of parts) {
-          if (y > doc.internal.pageSize.getHeight() - M.b) {
-            doc.addPage();
-            y = M.t;
-          }
-          line(p, y);
+          if (y > pageH - M.b) { doc.addPage(); y = M.t; }
+          text(p, y);
           y += gap;
         }
       };
+      const newSection = (title) => {
+        doc.setFontSize(12);
+        writeBlock(title, { size: 12, gap: 14 });
+        y += 2;
+      };
 
+      // Cabeçalho
       doc.setFont("Helvetica", "normal");
       doc.setFontSize(16);
-      line("SERVICE AGREEMENT – KASH Solutions", y);
-      y += 28;
+      text("SERVICE AGREEMENT – KASH Solutions", y); y += 20;
+      doc.setFontSize(10);
+      text(`Tracking: ${trackingCode}`, y); y += 20;
 
+      // EN — Parties
       doc.setFontSize(11);
       writeBlock(`CLIENT: ${company.companyName || "[CLIENT NAME]"}, identified by the information provided in the electronic form, hereinafter referred to as CLIENT.`);
-      writeBlock("CONTRACTOR: KASH CORPORATE SOLUTIONS LLC, a limited liability company registered in the State of Florida, United States of America, hereinafter referred to as KASH CORPORATE.");
+      writeBlock(`CONTRACTOR: ${CONFIG.brand.legal}, a limited liability company registered in the State of Florida, United States of America, hereinafter referred to as KASH CORPORATE.`);
 
-      const CLAUSES = [
+      // EN — Clauses
+      const EN = [
         { t: "SECTION 1 – PURPOSE", c: "This Agreement covers the registration of a limited liability company (LLC) in Florida, followed by the application with the IRS for issuance of the Employer Identification Number (EIN), upon approval of the company formation." },
         { t: "SECTION 2 – REGISTERED AGENT AND ADDRESS", c: "KASH CORPORATE will provide: (a) a virtual business address in Florida for twelve (12) months; (b) a registered agent in Florida for twelve (12) months. After this period, services may be renewed with additional fees." },
         { t: "SECTION 3 – INFORMATION RESPONSIBILITY", c: "All information provided by CLIENT is of his/her sole responsibility, including legal and civil liability for inaccuracies or false statements." },
@@ -373,33 +382,96 @@ function FormWizard({ open, onClose }) {
         { t: "SECTION 8 – VALIDITY CONDITION", c: "This Agreement only becomes valid after full payment as per Section 5." },
         { t: "SECTION 9 – CASE TRACKING", c: "After payment, CLIENT will receive a unique Tracking Number to monitor the process progress via KASH CORPORATE’s platform." },
         { t: "SECTION 10 – PUBLIC AGENCIES", c: "Approval of company formation and EIN issuance depends exclusively on the respective government agencies (State of Florida and IRS). KASH CORPORATE does not guarantee timelines or approvals." },
-        { t: "SECTION 11 – JURISDICTION", c: "For disputes, the forum elected is Rio de Janeiro, Brazil, with optional jurisdiction in Orlando, Florida, USA, at CLIENT’s discretion." }
+        { t: "SECTION 11 – JURISDICTION", c: "For disputes, the forum elected is Rio de Janeiro, Brazil, with optional jurisdiction in Orlando, Florida, USA, at CLIENT’s discretion." },
       ];
-
       y += 6;
-      CLAUSES.forEach(({ t, c }) => {
-        doc.setFontSize(12);
-        writeBlock(t, { size: 12, gap: 14 });
-        writeBlock(c, { size: 11, gap: 14 });
-        y += 4;
-      });
+      EN.forEach(({ t, c }) => { newSection(t); writeBlock(c, { size: 11, gap: 14 }); y += 4; });
 
-      // Linha em branco antes da assinatura
-      y += 20;
+      // Separador bilíngue
+      y += 10;
+      if (y > pageH - M.b) { doc.addPage(); y = M.t; }
+      doc.setFontSize(12);
+      text("— Portuguese Version Below —", y, { align: "left" }); y += 18;
 
+      // PT — Partes
+      writeBlock(`CONTRATANTE: ${company.companyName || "[NOME DO CLIENTE]"}, identificado(a) pelas informações fornecidas no formulário eletrônico, doravante denominado(a) CLIENTE.`);
+      writeBlock(`CONTRATADA: ${CONFIG.brand.legal}, sociedade de responsabilidade limitada, registrada no Estado da Flórida, Estados Unidos da América, doravante denominada KASH CORPORATE.`);
+
+      // PT — Cláusulas
+      const PT = [
+        { t: "CLÁUSULA 1ª – OBJETO", c: "O presente contrato tem por objeto o registro de empresa (LLC) no Estado da Flórida, seguido da aplicação junto ao IRS para emissão do EIN, após a aprovação da constituição da empresa." },
+        { t: "CLÁUSULA 2ª – AGENTE REGISTRADO E ENDEREÇO", c: "A KASH CORPORATE fornecerá: (a) endereço comercial virtual por 12 (doze) meses; (b) agente registrado na Flórida por 12 (doze) meses. Após esse período, os serviços poderão ser renovados mediante cobrança." },
+        { t: "CLÁUSULA 3ª – RESPONSABILIDADE DAS INFORMAÇÕES", c: "Todas as informações prestadas pelo CLIENTE são de sua exclusiva responsabilidade, incluindo responsabilidade civil e criminal por eventuais incorreções." },
+        { t: "CLÁUSULA 4ª – LIMITAÇÕES", c: "Não estão incluídos: licenças/alvarás, serviços contábeis/fiscais ou serviços bancários." },
+        { t: "CLÁUSULA 5ª – REMUNERAÇÃO", c: "O CLIENTE pagará à KASH CORPORATE o valor de US$ 1.360,00, em parcela única e imediata, por meio dos canais oficiais no site da KASH CORPORATE." },
+        { t: "CLÁUSULA 6ª – ENCERRAMENTO", c: "As obrigações da KASH CORPORATE encerram-se após a emissão do EIN e a entrega dos documentos digitais ao CLIENTE." },
+        { t: "CLÁUSULA 7ª – VIGÊNCIA", c: "Este contrato entra em vigor na data da assinatura e permanece válido até a conclusão dos serviços aqui descritos." },
+        { t: "CLÁUSULA 8ª – CONDIÇÃO DE VALIDADE", c: "Este contrato somente terá validade após o pagamento integral previsto na Cláusula 5ª." },
+        { t: "CLÁUSULA 9ª – ACOMPANHAMENTO", c: "Após o pagamento, o CLIENTE receberá um Número de Rastreamento (Tracking Number) para acompanhar o progresso do processo na plataforma da KASH CORPORATE." },
+        { t: "CLÁUSULA 10ª – ÓRGÃOS PÚBLICOS", c: "A aprovação da constituição da empresa e a emissão do EIN dependem exclusivamente dos órgãos públicos competentes (Estado da Flórida e IRS). A KASH CORPORATE não garante prazos ou aprovações." },
+        { t: "CLÁUSULA 11ª – FORO", c: "Fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, com opção pelo foro de Orlando, Flórida – EUA, a critério do CLIENTE." },
+      ];
+      y += 6;
+      PT.forEach(({ t, c }) => { newSection(t); writeBlock(c, { size: 11, gap: 14 }); y += 4; });
+
+      // Local e Data (PT/EN) + 2 linhas de espaço
       const now = new Date();
-      const dateStr = now.toLocaleDateString("en-US");
-      const timeStr = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+      const dateEN = now.toLocaleDateString("en-US");
+      const timeEN = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" });
+      y += 10;
+      writeBlock(`Local e Data / Place & Date: ______________________    ${dateEN} ${timeEN}`, { size: 11, gap: 14 });
+      // +2 linhas vazias (≈ 2 * 14pt)
+      y += 28;
 
-      writeBlock(`Place: ______________________   Date: ${dateStr} ${timeStr}`, { size: 11, gap: 16 });
+      // Blocos de assinatura dos sócios:
+      // - Nome do sócio (texto)
+      // - Linha de assinatura abaixo
+      // - Espaço de 3 linhas entre sócios (≈ 42pt)
+      const lineYGap = 16; // distância da linha de assinatura
+      const nameGap = 8;   // gap após o nome
+      const betweenPartners = 42; // 3 linhas (~14pt cada)
 
-      // Sócios (cada um em uma linha)
-      form.members.forEach((m) => {
-        writeBlock(`${m.fullName || "______________________"}`, { size: 11, gap: 16 });
+      members.forEach((m, idx) => {
+        const name = m.fullName || "____________________________";
+        // quebra de página se necessário
+        if (y > pageH - (M.b + 80)) { doc.addPage(); y = M.t; }
+
+        // Nome
+        doc.setFontSize(11);
+        text(name, y);
+        y += nameGap;
+
+        // Linha de assinatura (PT/EN)
+        const lineStart = M.l;
+        const lineEnd = pageW - M.r - 160;
+        doc.setLineWidth(0.7);
+        doc.line(lineStart, y + lineYGap, lineEnd, y + lineYGap);
+        doc.setFontSize(10);
+        text("Assinatura / Signature:", y + lineYGap - 2);
+        y += lineYGap + betweenPartners;
       });
 
-      // Contratada
-      writeBlock(`KASH CORPORATE SOLUTIONS LLC`, { size: 11 });
+      // Assinatura da contratada
+      if (y > pageH - (M.b + 80)) { doc.addPage(); y = M.t; }
+      doc.setFontSize(11);
+      text(`${CONFIG.brand.legal}`, y);
+      y += nameGap;
+      const lineStart2 = M.l;
+      const lineEnd2 = pageW - M.r - 160;
+      doc.setLineWidth(0.7);
+      doc.line(lineStart2, y + lineYGap, lineEnd2, y + lineYGap);
+      doc.setFontSize(10);
+      text("Assinatura / Signature:", y + lineYGap - 2);
+      y += lineYGap;
+
+      // ========== Paginação no rodapé ==========
+      const total = doc.getNumberOfPages();
+      for (let i = 1; i <= total; i++) {
+        doc.setPage(i);
+        doc.setFontSize(9);
+        const footer = `Page ${i} of ${total} • ${trackingCode}`;
+        doc.text(footer, centerX, pageH - 24, { align: "center" });
+      }
 
       return URL.createObjectURL(doc.output("blob"));
     } catch (e) {
@@ -412,22 +484,23 @@ function FormWizard({ open, onClose }) {
     const result = validate(); if (!result.ok) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     setLoading(true);
 
-    // 1) Enviar ao Formspree (JSON)
+    // 1) Gerar Tracking primeiro (para já constar no PDF)
+    const mock = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+    setTracking(mock);
+
+    // 2) Enviar ao Formspree (JSON)
     try {
       await fetch(CONFIG.formspreeEndpoint, {
         method: "POST",
         headers: { "Accept": "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, source: "kashsolutions.us" }),
+        body: JSON.stringify({ ...form, tracking: mock, source: "kashsolutions.us" }),
       });
     } catch (e) {
       console.warn("Formspree error (seguimos mesmo assim)", e);
     }
 
-    // 2) Gerar Tracking
-    const mock = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase(); setTracking(mock);
-
-    // 3) Gerar/baixar contrato PDF
-    const url = generatePdf();
+    // 3) Gerar/baixar contrato PDF (bilíngue)
+    const url = generatePdf(mock);
     if (url) {
       const a = document.createElement("a");
       a.href = url;
