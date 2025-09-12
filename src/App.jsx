@@ -13,7 +13,7 @@ const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
 function classNames(...cls) { return cls.filter(Boolean).join(" "); }
 
-/* Helpers (mantidos para futuras validações) */
+/* Helpers */
 function calcAgeFullDate(dateStr) {
   if (!dateStr) return 0;
   const d = new Date(dateStr);
@@ -211,52 +211,55 @@ function HowItWorks() {
 
 function FieldError({ msg }) { return msg ? <div className="text-red-400 text-xs mt-1">{msg}</div> : null; }
 
-/* ================== CONTRATO (ON-SCREEN) + PDF (2 páginas, 1 por idioma) ================== */
+/* ================== CONTRATO (ON-SCREEN) + PDF ================== */
 function ContractText({ companyName, tracking }) {
   return (
-    <div className="space-y-6 text-sm leading-5 text-slate-200">
-      <div>
+    <div className="space-y-8 text-[13px] leading-6 text-slate-200">
+      <section>
         <div className="text-base font-semibold text-slate-100">CONTRATO DE PRESTAÇÃO DE SERVIÇOS — KASH Solutions</div>
         <div className="text-xs text-slate-400">Cliente: {companyName || "[NOME DO CLIENTE]"} · Tracking: {tracking}</div>
         <ol className="list-decimal list-inside mt-3 space-y-2 text-slate-300">
           <li><b>Objeto.</b> Formação de LLC na Flórida, obtenção do EIN junto ao IRS e emissão do W‑8BEN‑E, após aprovação do registro.</li>
-          <li><b>Endereço e Agente.</b> Inclusos por 12 meses a partir da contratação; renováveis mediante cobrança adicional.</li>
+          <li><b>Endereço e Agente.</b> Inclusos por 12 meses; renováveis mediante cobrança adicional.</li>
           <li><b>Responsabilidade das informações.</b> Todos os dados enviados pelo CLIENTE são de sua exclusiva responsabilidade.</li>
           <li><b>Vigência e condição.</b> Este contrato entra em vigor após o pagamento integral das taxas e serviços.</li>
           <li><b>Jurisdição.</b> Rio de Janeiro/RJ, Brasil, podendo também ser aplicado o foro da Flórida (Orange County, EUA).</li>
           <li><b>Valor do pacote.</b> US$ 1.360, salvo promoções publicadas.</li>
           <li><b>Disposições finais.</b> O registro da LLC não implica contratação automática de serviços contábeis mensais.</li>
         </ol>
-      </div>
-      <div className="opacity-80">
+      </section>
+      <hr className="border-slate-700" />
+      <section>
         <div className="text-base font-semibold text-slate-100">SERVICE AGREEMENT — KASH Solutions</div>
         <div className="text-xs text-slate-400">Client: {companyName || "[CLIENT NAME]"} · Tracking: {tracking}</div>
         <ol className="list-decimal list-inside mt-3 space-y-2 text-slate-300">
           <li><b>Purpose.</b> Formation of a Florida LLC, obtaining the EIN with the IRS, and issuing Form W‑8BEN‑E upon company approval.</li>
-          <li><b>Registered Agent & Address.</b> Provided for 12 months from the date of contracting; renewable with additional fees.</li>
+          <li><b>Registered Agent & Address.</b> Provided for 12 months; renewable with additional fees.</li>
           <li><b>Information responsibility.</b> All information submitted by the CLIENT is the CLIENT’s sole responsibility.</li>
           <li><b>Effectiveness.</b> This Agreement becomes valid after full payment of services and fees.</li>
           <li><b>Jurisdiction.</b> Rio de Janeiro/RJ, Brazil, with Florida (Orange County, USA) as an alternative venue.</li>
           <li><b>Price.</b> US$ 1,360 unless otherwise promoted.</li>
           <li><b>Final provisions.</b> LLC registration does not imply automatic hiring of monthly bookkeeping.</li>
         </ol>
-      </div>
+      </section>
     </div>
   );
 }
 
-/* Geração de PDF enxuto: 2 páginas (PT e EN), fontes menores para caber 1 por página */
+/* PDF compacto (1 página PT + 1 página EN), fontes maiores para legibilidade */
 function generateCompactPdf({ companyName, tracking }) {
   try {
     const { jsPDF } = window.jspdf || {};
     if (!jsPDF) return "";
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();
-    const M = { l: 40, r: 40, t: 48, width: pageW - 80 };
-    const write = (title, header) => {
+    const M = { l: 44, r: 44, t: 54, width: pageW - 88 };
+
+    const writePT = () => {
       let y = M.t;
-      doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text(title, M.l, y); y += 16;
-      doc.setFont("helvetica", ""); doc.setFontSize(9); doc.text(header, M.l, y); y += 14;
+      doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text("CONTRATO DE PRESTAÇÃO DE SERVIÇOS — KASH Solutions", M.l, y); y += 18;
+      doc.setFont("helvetica", ""); doc.setFontSize(10.5); doc.text(`Cliente: ${companyName || "[NOME DO CLIENTE]"} · Tracking: ${tracking}`, M.l, y); y += 16;
+
       const blocks = [
         "1. OBJETO — Formação de LLC na Flórida, obtenção do EIN junto ao IRS e emissão do W‑8BEN‑E, após aprovação do registro.",
         "2. ENDEREÇO E AGENTE — Inclusos por 12 (doze) meses a partir da contratação; renováveis mediante cobrança adicional.",
@@ -268,15 +271,15 @@ function generateCompactPdf({ companyName, tracking }) {
       ];
       for (const b of blocks) {
         const lines = doc.splitTextToSize(b, M.width);
-        doc.text(lines, M.l, y); y += 12 * lines.length + 4;
+        doc.text(lines, M.l, y); y += 14 * lines.length + 4;
       }
     };
-    write("CONTRATO DE PRESTAÇÃO DE SERVIÇOS — KASH Solutions", `Cliente: ${companyName || "[NOME]"} · Tracking: ${tracking}`);
-    doc.addPage();
+
     const writeEN = () => {
       let y = M.t;
-      doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text("SERVICE AGREEMENT — KASH Solutions", M.l, y); y += 16;
-      doc.setFont("helvetica", ""); doc.setFontSize(9); doc.text(`Client: ${companyName || "[NAME]"} · Tracking: ${tracking}`, M.l, y); y += 14;
+      doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text("SERVICE AGREEMENT — KASH Solutions", M.l, y); y += 18;
+      doc.setFont("helvetica", ""); doc.setFontSize(10.5); doc.text(`Client: ${companyName || "[CLIENT NAME]"} · Tracking: ${tracking}`, M.l, y); y += 16;
+
       const blocks = [
         "1. PURPOSE — Formation of a Florida LLC, obtaining the EIN with the IRS, and issuing Form W‑8BEN‑E upon company approval.",
         "2. REGISTERED AGENT & ADDRESS — Provided for 12 (twelve) months from the contracting date; renewable with additional fees.",
@@ -288,9 +291,12 @@ function generateCompactPdf({ companyName, tracking }) {
       ];
       for (const b of blocks) {
         const lines = doc.splitTextToSize(b, M.width);
-        doc.text(lines, M.l, y); y += 12 * lines.length + 4;
+        doc.text(lines, M.l, y); y += 14 * lines.length + 4;
       }
     };
+
+    writePT();
+    doc.addPage();
     writeEN();
     return doc.output("bloburl");
   } catch (e) {
@@ -303,8 +309,8 @@ function generateCompactPdf({ companyName, tracking }) {
 const initialForm = {
   company: { companyName: "", email: "", phone: "", address: "" },
   members: [
-    { fullName: "", passport: "", issuer: "", birthdate: "", percent: "" },
-    { fullName: "", passport: "", issuer: "", birthdate: "", percent: "" },
+    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
+    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
   ],
   accept: { responsibility: false, limitations: false },
 };
@@ -317,7 +323,7 @@ function formReducer(state, action) {
       return { ...state, members: list };
     }
     case "ADD_MEMBER":
-      return { ...state, members: [...state.members, { fullName: "", passport: "", issuer: "", birthdate: "", percent: "" }] };
+      return { ...state, members: [...state.members, { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" }] };
     case "REMOVE_MEMBER":
       return { ...state, members: state.members.filter((_, i) => i !== action.index) };
     case "TOGGLE_ACCEPT":
@@ -333,28 +339,44 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
         <div className="text-slate-300 font-medium">Sócio {index + 1}</div>
         {canRemove && <button className="text-slate-400 hover:text-slate-200 text-xs" onClick={onRemove}>Remover</button>}
       </div>
-      <div>
-        <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.fullName && "border-red-500")} placeholder="Nome completo" value={data.fullName} onChange={(e) => onChange("fullName", e.target.value)} />
-        <FieldError msg={errors.fullName} />
+      <div className="grid md:grid-cols-2 gap-2">
+        <div>
+          <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.fullName && "border-red-500")} placeholder="Nome completo" value={data.fullName} onChange={(e) => onChange("fullName", e.target.value)} />
+          <FieldError msg={errors.fullName} />
+        </div>
+        <div>
+          <input type="email" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.email && "border-red-500")} placeholder="E-mail do sócio" value={data.email} onChange={(e) => onChange("email", e.target.value)} />
+          <FieldError msg={errors.email} />
+        </div>
       </div>
       <div className="grid md:grid-cols-2 gap-2">
+        <div>
+          <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.phone && "border-red-500")} placeholder="Telefone do sócio" value={data.phone} onChange={(e) => onChange("phone", e.target.value)} />
+          <FieldError msg={errors.phone} />
+        </div>
         <div>
           <input className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.passport && "border-red-500")} placeholder="Passaporte (ou RG)" value={data.passport} onChange={(e) => onChange("passport", e.target.value)} />
           <FieldError msg={errors.passport} />
         </div>
+      </div>
+      <div className="grid md:grid-cols-3 gap-2">
         <div>
           <input className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500")} placeholder="Órgão emissor" value={data.issuer} onChange={(e) => onChange("issuer", e.target.value)} />
         </div>
-      </div>
-      <div className="grid md:grid-cols-2 gap-2">
+        <div>
+          <input type="date" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.docExpiry && "border-red-500")} value={data.docExpiry} onChange={(e) => onChange("docExpiry", e.target.value)} />
+          <div className="text-[11px] text-slate-400 mt-1">Validade do documento</div>
+          <FieldError msg={errors.docExpiry} />
+        </div>
         <div>
           <input type="date" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.birthdate && "border-red-500")} value={data.birthdate} onChange={(e) => onChange("birthdate", e.target.value)} />
+          <div className="text-[11px] text-slate-400 mt-1">Data de nascimento</div>
           <FieldError msg={errors.birthdate} />
         </div>
-        <div>
-          <input type="number" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.percent && "border-red-500")} placeholder="% de participação" value={data.percent} onChange={(e) => onChange("percent", e.target.value)} />
-          <FieldError msg={errors.percent} />
-        </div>
+      </div>
+      <div>
+        <input type="number" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.percent && "border-red-500")} placeholder="% de participação" value={data.percent} onChange={(e) => onChange("percent", e.target.value)} />
+        <FieldError msg={errors.percent} />
       </div>
     </div>
   );
@@ -385,7 +407,10 @@ function FormWizard({ open, onClose }) {
     for (let i = 0; i < members.length; i++) {
       const m = members[i];
       if (!m.fullName || m.fullName.length < 5) errs.members[i].fullName = "Nome inválido.";
+      if (!emailRe.test(m.email || "")) errs.members[i].email = "E-mail inválido.";
+      if (!phoneRe.test(m.phone || "")) errs.members[i].phone = "Telefone inválido.";
       if (!m.passport || m.passport.length < 5) errs.members[i].passport = "Documento obrigatório.";
+      if (!m.docExpiry) errs.members[i].docExpiry = "Informe a validade do documento.";
       if (!m.birthdate) errs.members[i].birthdate = "Data obrigatória.";
       if (!m.percent || Number(m.percent) <= 0) errs.members[i].percent = "% obrigatório.";
       if (m.birthdate && calcAgeFullDate(m.birthdate) < 18) errs.members[i].birthdate = "Precisa ter 18+.";
@@ -507,8 +532,11 @@ function FormWizard({ open, onClose }) {
                       <div key={i} className="text-sm text-slate-400">
                         <div className="font-medium text-slate-300">Sócio {i + 1}: {m.fullName || "—"}</div>
                         <div className="grid md:grid-cols-2 gap-x-6 gap-y-1">
+                          <div><span className="text-slate-500">E-mail: </span>{m.email || "—"}</div>
+                          <div><span className="text-slate-500">Telefone: </span>{m.phone || "—"}</div>
                           <div><span className="text-slate-500">Documento: </span>{m.passport || "—"}</div>
                           <div><span className="text-slate-500">Órgão emissor: </span>{m.issuer || "—"}</div>
+                          <div><span className="text-slate-500">Validade doc.: </span>{m.docExpiry || "—"}</div>
                           <div><span className="text-slate-500">Nascimento: </span>{m.birthdate || "—"}</div>
                           <div><span className="text-slate-500">Participação: </span>{m.percent || "—"}%</div>
                         </div>
