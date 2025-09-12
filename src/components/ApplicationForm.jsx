@@ -1,5 +1,7 @@
+// src/components/ApplicationForm.jsx — v2 (com Sócios + Declarações + Contrato)
 import React, { useMemo, useState } from "react";
 
+// ajuste se necessário:
 const FORMSPREE_ENDPOINT = "https://formspree.io/f/xblawgpk";
 const REDIRECT_URL = "https://www.kashsolutions.us/sucesso";
 const MAX_SOCIOS = 5;
@@ -9,18 +11,21 @@ export default function ApplicationForm({
   redirectUrl = REDIRECT_URL,
 }) {
   const [form, setForm] = useState({
+    // Solicitante
     applicantName: "",
     applicantEmail: "",
     phone: "",
+    // Business
     businessNamePrimary: "",
     businessNameAlt: "",
+    // Endereço
     addressChoice: "kash", // "kash" | "own"
     ownStreet: "",
     ownCity: "",
     ownState: "FL",
     ownZip: "",
+    // Aceites
     agree: false,
-    // declarações:
     decl_truth: false,
     decl_authorize: false,
     decl_registeredAddress: false,
@@ -36,6 +41,7 @@ export default function ApplicationForm({
     setForm((prev) => ({ ...prev, [name]: type === "checkbox" ? checked : value }));
   };
 
+  // Sócios helpers
   const setSocioField = (idx, key, value) =>
     setSocios((prev) => prev.map((s, i) => (i === idx ? { ...s, [key]: value } : s)));
   const addSocio = () =>
@@ -44,6 +50,7 @@ export default function ApplicationForm({
     );
   const removeSocio = (idx) => setSocios((prev) => (prev.length <= 1 ? prev : prev.filter((_, i) => i !== idx)));
 
+  // Datas e textos
   const today = useMemo(() => new Date(), []);
   const dataStr = useMemo(
     () => today.toLocaleDateString("pt-BR", { year: "numeric", month: "2-digit", day: "2-digit" }),
@@ -55,14 +62,17 @@ export default function ApplicationForm({
     : "Endereço físico KASH Corporate Solutions por até 12 meses (sem custo)";
   const subject = `Nova aplicação LLC — ${form.businessNamePrimary || "(sem nome)"}`;
 
-  const sociosTexto = socios
-    .map(
-      (s, i) =>
-        `Sócio ${i + 1}: ${s.fullName || "(sem nome)"} | Email: ${s.email || "—"} | País: ${
-          s.country || "—"
-        } | Doc: ${s.idDoc || "—"} | Quota: ${s.ownership || "—"}% | Papel: ${s.role || "Member"}`
-    )
-    .join("\n") || "—";
+  const sociosTexto =
+    socios.length > 0
+      ? socios
+          .map(
+            (s, i) =>
+              `Sócio ${i + 1}: ${s.fullName || "(sem nome)"} | Email: ${s.email || "—"} | País: ${
+                s.country || "—"
+              } | Doc: ${s.idDoc || "—"} | Quota: ${s.ownership || "—"}% | Papel: ${s.role || "Member"}`
+          )
+          .join("\n")
+      : "—";
 
   const declaracoesTexto = [
     ["Veracidade das informações", form.decl_truth],
@@ -93,7 +103,7 @@ export default function ApplicationForm({
 
   return (
     <form action={formspreeEndpoint} method="POST" className="grid gap-8">
-      {/* Formspree */}
+      {/* Formspree meta */}
       <input type="hidden" name="_subject" value={subject} />
       <input type="hidden" name="_redirect" value={redirectUrl} />
       <input type="text" name="_gotcha" className="hidden" aria-hidden="true" tabIndex={-1} />
@@ -193,11 +203,25 @@ export default function ApplicationForm({
         <div className="grid gap-3">
           <div className="join join-vertical md:join-horizontal">
             <label className="btn btn-outline join-item justify-start">
-              <input type="radio" name="addressChoice" value="kash" checked={form.addressChoice === "kash"} onChange={onChange} className="radio mr-2" />
+              <input
+                type="radio"
+                name="addressChoice"
+                value="kash"
+                checked={form.addressChoice === "kash"}
+                onChange={onChange}
+                className="radio mr-2"
+              />
               Usar endereço físico KASH (12 meses, sem custo)
             </label>
             <label className="btn btn-outline join-item justify-start">
-              <input type="radio" name="addressChoice" value="own" checked={form.addressChoice === "own"} onChange={onChange} className="radio mr-2" />
+              <input
+                type="radio"
+                name="addressChoice"
+                value="own"
+                checked={form.addressChoice === "own"}
+                onChange={onChange}
+                className="radio mr-2"
+              />
               Usar meu próprio endereço na Flórida
             </label>
           </div>
@@ -265,9 +289,12 @@ export default function ApplicationForm({
           <div className="card-body whitespace-pre-wrap text-sm leading-6">{contratoTexto}</div>
         </div>
 
+        {/* dados para o Formspree */}
         <textarea name="contract_text" value={contratoTexto} readOnly className="hidden" />
         <input type="hidden" name="address_summary" value={enderecoResumo} />
+        <input type="hidden" name="agree_checkbox" value={form.agree ? "true" : "false"} />
 
+        {/* também mandamos os sócios em campos nomeados */}
         {socios.map((s, idx) => (
           <div key={`hidden-${idx}`} className="hidden">
             <input name={`partners[${idx}][fullName]`} defaultValue={s.fullName} />
