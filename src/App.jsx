@@ -229,15 +229,6 @@ function HowItWorks() {
   );
 }
 
-function SectionTitle({ title, subtitle }) {
-  return (
-    <div>
-      <h3 className="text-2xl text-slate-100 font-semibold">{title}</h3>
-      {subtitle && <p className="text-slate-400 text-sm mt-1">{subtitle}</p>}
-    </div>
-  );
-}
-
 function FieldError({ msg }) { return msg ? <div className="text-red-400 text-xs mt-1">{msg}</div> : null; }
 
 /* ================== FORM WIZARD ================== */
@@ -415,7 +406,7 @@ function FormWizard({ open, onClose }) {
       writeBlock("ASSINATURAS / SIGNATURES"); y += 8;
       members.forEach((m, idx) => {
         writeBlock(`${idx + 1}. ${m.fullName || "[Nome do sócio]"}`);
-        y += 10; hr(y); y += 26;
+        y += 10; hr(y); y += 26; // espaço para assinatura
       });
       footer(4);
 
