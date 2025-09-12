@@ -1,4 +1,4 @@
-import React, { useCallback, useReducer, useState } from "react";
+import React, { useReducer, useState } from "react";
 
 /* ================== CONFIG ================== */
 const CONFIG = {
@@ -13,7 +13,7 @@ const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
 function classNames(...cls) { return cls.filter(Boolean).join(" "); }
 
-/* Helpers */
+/* Helpers (mantidos para futuras validações) */
 function calcAgeFullDate(dateStr) {
   if (!dateStr) return 0;
   const d = new Date(dateStr);
@@ -48,9 +48,7 @@ function KLogo({ size = 40 }) {
   );
 }
 function Pill({ children }) {
-  return (
-    <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-emerald-300 text-xs">{children}</span>
-  );
+  return <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-emerald-300 text-xs">{children}</span>;
 }
 function SectionTitle({ title, subtitle }) {
   return (
@@ -67,11 +65,7 @@ function CTAButton({ children, variant = "primary", onClick, type = "button", di
     : variant === "ghost"
     ? "bg-transparent border border-slate-700 text-slate-200 hover:bg-slate-800"
     : "bg-slate-700 text-slate-100 hover:bg-slate-600";
-  return (
-    <button type={type} onClick={onClick} disabled={disabled} className={classNames(base, styles)}>
-      {children}
-    </button>
-  );
+  return <button type={type} onClick={onClick} disabled={disabled} className={classNames(base, styles)}>{children}</button>;
 }
 
 /* ================== SIMULADOR ================== */
@@ -82,29 +76,15 @@ function DemoCalculator() {
   const saved = Math.max(0, withheld - 1360);
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-      <div className="flex items-center justify-between">
-        <div className="text-slate-300">Estimativa de economia anual</div>
-        <Pill>Simulador</Pill>
-      </div>
+      <div className="flex items-center justify-between"><div className="text-slate-300">Estimativa de economia anual</div><Pill>Simulador</Pill></div>
       <div className="mt-4">
         <input type="range" min={1000} max={20000} step={100} value={monthly} onChange={(e) => setMonthly(Number(e.target.value))} className="w-full" />
-        <div className="mt-2 text-sm text-slate-400">
-          Receita mensal: <span className="text-slate-200">US$ {monthly.toLocaleString()}</span>
-        </div>
+        <div className="mt-2 text-sm text-slate-400">Receita mensal: <span className="text-slate-200">US$ {monthly.toLocaleString()}</span></div>
       </div>
       <div className="mt-4 grid grid-cols-3 gap-3 text-center">
-        <div className="rounded-xl bg-slate-800 p-3">
-          <div className="text-xs text-slate-400">Receita/ano</div>
-          <div className="text-lg text-slate-100">US$ {yearly.toLocaleString()}</div>
-        </div>
-        <div className="rounded-xl bg-slate-800 p-3">
-          <div className="text-xs text-slate-400">Retenção 30%</div>
-          <div className="text-lg text-slate-100">US$ {withheld.toLocaleString()}</div>
-        </div>
-        <div className="rounded-xl bg-slate-800 p-3">
-          <div className="text-xs text-slate-400">Economia potencial</div>
-          <div className="text-lg text-emerald-400">US$ {saved.toLocaleString()}</div>
-        </div>
+        <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Receita/ano</div><div className="text-lg text-slate-100">US$ {yearly.toLocaleString()}</div></div>
+        <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Retenção 30%</div><div className="text-lg text-slate-100">US$ {withheld.toLocaleString()}</div></div>
+        <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-emerald-300">Economia potencial</div><div className="text-lg text-emerald-400">US$ {saved.toLocaleString()}</div></div>
       </div>
     </div>
   );
@@ -128,7 +108,7 @@ function Hero({ onStart }) {
         <div className="mt-10 grid md:grid-cols-2 gap-8 items-start">
           <div>
             <h2 className="text-3xl md:text-4xl font-semibold text-slate-100">Abra sua LLC na Flórida e elimine a retenção de 30%.</h2>
-            <p className="mt-4 text-slate-300">Solução completa para criadores brasileiros que monetizam nos EUA: abertura da empresa, EIN, W‑8BEN‑E, endereço e agente registrado por 12 meses.</p>
+            <p className="mt-4 text-slate-300">Solução completa para criadores brasileiros que monetizam nos EUA: abertura da empresa, EIN, W‑8BEN‑E, endereço e agente por 12 meses.</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <CTAButton onClick={onStart}>Começar agora</CTAButton>
               <a href="#como-funciona" className="inline-flex"><CTAButton variant="ghost">Como funciona</CTAButton></a>
@@ -231,6 +211,94 @@ function HowItWorks() {
 
 function FieldError({ msg }) { return msg ? <div className="text-red-400 text-xs mt-1">{msg}</div> : null; }
 
+/* ================== CONTRATO (ON-SCREEN) + PDF (2 páginas, 1 por idioma) ================== */
+function ContractText({ companyName, tracking }) {
+  return (
+    <div className="space-y-6 text-sm leading-5 text-slate-200">
+      <div>
+        <div className="text-base font-semibold text-slate-100">CONTRATO DE PRESTAÇÃO DE SERVIÇOS — KASH Solutions</div>
+        <div className="text-xs text-slate-400">Cliente: {companyName || "[NOME DO CLIENTE]"} · Tracking: {tracking}</div>
+        <ol className="list-decimal list-inside mt-3 space-y-2 text-slate-300">
+          <li><b>Objeto.</b> Formação de LLC na Flórida, obtenção do EIN junto ao IRS e emissão do W‑8BEN‑E, após aprovação do registro.</li>
+          <li><b>Endereço e Agente.</b> Inclusos por 12 meses a partir da contratação; renováveis mediante cobrança adicional.</li>
+          <li><b>Responsabilidade das informações.</b> Todos os dados enviados pelo CLIENTE são de sua exclusiva responsabilidade.</li>
+          <li><b>Vigência e condição.</b> Este contrato entra em vigor após o pagamento integral das taxas e serviços.</li>
+          <li><b>Jurisdição.</b> Rio de Janeiro/RJ, Brasil, podendo também ser aplicado o foro da Flórida (Orange County, EUA).</li>
+          <li><b>Valor do pacote.</b> US$ 1.360, salvo promoções publicadas.</li>
+          <li><b>Disposições finais.</b> O registro da LLC não implica contratação automática de serviços contábeis mensais.</li>
+        </ol>
+      </div>
+      <div className="opacity-80">
+        <div className="text-base font-semibold text-slate-100">SERVICE AGREEMENT — KASH Solutions</div>
+        <div className="text-xs text-slate-400">Client: {companyName || "[CLIENT NAME]"} · Tracking: {tracking}</div>
+        <ol className="list-decimal list-inside mt-3 space-y-2 text-slate-300">
+          <li><b>Purpose.</b> Formation of a Florida LLC, obtaining the EIN with the IRS, and issuing Form W‑8BEN‑E upon company approval.</li>
+          <li><b>Registered Agent & Address.</b> Provided for 12 months from the date of contracting; renewable with additional fees.</li>
+          <li><b>Information responsibility.</b> All information submitted by the CLIENT is the CLIENT’s sole responsibility.</li>
+          <li><b>Effectiveness.</b> This Agreement becomes valid after full payment of services and fees.</li>
+          <li><b>Jurisdiction.</b> Rio de Janeiro/RJ, Brazil, with Florida (Orange County, USA) as an alternative venue.</li>
+          <li><b>Price.</b> US$ 1,360 unless otherwise promoted.</li>
+          <li><b>Final provisions.</b> LLC registration does not imply automatic hiring of monthly bookkeeping.</li>
+        </ol>
+      </div>
+    </div>
+  );
+}
+
+/* Geração de PDF enxuto: 2 páginas (PT e EN), fontes menores para caber 1 por página */
+function generateCompactPdf({ companyName, tracking }) {
+  try {
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF) return "";
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const M = { l: 40, r: 40, t: 48, width: pageW - 80 };
+    const write = (title, header) => {
+      let y = M.t;
+      doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text(title, M.l, y); y += 16;
+      doc.setFont("helvetica", ""); doc.setFontSize(9); doc.text(header, M.l, y); y += 14;
+      const blocks = [
+        "1. OBJETO — Formação de LLC na Flórida, obtenção do EIN junto ao IRS e emissão do W‑8BEN‑E, após aprovação do registro.",
+        "2. ENDEREÇO E AGENTE — Inclusos por 12 (doze) meses a partir da contratação; renováveis mediante cobrança adicional.",
+        "3. RESPONSABILIDADE DAS INFORMAÇÕES — Todos os dados enviados pelo CLIENTE são de sua exclusiva responsabilidade.",
+        "4. VIGÊNCIA E CONDIÇÃO — Este contrato entra em vigor após o pagamento integral das taxas e serviços.",
+        "5. JURISDIÇÃO — Rio de Janeiro/RJ, Brasil, podendo também ser aplicado o foro da Flórida (Orange County, EUA).",
+        "6. VALOR DO PACOTE — US$ 1.360, salvo promoções publicadas.",
+        "7. DISPOSIÇÕES FINAIS — O registro da LLC não implica contratação automática de serviços contábeis mensais.",
+      ];
+      for (const b of blocks) {
+        const lines = doc.splitTextToSize(b, M.width);
+        doc.text(lines, M.l, y); y += 12 * lines.length + 4;
+      }
+    };
+    write("CONTRATO DE PRESTAÇÃO DE SERVIÇOS — KASH Solutions", `Cliente: ${companyName || "[NOME]"} · Tracking: ${tracking}`);
+    doc.addPage();
+    const writeEN = () => {
+      let y = M.t;
+      doc.setFont("helvetica", "bold"); doc.setFontSize(13); doc.text("SERVICE AGREEMENT — KASH Solutions", M.l, y); y += 16;
+      doc.setFont("helvetica", ""); doc.setFontSize(9); doc.text(`Client: ${companyName || "[NAME]"} · Tracking: ${tracking}`, M.l, y); y += 14;
+      const blocks = [
+        "1. PURPOSE — Formation of a Florida LLC, obtaining the EIN with the IRS, and issuing Form W‑8BEN‑E upon company approval.",
+        "2. REGISTERED AGENT & ADDRESS — Provided for 12 (twelve) months from the contracting date; renewable with additional fees.",
+        "3. INFORMATION RESPONSIBILITY — All information submitted by the CLIENT is the CLIENT’s sole responsibility.",
+        "4. EFFECTIVENESS — This Agreement becomes valid after full payment of services and fees.",
+        "5. JURISDICTION — Rio de Janeiro/RJ, Brazil, with Florida (Orange County, USA) as an alternative venue.",
+        "6. PRICE — US$ 1,360 unless otherwise promoted.",
+        "7. FINAL PROVISIONS — LLC registration does not imply automatic hiring of monthly bookkeeping.",
+      ];
+      for (const b of blocks) {
+        const lines = doc.splitTextToSize(b, M.width);
+        doc.text(lines, M.l, y); y += 12 * lines.length + 4;
+      }
+    };
+    writeEN();
+    return doc.output("bloburl");
+  } catch (e) {
+    console.error(e);
+    return "";
+  }
+}
+
 /* ================== FORM WIZARD ================== */
 const initialForm = {
   company: { companyName: "", email: "", phone: "", address: "" },
@@ -266,39 +334,25 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
         {canRemove && <button className="text-slate-400 hover:text-slate-200 text-xs" onClick={onRemove}>Remover</button>}
       </div>
       <div>
-        <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.fullName && "border-red-500")}
-               placeholder="Nome completo"
-               value={data.fullName}
-               onChange={(e) => onChange("fullName", e.target.value)} />
+        <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.fullName && "border-red-500")} placeholder="Nome completo" value={data.fullName} onChange={(e) => onChange("fullName", e.target.value)} />
         <FieldError msg={errors.fullName} />
       </div>
       <div className="grid md:grid-cols-2 gap-2">
         <div>
-          <input className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.passport && "border-red-500")}
-                 placeholder="Passaporte (ou RG)"
-                 value={data.passport}
-                 onChange={(e) => onChange("passport", e.target.value)} />
+          <input className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.passport && "border-red-500")} placeholder="Passaporte (ou RG)" value={data.passport} onChange={(e) => onChange("passport", e.target.value)} />
           <FieldError msg={errors.passport} />
         </div>
         <div>
-          <input className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500")}
-                 placeholder="Órgão emissor"
-                 value={data.issuer}
-                 onChange={(e) => onChange("issuer", e.target.value)} />
+          <input className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500")} placeholder="Órgão emissor" value={data.issuer} onChange={(e) => onChange("issuer", e.target.value)} />
         </div>
       </div>
       <div className="grid md:grid-cols-2 gap-2">
         <div>
-          <input type="date" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.birthdate && "border-red-500")}
-                 value={data.birthdate}
-                 onChange={(e) => onChange("birthdate", e.target.value)} />
+          <input type="date" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.birthdate && "border-red-500")} value={data.birthdate} onChange={(e) => onChange("birthdate", e.target.value)} />
           <FieldError msg={errors.birthdate} />
         </div>
         <div>
-          <input type="number" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.percent && "border-red-500")}
-                 placeholder="% de participação"
-                 value={data.percent}
-                 onChange={(e) => onChange("percent", e.target.value)} />
+          <input type="number" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.percent && "border-red-500")} placeholder="% de participação" value={data.percent} onChange={(e) => onChange("percent", e.target.value)} />
           <FieldError msg={errors.percent} />
         </div>
       </div>
@@ -309,6 +363,7 @@ function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState({ company: {}, members: [], accept: {} });
 
@@ -345,104 +400,21 @@ function FormWizard({ open, onClose }) {
     return { ok, errs };
   }
 
-  function generatePdf(trackingCode) {
-    try {
-      const { jsPDF } = window.jspdf || {};
-      if (!jsPDF) return "";
-
-      const doc = new jsPDF({ unit: "pt", format: "a4" });
-      const { company, members } = form;
-
-      const pageW = doc.internal.pageSize.getWidth();
-      const pageH = doc.internal.pageSize.getHeight();
-      const M = { l: 48, r: 48, t: 64, b: 64, width: pageW - 96 };
-      let y = M.t;
-      const centerX = pageW / 2;
-
-      const text = (t, yy, opt = {}) => doc.text(t, M.l, yy, opt);
-      const center = (t, yy) => doc.text(t, centerX, yy, { align: "center" });
-      const hr = (yy) => { doc.setDrawColor(60); doc.line(M.l, yy, pageW - M.r, yy); };
-      const writeBlock = (t) => { const lines = doc.splitTextToSize(t, M.width); lines.forEach((ln) => { text(ln, y); y += 16; }); y += 6; };
-      const footer = (pageNum) => { doc.setFontSize(9); doc.setTextColor(150); doc.text(`Página ${pageNum}`, pageW - M.r, pageH - 26, { align: "right" }); doc.text(`Tracking: ${trackingCode}`, M.l, pageH - 26); };
-
-      // CAPA
-      doc.setFont("helvetica", "bold"); doc.setFontSize(20); doc.setTextColor(30);
-      center("KASH CORPORATE SOLUTIONS LLC", y); y += 26;
-      doc.setFontSize(13); center("Service Agreement / Contrato de Prestação de Serviços", y); y += 24; hr(y); y += 24;
-      doc.setFontSize(11); text("CLIENTE: " + (company.companyName || "[NOME DO CLIENTE]"), y); y += 18;
-      text("CONTRATADA: " + CONFIG.brand.legal + ", Florida, EUA", y); y += 24;
-      text("Tracking: " + trackingCode, y); y += 24; footer(1);
-
-      // PÁGINA 2 — PORTUGUÊS
-      doc.addPage(); y = M.t; doc.setFontSize(12); doc.setFont("helvetica", "bold"); text("CONTRATO DE PRESTAÇÃO DE SERVIÇOS", y); y += 20;
-      doc.setFont("helvetica", ""); doc.setFontSize(10);
-      writeBlock("1. OBJETO — Este contrato tem por objeto a prestação de serviços profissionais para abertura de empresa do tipo LLC no Estado da Flórida, obtenção do EIN junto ao IRS e emissão do formulário W‑8BEN‑E, após aprovação da empresa.");
-      writeBlock("2. ENDEREÇO E AGENTE — A CONTRATADA fornecerá endereço físico e agente registrado por 12 (doze) meses contados da assinatura. Após este período, os serviços poderão ser renovados mediante cobrança adicional.");
-      writeBlock("3. RESPONSABILIDADE DAS INFORMAÇÕES — Todas as informações fornecidas pelo CLIENTE por meio do formulário eletrônico são de sua exclusiva responsabilidade, incluindo consequências civis e criminais por declarações inexatas ou falsas.");
-      writeBlock("4. VIGÊNCIA E CONDIÇÃO — O contrato torna‑se válido após o pagamento integral dos serviços e taxas no ambiente disponibilizado pela CONTRATADA.");
-      writeBlock("5. JURISDIÇÃO — Fica eleito o foro da Comarca do Rio de Janeiro/RJ, Brasil, e, se conveniente ao CLIENTE, também poderá ser aplicado o foro do Estado da Flórida, EUA, Condado de Orange.");
-      writeBlock("6. VALOR — O valor do pacote de abertura é de US$ 1.360 (um mil trezentos e sessenta dólares), salvo promoções divulgadas no site.");
-      writeBlock("7. DISPOSIÇÕES FINAIS — O CLIENTE declara ciência de que o registro da LLC não implica contratação automática de serviços contábeis mensais.");
-      footer(2);
-
-      // PÁGINA 3 — ENGLISH
-      doc.addPage(); y = M.t; doc.setFontSize(12); doc.setFont("helvetica", "bold"); text("SERVICE AGREEMENT – KASH Solutions", y); y += 20;
-      doc.setFont("helvetica", ""); doc.setFontSize(10);
-      writeBlock("1. PURPOSE — This Agreement covers the professional services for forming a Florida LLC, obtaining the EIN with the IRS, and issuing the W‑8BEN‑E Form upon company approval.");
-      writeBlock("2. REGISTERED AGENT AND ADDRESS — CONTRACTOR shall provide a physical address and registered agent for 12 (twelve) months from the signature date. After this period, services may be renewed with additional fees.");
-      writeBlock("3. INFORMATION RESPONSIBILITY — All information provided by the CLIENT through the electronic form is the CLIENT’s sole responsibility, including criminal and civil liability for inaccuracies or false statements.");
-      writeBlock("4. EFFECTIVENESS — This Agreement becomes valid after full payment of services and fees through the platform provided by the CONTRACTOR.");
-      writeBlock("5. JURISDICTION — Venue is elected in Rio de Janeiro/RJ, Brazil, and, if convenient to the CLIENT, the State of Florida, USA, Orange County, may also apply.");
-      writeBlock("6. PRICE — The package price is US$ 1,360 (one thousand three hundred and sixty US dollars), unless otherwise promoted on the website.");
-      writeBlock("7. FINAL PROVISIONS — CLIENT acknowledges that LLC registration does not imply automatic hiring of monthly bookkeeping services.");
-      footer(3);
-
-      // Assinaturas
-      doc.addPage(); y = M.t; doc.setFontSize(12); doc.setFont("helvetica", "bold"); text("LOCAL E DATA / PLACE AND DATE", y); y += 18;
-      doc.setFont("helvetica", ""); doc.setFontSize(10);
-      const now = new Date();
-      writeBlock(`Gerado em ${now.toLocaleDateString()} ${now.toLocaleTimeString()} — Tracking: ${trackingCode}`);
-      y += 10; hr(y); y += 24;
-      writeBlock("ASSINATURAS / SIGNATURES"); y += 8;
-      members.forEach((m, idx) => {
-        writeBlock(`${idx + 1}. ${m.fullName || "[Nome do sócio]"}`);
-        y += 10; hr(y); y += 26; // espaço para assinatura
-      });
-      footer(4);
-
-      return doc.output("bloburl");
-    } catch (e) {
-      console.error(e);
-      return "";
-    }
-  }
-
   async function handleSubmit() {
     const v = validate();
     if (!v.ok) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     setLoading(true);
-
     const mock = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
     setTracking(mock);
-
     try {
       await fetch(CONFIG.formspreeEndpoint, {
         method: "POST",
         headers: { "Accept": "application/json", "Content-Type": "application/json" },
         body: JSON.stringify({ ...form, tracking: mock, source: "kashsolutions.us" }),
       });
-    } catch (e) {
-      console.warn("Formspree error", e);
-    }
-
-    const url = generatePdf(mock);
-    if (url) {
-      const a = document.createElement("a");
-      a.href = url; a.download = `KASH_Contract_${mock}.pdf`;
-      document.body.appendChild(a); a.click(); a.remove();
-    }
-
-    setLoading(false); setStep(3);
+    } catch (e) { console.warn("Formspree error", e); }
+    setLoading(false);
+    setStep(3); // Mostra tracking + contrato
   }
 
   const { company, members, accept } = form;
@@ -458,7 +430,7 @@ function FormWizard({ open, onClose }) {
               <button className="text-slate-400 hover:text-slate-200" onClick={onClose}>Fechar</button>
             </div>
 
-            {/* Step 1 */}
+            {/* Step 1: Formulário */}
             {step === 1 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">1/2 — Dados iniciais da LLC</h4>
@@ -502,22 +474,21 @@ function FormWizard({ open, onClose }) {
                   </label>
                   <label className="flex items-start gap-2">
                     <input type="checkbox" checked={accept.limitations} onChange={(e) => toggleAccept("limitations", e.target.checked)} />
-                    <span>Estou ciente de que (i) o registro da LLC <strong>não</strong> implica contratação automática de serviços contábeis mensais e (ii) endereço e agente são válidos por 12 meses, com possibilidade de renovação mediante cobrança.</span>
+                    <span>Estou ciente de que (i) o registro da LLC não implica contratação automática de serviços contábeis e (ii) endereço e agente são válidos por 12 meses.</span>
                   </label>
                   {errors.accept.base && <div className="text-red-400 text-xs">{errors.accept.base}</div>}
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton variant="ghost" onClick={() => setStep(1)}>Revisar</CTAButton>
                   <CTAButton onClick={() => { const v = validate(); if (v.ok) setStep(2); }}>Continuar</CTAButton>
                 </div>
               </div>
             )}
 
-            {/* Step 2 */}
+            {/* Step 2: Revisão */}
             {step === 2 && (
               <div className="p-6">
-                <h4 className="text-slate-100 font-medium">2/2 — Revisão e envio</h4>
+                <h4 className="text-slate-100 font-medium">2/2 — Revisão</h4>
 
                 <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="text-slate-300 font-medium">Empresa</div>
@@ -548,19 +519,39 @@ function FormWizard({ open, onClose }) {
 
                 <div className="mt-6 flex justify-end gap-3">
                   <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
-                  <CTAButton onClick={handleSubmit}>{loading ? "Enviando..." : "Enviar e gerar contrato"}</CTAButton>
+                  <CTAButton onClick={handleSubmit}>{loading ? "Enviando..." : "Enviar"}</CTAButton>
                 </div>
               </div>
             )}
 
-            {/* Step 3 */}
+            {/* Step 3: Tracking + Contrato (Li e Concordo) */}
             {step === 3 && (
-              <div className="p-6 text-center">
-                <h4 className="text-slate-100 font-medium">Aplicação enviada!</h4>
-                <p className="text-slate-400 mt-2">Recebemos seus dados. Você pode baixar o contrato gerado automaticamente e acompanhar pelo e‑mail.</p>
-                <div className="mt-2 text-emerald-400 text-xl font-bold">{tracking}</div>
-                <p className="text-slate-500 text-xs mt-2">Guarde este código para consultar o status.</p>
-                <div className="mt-6"><CTAButton onClick={onClose}>Concluir</CTAButton></div>
+              <div className="p-6">
+                <div className="text-center">
+                  <h4 className="text-slate-100 font-medium">Dados enviados com sucesso</h4>
+                  <p className="text-slate-400 mt-2">Anote seu código de acompanhamento (tracking):</p>
+                  <div className="mt-2 text-emerald-400 text-xl font-bold">{tracking}</div>
+                </div>
+
+                <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-slate-300 font-medium">Contrato (PT & EN)</div>
+                    <button className="text-xs text-emerald-400 hover:underline" onClick={() => {
+                      const url = generateCompactPdf({ companyName: company.companyName, tracking });
+                      if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
+                    }}>Baixar PDF</button>
+                  </div>
+                  <div className="mt-4 max-h-[50vh] overflow-auto pr-2">
+                    <ContractText companyName={company.companyName} tracking={tracking} />
+                  </div>
+                  <label className="mt-4 flex items-center gap-2 text-sm text-slate-300">
+                    <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+                    <span>Li e concordo com os termos acima.</span>
+                  </label>
+                  <div className="mt-4 flex justify-end">
+                    <CTAButton onClick={onClose} disabled={!agreed}>Concluir</CTAButton>
+                  </div>
+                </div>
               </div>
             )}
           </div>
