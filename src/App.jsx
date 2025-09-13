@@ -1,4 +1,4 @@
-import React, { useReducer, useState } from "react";
+import React, { useReducer, useState, useEffect } from "react";
 
 /* ================== CONFIG ================== */
 const CONFIG = {
@@ -299,7 +299,13 @@ function generateCompactPdf({ companyName, tracking }) {
 
 /* ================== FORM WIZARD ================== */
 const initialForm = {
-  company: { companyName: "", email: "", phone: "", address: "" },
+  company: {
+    companyName: "",
+    email: "",
+    phone: "",
+    hasFloridaAddress: false,
+    usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" },
+  },
   members: [
     { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
     { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
@@ -310,6 +316,8 @@ function formReducer(state, action) {
   switch (action.type) {
     case "UPDATE_COMPANY":
       return { ...state, company: { ...state.company, [action.field]: action.value } };
+    case "UPDATE_US_ADDRESS":
+      return { ...state, company: { ...state.company, usAddress: { ...state.company.usAddress, [action.field]: action.value } } };
     case "UPDATE_MEMBER": {
       const list = state.members.map((m, i) => i === action.index ? { ...m, [action.field]: action.value } : m);
       return { ...state, members: list };
@@ -373,6 +381,11 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
     </div>
   );
 }
+
+const US_STATES = [
+  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"
+];
+
 function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -382,10 +395,19 @@ function FormWizard({ open, onClose }) {
   const [errors, setErrors] = useState({ company: {}, members: [], accept: {} });
 
   const updateCompany = (field, value) => dispatch({ type: "UPDATE_COMPANY", field, value });
+  const updateUS = (field, value) => dispatch({ type: "UPDATE_US_ADDRESS", field, value });
   const updateMember = (index, field, value) => dispatch({ type: "UPDATE_MEMBER", index, field, value });
   const addMember = () => dispatch({ type: "ADD_MEMBER" });
   const removeMember = (index) => dispatch({ type: "REMOVE_MEMBER", index });
   const toggleAccept = (key, value) => dispatch({ type: "TOGGLE_ACCEPT", key, value });
+
+  // Se o usuário marcar que possui endereço na Flórida, desabilita/limpa a caixa de "limitações"
+  useEffect(() => {
+    if (form.company.hasFloridaAddress && form.accept.limitations) {
+      dispatch({ type: "TOGGLE_ACCEPT", key: "limitations", value: false });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.company.hasFloridaAddress]);
 
   function validate() {
     const { company, members, accept } = form;
@@ -394,7 +416,13 @@ function FormWizard({ open, onClose }) {
     if (!company.companyName || company.companyName.length < 3) errs.company.companyName = "Informe o nome da LLC.";
     if (!emailRe.test(company.email || "")) errs.company.email = "E-mail inválido.";
     if (!phoneRe.test(company.phone || "")) errs.company.phone = "Telefone inválido.";
-    if (!company.address || company.address.length < 8) errs.company.address = "Informe o endereço (ou indique uso do escritório).";
+
+    if (company.hasFloridaAddress) {
+      if (!company.usAddress.line1 || company.usAddress.line1.length < 3) errs.company.line1 = "Endereço (Line 1) obrigatório.";
+      if (!company.usAddress.city) errs.company.city = "Cidade obrigatória.";
+      if (!company.usAddress.state) errs.company.state = "Estado obrigatório.";
+      if (!company.usAddress.zip) errs.company.zip = "ZIP obrigatório.";
+    }
 
     for (let i = 0; i < members.length; i++) {
       const m = members[i];
@@ -408,11 +436,16 @@ function FormWizard({ open, onClose }) {
       if (m.birthdate && calcAgeFullDate(m.birthdate) < 18) errs.members[i].birthdate = "Precisa ter 18+.";
     }
     if (!isPercentTotalValid(members)) alert("A soma dos percentuais deve ser 100%.");
-    if (!accept.responsibility || !accept.limitations) errs.accept.base = "Aceite as declarações.";
 
-    const ok = !errs.company.companyName && !errs.company.email && !errs.company.phone && !errs.company.address
-      && errs.members.every((m) => Object.keys(m).length === 0) && accept.responsibility && accept.limitations && isPercentTotalValid(members);
+    // Aceites: responsabilidade sempre obrigatória; limitações só é exigido se NÃO tiver endereço próprio
+    if (!accept.responsibility) errs.accept.base = "Aceite a declaração de responsabilidade.";
+    if (!company.hasFloridaAddress && !accept.limitations) errs.accept.base = "Aceite as limitações (endereço/agente por 12 meses).";
 
+    const companyErrors = Object.keys(errs.company).length === 0;
+    const membersOk = errs.members.every((m) => Object.keys(m).length === 0);
+    const acceptsOk = accept.responsibility && (company.hasFloridaAddress || accept.limitations);
+
+    const ok = companyErrors && membersOk && acceptsOk && isPercentTotalValid(members);
     setErrors(errs);
     return { ok, errs };
   }
@@ -435,6 +468,7 @@ function FormWizard({ open, onClose }) {
   }
 
   const { company, members, accept } = form;
+  const AErr = errors.company || {};
 
   return (
     <div className={classNames("fixed inset-0 z-50", !open && "hidden")}>
@@ -455,24 +489,64 @@ function FormWizard({ open, onClose }) {
                 <div className="mt-4 grid gap-4">
                   <div>
                     <label className="block text-sm text-slate-400" htmlFor="companyName">Nome da LLC</label>
-                    <input id="companyName" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.company.companyName && "border-red-500")} placeholder="Ex.: SUNSHINE MEDIA LLC" value={company.companyName} onChange={(e) => updateCompany("companyName", e.target.value)} />
-                    <FieldError msg={errors.company.companyName} />
+                    <input id="companyName" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", AErr.companyName && "border-red-500")} placeholder="Ex.: SUNSHINE MEDIA LLC" value={company.companyName} onChange={(e) => updateCompany("companyName", e.target.value)} />
+                    <FieldError msg={AErr.companyName} />
                   </div>
-                  <div>
-                    <label className="block text-sm text-slate-400" htmlFor="companyEmail">E-mail principal</label>
-                    <input id="companyEmail" type="email" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.company.email && "border-red-500")} placeholder="email@exemplo.com" value={company.email} onChange={(e) => updateCompany("email", e.target.value)} />
-                    <FieldError msg={errors.company.email} />
+
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-slate-400" htmlFor="companyEmail">E-mail principal</label>
+                      <input id="companyEmail" type="email" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", AErr.email && "border-red-500")} placeholder="email@exemplo.com" value={company.email} onChange={(e) => updateCompany("email", e.target.value)} />
+                      <FieldError msg={AErr.email} />
+                    </div>
+                    <div>
+                      <label className="block text-sm text-slate-400" htmlFor="companyPhone">Telefone principal</label>
+                      <input id="companyPhone" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", AErr.phone && "border-red-500")} placeholder="+1 (305) 123-4567" value={company.phone} onChange={(e) => updateCompany("phone", e.target.value)} />
+                      <FieldError msg={AErr.phone} />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-sm text-slate-400" htmlFor="companyPhone">Telefone principal</label>
-                    <input id="companyPhone" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.company.phone && "border-red-500")} placeholder="+1 (305) 123-4567" value={company.phone} onChange={(e) => updateCompany("phone", e.target.value)} />
-                    <FieldError msg={errors.company.phone} />
+
+                  {/* Toggle: possui endereço na Flórida? */}
+                  <div className="mt-2">
+                    <label className="inline-flex items-center gap-2 text-sm text-slate-300">
+                      <input type="checkbox" checked={company.hasFloridaAddress} onChange={(e) => updateCompany("hasFloridaAddress", e.target.checked)} />
+                      <span>Possui endereço físico na Flórida?</span>
+                    </label>
                   </div>
-                  <div>
-                    <label className="block text-sm text-slate-400" htmlFor="companyAddress">Endereço</label>
-                    <input id="companyAddress" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.company.address && "border-red-500")} placeholder="Rua, número, cidade, país" value={company.address} onChange={(e) => updateCompany("address", e.target.value)} />
-                    <FieldError msg={errors.company.address} />
-                  </div>
+
+                  {/* Se SIM, abrir campos de endereço USA */}
+                  {company.hasFloridaAddress ? (
+                    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+                      <div className="text-slate-300 font-medium mb-2">Endereço da empresa (USA)</div>
+                      <div>
+                        <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", AErr.line1 && "border-red-500")} placeholder="Address Line 1" value={company.usAddress.line1} onChange={(e) => updateUS("line1", e.target.value)} />
+                        <FieldError msg={AErr.line1} />
+                      </div>
+                      <div className="mt-2">
+                        <input className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Address Line 2 (opcional)" value={company.usAddress.line2} onChange={(e) => updateUS("line2", e.target.value)} />
+                      </div>
+                      <div className="mt-2 grid md:grid-cols-3 gap-2">
+                        <div>
+                          <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", AErr.city && "border-red-500")} placeholder="City" value={company.usAddress.city} onChange={(e) => updateUS("city", e.target.value)} />
+                          <FieldError msg={AErr.city} />
+                        </div>
+                        <div>
+                          <select className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", AErr.state && "border-red-500")} value={company.usAddress.state} onChange={(e) => updateUS("state", e.target.value)}>
+                            {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+                          </select>
+                          <FieldError msg={AErr.state} />
+                        </div>
+                        <div>
+                          <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", AErr.zip && "border-red-500")} placeholder="ZIP Code" value={company.usAddress.zip} onChange={(e) => updateUS("zip", e.target.value)} />
+                          <FieldError msg={AErr.zip} />
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
+                      Não possui endereço na Flórida — utilizaremos o **endereço e agente da KASH por 12 meses** incluídos no pacote.
+                    </div>
+                  )}
                 </div>
 
                 <h4 className="mt-6 text-slate-100 font-medium">Sócios (mínimo 2)</h4>
@@ -489,10 +563,11 @@ function FormWizard({ open, onClose }) {
                     <input type="checkbox" checked={accept.responsibility} onChange={(e) => toggleAccept("responsibility", e.target.checked)} />
                     <span>Declaro que todas as informações prestadas são verdadeiras e completas e assumo total responsabilidade civil e legal por elas.</span>
                   </label>
-                  <label className="flex items-start gap-2">
-                    <input type="checkbox" checked={accept.limitations} onChange={(e) => toggleAccept("limitations", e.target.checked)} />
-                    <span>Estou ciente de que (i) o registro da LLC não implica contratação automática de serviços contábeis e (ii) endereço e agente são válidos por 12 meses.</span>
+                  <label className={classNames("flex items-start gap-2", company.hasFloridaAddress && "opacity-50")}>
+                    <input type="checkbox" checked={accept.limitations} disabled={company.hasFloridaAddress} onChange={(e) => toggleAccept("limitations", e.target.checked)} />
+                    <span>Estou ciente de que endereço e agente da KASH são válidos por 12 meses.</span>
                   </label>
+                  {company.hasFloridaAddress && <div className="text-[12px] text-slate-400 -mt-2">* Indisponível porque você informou endereço próprio na Flórida.</div>}
                   {errors.accept.base && <div className="text-red-400 text-xs">{errors.accept.base}</div>}
                 </div>
 
@@ -509,11 +584,22 @@ function FormWizard({ open, onClose }) {
 
                 <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="text-slate-300 font-medium">Empresa</div>
-                  <div className="mt-2 grid md:grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                  <div className="mt-2 grid gap-y-1 text-sm">
                     <div><span className="text-slate-500">Nome: </span>{company.companyName || "—"}</div>
-                    <div><span className="text-slate-500">E-mail: </span>{company.email || "—"}</div>
-                    <div><span className="text-slate-500">Telefone: </span>{company.phone || "—"}</div>
-                    <div className="md:col-span-2"><span className="text-slate-500">Endereço: </span>{company.address || "—"}</div>
+                    <div className="grid md:grid-cols-2 gap-x-6">
+                      <div><span className="text-slate-500">E-mail: </span>{company.email || "—"}</div>
+                      <div><span className="text-slate-500">Telefone: </span>{company.phone || "—"}</div>
+                    </div>
+                    {company.hasFloridaAddress ? (
+                      <div className="mt-1">
+                        <div className="text-slate-400">Endereço informado:</div>
+                        <div>{company.usAddress.line1}</div>
+                        {company.usAddress.line2 && <div>{company.usAddress.line2}</div>}
+                        <div>{company.usAddress.city}, {company.usAddress.state} {company.usAddress.zip}</div>
+                      </div>
+                    ) : (
+                      <div className="mt-1 text-slate-400">Será utilizado o endereço e agente da KASH por 12 meses.</div>
+                    )}
                   </div>
                 </div>
 
