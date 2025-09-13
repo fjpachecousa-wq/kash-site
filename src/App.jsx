@@ -27,6 +27,11 @@ function isPercentTotalValid(members) {
   const sum = members.reduce((acc, m) => acc + (Number(m.percent || 0) || 0), 0);
   return Math.abs(sum - 100) < 0.001;
 }
+function todayISO() {
+  const d = new Date();
+  const pad = (n)=> String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
 
 /* ================== UI BÁSICOS ================== */
 function KLogo({ size = 40 }) {
@@ -211,84 +216,110 @@ function HowItWorks() {
 
 function FieldError({ msg }) { return msg ? <div className="text-red-400 text-xs mt-1">{msg}</div> : null; }
 
-/* ================== CONTRATO (ON-SCREEN) + PDF ================== */
-function ContractText({ companyName, tracking }) {
+/* ================== CONTRATO (texto padrão) ================== */
+function buildContractPT(companyName, tracking, dateISO) {
+  return [
+    "CONTRATO DE PRESTAÇÃO DE SERVIÇOS — KASH Solutions",
+    "",
+    "1. OBJETO – Formação de LLC na Flórida, obtenção do EIN junto ao IRS e emissão do W‑8BEN‑E, após aprovação do registro.",
+    "2. ENDEREÇO E AGENTE – Inclusos por 12 (doze) meses a partir da contratação; renováveis mediante cobrança adicional.",
+    "3. RESPONSABILIDADE – Todas as informações submetidas pelo CLIENTE são de sua exclusiva responsabilidade.",
+    "4. VIGÊNCIA – Este contrato entra em vigor após o pagamento integral das taxas e serviços.",
+    "5. JURISDIÇÃO – Rio de Janeiro/RJ, Brasil, podendo ser aplicado o foro da Flórida (Orange County, EUA).",
+    "6. PREÇO – US$ 1.360, salvo promoções publicadas.",
+    "7. DISPOSIÇÕES FINAIS – O registro da LLC não implica contratação automática de contabilidade mensal.",
+    "",
+    `Tracking: ${tracking}`,
+    `Data: ${dateISO}`
+  ].join("\n");
+}
+function buildContractEN(companyName, tracking, dateISO) {
+  return [
+    "SERVICE AGREEMENT — KASH Solutions",
+    "",
+    "1. PURPOSE – Formation of a Florida LLC, obtaining the EIN with the IRS, and issuing Form W‑8BEN‑E upon approval.",
+    "2. REGISTERED AGENT & ADDRESS – Provided for 12 (twelve) months from the contracting date; renewable with additional fees.",
+    "3. INFORMATION RESPONSIBILITY – All information submitted by the CLIENT is the CLIENT’s sole responsibility.",
+    "4. EFFECTIVENESS – This Agreement becomes valid after full payment of services and fees.",
+    "5. JURISDICTION – Rio de Janeiro/RJ, Brazil, with Florida (Orange County, USA) as an alternative venue.",
+    "6. PRICE – US$ 1,360 unless otherwise promoted.",
+    "7. FINAL PROVISIONS – LLC registration does not imply automatic hiring of monthly bookkeeping.",
+    "",
+    `Tracking: ${tracking}`,
+    `Date: ${dateISO}`
+  ].join("\n");
+}
+function ContractText({ companyName, tracking, dateISO }) {
   return (
-    <div className="space-y-8 text-[13px] leading-6 text-slate-200">
+    <div className="space-y-10 text-[13px] leading-6 text-slate-200">
       <section>
         <div className="text-base font-semibold text-slate-100">CONTRATO DE PRESTAÇÃO DE SERVIÇOS — KASH Solutions</div>
-        <div className="text-xs text-slate-400">Cliente: {companyName || "[NOME DO CLIENTE]"} · Tracking: {tracking}</div>
         <ol className="list-decimal list-inside mt-3 space-y-2 text-slate-300">
           <li><b>Objeto.</b> Formação de LLC na Flórida, obtenção do EIN junto ao IRS e emissão do W‑8BEN‑E, após aprovação do registro.</li>
           <li><b>Endereço e Agente.</b> Inclusos por 12 meses; renováveis mediante cobrança adicional.</li>
-          <li><b>Responsabilidade das informações.</b> Todos os dados enviados pelo CLIENTE são de sua exclusiva responsabilidade.</li>
-          <li><b>Vigência e condição.</b> Este contrato entra em vigor após o pagamento integral das taxas e serviços.</li>
-          <li><b>Jurisdição.</b> Rio de Janeiro/RJ, Brasil, podendo também ser aplicado o foro da Flórida (Orange County, EUA).</li>
-          <li><b>Valor do pacote.</b> US$ 1.360, salvo promoções publicadas.</li>
-          <li><b>Disposições finais.</b> O registro da LLC não implica contratação automática de serviços contábeis mensais.</li>
+          <li><b>Responsabilidade.</b> Dados enviados pelo CLIENTE são de sua exclusiva responsabilidade.</li>
+          <li><b>Vigência.</b> Válido após pagamento integral das taxas e serviços.</li>
+          <li><b>Jurisdição.</b> Rio de Janeiro/RJ, Brasil, e alternativa em Orange County/FL, EUA.</li>
+          <li><b>Preço.</b> US$ 1.360.</li>
+          <li><b>Disposições finais.</b> Registro da LLC não implica contabilidade mensal.</li>
         </ol>
+        <div className="text-xs text-slate-400 mt-4">Tracking: {tracking}</div>
+        <div className="text-xs text-slate-400">Data: {dateISO}</div>
       </section>
       <hr className="border-slate-700" />
       <section>
         <div className="text-base font-semibold text-slate-100">SERVICE AGREEMENT — KASH Solutions</div>
-        <div className="text-xs text-slate-400">Client: {companyName || "[CLIENT NAME]"} · Tracking: {tracking}</div>
         <ol className="list-decimal list-inside mt-3 space-y-2 text-slate-300">
-          <li><b>Purpose.</b> Formation of a Florida LLC, obtaining the EIN with the IRS, and issuing Form W‑8BEN‑E upon company approval.</li>
-          <li><b>Registered Agent & Address.</b> Provided for 12 months; renewable with additional fees.</li>
-          <li><b>Information responsibility.</b> All information submitted by the CLIENT is the CLIENT’s sole responsibility.</li>
-          <li><b>Effectiveness.</b> This Agreement becomes valid after full payment of services and fees.</li>
-          <li><b>Jurisdiction.</b> Rio de Janeiro/RJ, Brazil, with Florida (Orange County, USA) as an alternative venue.</li>
-          <li><b>Price.</b> US$ 1,360 unless otherwise promoted.</li>
-          <li><b>Final provisions.</b> LLC registration does not imply automatic hiring of monthly bookkeeping.</li>
+          <li><b>Purpose.</b> Formation of a Florida LLC, EIN with the IRS, and W‑8BEN‑E issuance upon approval.</li>
+          <li><b>Registered Agent & Address.</b> Provided for 12 months; renewable with fees.</li>
+          <li><b>Information responsibility.</b> All data is the CLIENT’s sole responsibility.</li>
+          <li><b>Effectiveness.</b> Valid after full payment of fees and services.</li>
+          <li><b>Jurisdiction.</b> Rio de Janeiro/RJ, Brazil; alternative venue in Orange County/FL, USA.</li>
+          <li><b>Price.</b> US$ 1,360.</li>
+          <li><b>Final provisions.</b> Registration does not imply monthly bookkeeping.</li>
         </ol>
+        <div className="text-xs text-slate-400 mt-4">Tracking: {tracking}</div>
+        <div className="text-xs text-slate-400">Date: {dateISO}</div>
       </section>
     </div>
   );
 }
 
-/* PDF compacto (1 página PT + 1 página EN), legível */
-function generateCompactPdf({ companyName, tracking }) {
+/* ================== PDF (Times, 12pt, margens 1" e data ao final) ================== */
+function generateA4PdfLikeModel({ companyName, tracking, dateISO }) {
   try {
     const { jsPDF } = window.jspdf || {};
     if (!jsPDF) return "";
     const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
-    const M = { l: 44, r: 44, t: 54, b: 54, width: pageW - 88 };
-
-    const writeBlocks = (title, header, blocks) => {
+    const M = { l: 72, r: 72, t: 72, b: 72 }; // 1 inch margins
+    const width = doc.internal.pageSize.getWidth() - M.l - M.r;
+    const write = (title, lines) => {
       let y = M.t;
-      doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text(title, M.l, y); y += 18;
-      doc.setFont("helvetica", ""); doc.setFontSize(10.5); doc.text(header, M.l, y); y += 16;
-      for (const b of blocks) {
-        const lines = doc.splitTextToSize(b, M.width);
-        if (y + 14 * lines.length > pageH - M.b) break; // segurança
-        doc.text(lines, M.l, y); y += 14 * lines.length + 4;
-      }
+      doc.setFont("times", "bold"); doc.setFontSize(14);
+      doc.text(title, M.l, y); y += 18;
+      doc.setFont("times", ""); doc.setFontSize(12);
+      lines.forEach((t) => {
+        const arr = doc.splitTextToSize(t, width);
+        doc.text(arr, M.l, y);
+        y += (arr.length * 16);
+      });
     };
 
-    const blocksPT = [
-      "1. OBJETO — Formação de LLC na Flórida, obtenção do EIN junto ao IRS e emissão do W‑8BEN‑E, após aprovação do registro.",
-      "2. ENDEREÇO E AGENTE — Inclusos por 12 (doze) meses a partir da contratação; renováveis mediante cobrança adicional.",
-      "3. RESPONSABILIDADE DAS INFORMAÇÕES — Todos os dados enviados pelo CLIENTE são de sua exclusiva responsabilidade.",
-      "4. VIGÊNCIA E CONDIÇÃO — Este contrato entra em vigor após o pagamento integral das taxas e serviços.",
-      "5. JURISDIÇÃO — Rio de Janeiro/RJ, Brasil, podendo também ser aplicado o foro da Flórida (Orange County, EUA).",
-      "6. VALOR DO PACOTE — US$ 1.360, salvo promoções publicadas.",
-      "7. DISPOSIÇÕES FINAIS — O registro da LLC não implica contratação automática de serviços contábeis mensais.",
-    ];
-    writeBlocks("CONTRATO DE PRESTAÇÃO DE SERVIÇOS — KASH Solutions", `Cliente: ${companyName || "[NOME DO CLIENTE]"} · Tracking: ${tracking}`, blocksPT);
+    // PT
+    const pt = buildContractPT(companyName, tracking, dateISO).split("\n");
+    write("CONTRATO DE PRESTAÇÃO DE SERVIÇOS — KASH Solutions", pt.slice(2, -2)); // corpo principal
+    // rodapé com tracking + data
+    doc.setFont("times",""); doc.setFontSize(12);
+    doc.text(`Tracking: ${tracking}`, M.l, doc.internal.pageSize.getHeight() - M.b - 28);
+    doc.text(`Data: ${dateISO}`, M.l, doc.internal.pageSize.getHeight() - M.b - 12);
 
+    // EN (segunda página)
     doc.addPage();
-    const blocksEN = [
-      "1. PURPOSE — Formation of a Florida LLC, obtaining the EIN with the IRS, and issuing Form W‑8BEN‑E upon company approval.",
-      "2. REGISTERED AGENT & ADDRESS — Provided for 12 (twelve) months from the contracting date; renewable with additional fees.",
-      "3. INFORMATION RESPONSIBILITY — All information submitted by the CLIENT is the CLIENT’s sole responsibility.",
-      "4. EFFECTIVENESS — This Agreement becomes valid after full payment of services and fees.",
-      "5. JURISDICTION — Rio de Janeiro/RJ, Brazil, with Florida (Orange County, USA) as an alternative venue.",
-      "6. PRICE — US$ 1,360 unless otherwise promoted.",
-      "7. FINAL PROVISIONS — LLC registration does not imply automatic hiring of monthly bookkeeping.",
-    ];
-    writeBlocks("SERVICE AGREEMENT — KASH Solutions", `Client: ${companyName || "[CLIENT NAME]"} · Tracking: ${tracking}`, blocksEN);
+    const en = buildContractEN(companyName, tracking, dateISO).split("\n");
+    write("SERVICE AGREEMENT — KASH Solutions", en.slice(2, -2));
+    doc.setFont("times",""); doc.setFontSize(12);
+    doc.text(`Tracking: ${tracking}`, M.l, doc.internal.pageSize.getHeight() - M.b - 28);
+    doc.text(`Date: ${dateISO}`, M.l, doc.internal.pageSize.getHeight() - M.b - 12);
 
     return doc.output("bloburl");
   } catch (e) {
@@ -386,11 +417,55 @@ const US_STATES = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"
 ];
 
+/* ======= Tracking Search (simples, sem rotas) ======= */
+function TrackingSearch() {
+  const [code, setCode] = useState("");
+  const [result, setResult] = useState(null);
+  const [notFound, setNotFound] = useState(false);
+
+  const handleLookup = () => {
+    try {
+      const raw = localStorage.getItem(code.trim());
+      if (!raw) { setResult(null); setNotFound(true); return; }
+      const data = JSON.parse(raw);
+      setResult(data);
+      setNotFound(false);
+    } catch (e) {
+      setResult(null); setNotFound(true);
+    }
+  };
+
+  return (
+    <section className="py-12 border-t border-slate-800">
+      <div className="max-w-4xl mx-auto px-4">
+        <SectionTitle title="Consultar processo por Tracking" subtitle="Insira seu código (ex.: KASH-XXXXXX) para verificar os dados enviados e baixar o contrato." />
+        <div className="mt-4 flex gap-2">
+          <input className="flex-1 rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="KASH-ABC123" value={code} onChange={(e)=>setCode(e.target.value)} />
+          <CTAButton onClick={handleLookup}>Consultar</CTAButton>
+        </div>
+        {notFound && <div className="text-sm text-red-400 mt-2">Tracking não encontrado neste dispositivo.</div>}
+        {result && (
+          <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-4">
+            <div className="text-slate-300 font-medium">Status</div>
+            <div className="text-slate-400 text-sm mt-1">Recebido em {result.dateISO}. Empresa: {result.company?.companyName || "—"}</div>
+            <div className="mt-4">
+              <CTAButton onClick={() => {
+                const url = generateA4PdfLikeModel({ companyName: result.company?.companyName, tracking: result.tracking, dateISO: result.dateISO });
+                if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${result.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
+              }}>Baixar contrato (PDF)</CTAButton>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
-  const [agreed, setAgreed] = useState(false);
+  const [agreed, setAgreed] = useState(true); // marcado por padrão conforme solicitado
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState({ company: {}, members: [], accept: {} });
 
@@ -401,7 +476,7 @@ function FormWizard({ open, onClose }) {
   const removeMember = (index) => dispatch({ type: "REMOVE_MEMBER", index });
   const toggleAccept = (key, value) => dispatch({ type: "TOGGLE_ACCEPT", key, value });
 
-  // Se o usuário marcar que possui endereço na Flórida, desabilita/limpa a caixa de "limitações"
+  // Se o usuário marcar que possui endereço na Flórida, desabilita/limpa caixa de "limitações"
   useEffect(() => {
     if (form.company.hasFloridaAddress && form.accept.limitations) {
       dispatch({ type: "TOGGLE_ACCEPT", key: "limitations", value: false });
@@ -437,7 +512,6 @@ function FormWizard({ open, onClose }) {
     }
     if (!isPercentTotalValid(members)) alert("A soma dos percentuais deve ser 100%.");
 
-    // Aceites: responsabilidade sempre obrigatória; limitações só é exigido se NÃO tiver endereço próprio
     if (!accept.responsibility) errs.accept.base = "Aceite a declaração de responsabilidade.";
     if (!company.hasFloridaAddress && !accept.limitations) errs.accept.base = "Aceite as limitações (endereço/agente por 12 meses).";
 
@@ -456,19 +530,38 @@ function FormWizard({ open, onClose }) {
     setLoading(true);
     const mock = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
     setTracking(mock);
+    const dateISO = todayISO();
+
+    const contractPT = buildContractPT(form.company.companyName, mock, dateISO);
+    const contractEN = buildContractEN(form.company.companyName, mock, dateISO);
+
+    const payload = {
+      tracking: mock,
+      dateISO,
+      agreed: true, // enviar marcado
+      company: form.company,
+      members: form.members,
+      accepts: form.accept,
+      contractPT,
+      contractEN,
+      source: "kashsolutions.us",
+    };
+
     try {
+      localStorage.setItem(mock, JSON.stringify(payload));
       await fetch(CONFIG.formspreeEndpoint, {
         method: "POST",
         headers: { "Accept": "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, tracking: mock, source: "kashsolutions.us" }),
+        body: JSON.stringify(payload),
       });
-    } catch (e) { console.warn("Formspree error", e); }
+    } catch (e) { console.warn("Formspree/local save error", e); }
     setLoading(false);
     setStep(3); // Mostra tracking + contrato
   }
 
   const { company, members, accept } = form;
   const AErr = errors.company || {};
+  const dateISO = todayISO();
 
   return (
     <div className={classNames("fixed inset-0 z-50", !open && "hidden")}>
@@ -544,7 +637,7 @@ function FormWizard({ open, onClose }) {
                     </div>
                   ) : (
                     <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
-                      Não possui endereço na Flórida — utilizaremos o **endereço e agente da KASH por 12 meses** incluídos no pacote.
+                      Não possui endereço na Flórida — utilizaremos o <b>endereço e agente da KASH por 12 meses</b> incluídos no pacote.
                     </div>
                   )}
                 </div>
@@ -630,7 +723,7 @@ function FormWizard({ open, onClose }) {
               </div>
             )}
 
-            {/* Step 3: Tracking + Contrato (Li e Concordo) */}
+            {/* Step 3: Tracking + Contrato (Li e Concordo marcado) */}
             {step === 3 && (
               <div className="p-6">
                 <div className="text-center">
@@ -643,12 +736,12 @@ function FormWizard({ open, onClose }) {
                   <div className="flex items-center justify-between">
                     <div className="text-slate-300 font-medium">Contrato (PT & EN)</div>
                     <button className="text-xs text-emerald-400 hover:underline" onClick={() => {
-                      const url = generateCompactPdf({ companyName: company.companyName, tracking });
+                      const url = generateA4PdfLikeModel({ companyName: company.companyName, tracking, dateISO });
                       if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
                     }}>Baixar PDF</button>
                   </div>
                   <div className="mt-4 max-h-[50vh] overflow-auto pr-2">
-                    <ContractText companyName={company.companyName} tracking={tracking} />
+                    <ContractText companyName={company.companyName} tracking={tracking} dateISO={dateISO} />
                   </div>
                   <label className="mt-4 flex items-center gap-2 text-sm text-slate-300">
                     <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
@@ -687,6 +780,7 @@ export default function App() {
       <Services />
       <Pricing onStart={() => setOpen(true)} />
       <HowItWorks />
+      <TrackingSearch />
       <Footer />
       <FormWizard open={open} onClose={() => setOpen(false)} />
     </div>
