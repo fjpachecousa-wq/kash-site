@@ -13,7 +13,7 @@ const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
 function classNames(...cls) { return cls.filter(Boolean).join(" "); }
 
-/* Helpers */
+/* ================== HELPERS ================== */
 function calcAgeFullDate(dateStr) {
   if (!dateStr) return 0;
   const d = new Date(dateStr);
@@ -246,58 +246,50 @@ function ContractText({ companyName, tracking }) {
   );
 }
 
-/* PDF compacto (1 página PT + 1 página EN), fontes maiores para legibilidade */
+/* PDF compacto (1 página PT + 1 página EN), legível */
 function generateCompactPdf({ companyName, tracking }) {
   try {
     const { jsPDF } = window.jspdf || {};
     if (!jsPDF) return "";
     const doc = new jsPDF({ unit: "pt", format: "a4" });
     const pageW = doc.internal.pageSize.getWidth();
-    const M = { l: 44, r: 44, t: 54, width: pageW - 88 };
+    const pageH = doc.internal.pageSize.getHeight();
+    const M = { l: 44, r: 44, t: 54, b: 54, width: pageW - 88 };
 
-    const writePT = () => {
+    const writeBlocks = (title, header, blocks) => {
       let y = M.t;
-      doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text("CONTRATO DE PRESTAÇÃO DE SERVIÇOS — KASH Solutions", M.l, y); y += 18;
-      doc.setFont("helvetica", ""); doc.setFontSize(10.5); doc.text(`Cliente: ${companyName || "[NOME DO CLIENTE]"} · Tracking: ${tracking}`, M.l, y); y += 16;
-
-      const blocks = [
-        "1. OBJETO — Formação de LLC na Flórida, obtenção do EIN junto ao IRS e emissão do W‑8BEN‑E, após aprovação do registro.",
-        "2. ENDEREÇO E AGENTE — Inclusos por 12 (doze) meses a partir da contratação; renováveis mediante cobrança adicional.",
-        "3. RESPONSABILIDADE DAS INFORMAÇÕES — Todos os dados enviados pelo CLIENTE são de sua exclusiva responsabilidade.",
-        "4. VIGÊNCIA E CONDIÇÃO — Este contrato entra em vigor após o pagamento integral das taxas e serviços.",
-        "5. JURISDIÇÃO — Rio de Janeiro/RJ, Brasil, podendo também ser aplicado o foro da Flórida (Orange County, EUA).",
-        "6. VALOR DO PACOTE — US$ 1.360, salvo promoções publicadas.",
-        "7. DISPOSIÇÕES FINAIS — O registro da LLC não implica contratação automática de serviços contábeis mensais.",
-      ];
+      doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text(title, M.l, y); y += 18;
+      doc.setFont("helvetica", ""); doc.setFontSize(10.5); doc.text(header, M.l, y); y += 16;
       for (const b of blocks) {
         const lines = doc.splitTextToSize(b, M.width);
+        if (y + 14 * lines.length > pageH - M.b) break; // segurança
         doc.text(lines, M.l, y); y += 14 * lines.length + 4;
       }
     };
 
-    const writeEN = () => {
-      let y = M.t;
-      doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text("SERVICE AGREEMENT — KASH Solutions", M.l, y); y += 18;
-      doc.setFont("helvetica", ""); doc.setFontSize(10.5); doc.text(`Client: ${companyName || "[CLIENT NAME]"} · Tracking: ${tracking}`, M.l, y); y += 16;
+    const blocksPT = [
+      "1. OBJETO — Formação de LLC na Flórida, obtenção do EIN junto ao IRS e emissão do W‑8BEN‑E, após aprovação do registro.",
+      "2. ENDEREÇO E AGENTE — Inclusos por 12 (doze) meses a partir da contratação; renováveis mediante cobrança adicional.",
+      "3. RESPONSABILIDADE DAS INFORMAÇÕES — Todos os dados enviados pelo CLIENTE são de sua exclusiva responsabilidade.",
+      "4. VIGÊNCIA E CONDIÇÃO — Este contrato entra em vigor após o pagamento integral das taxas e serviços.",
+      "5. JURISDIÇÃO — Rio de Janeiro/RJ, Brasil, podendo também ser aplicado o foro da Flórida (Orange County, EUA).",
+      "6. VALOR DO PACOTE — US$ 1.360, salvo promoções publicadas.",
+      "7. DISPOSIÇÕES FINAIS — O registro da LLC não implica contratação automática de serviços contábeis mensais.",
+    ];
+    writeBlocks("CONTRATO DE PRESTAÇÃO DE SERVIÇOS — KASH Solutions", `Cliente: ${companyName || "[NOME DO CLIENTE]"} · Tracking: ${tracking}`, blocksPT);
 
-      const blocks = [
-        "1. PURPOSE — Formation of a Florida LLC, obtaining the EIN with the IRS, and issuing Form W‑8BEN‑E upon company approval.",
-        "2. REGISTERED AGENT & ADDRESS — Provided for 12 (twelve) months from the contracting date; renewable with additional fees.",
-        "3. INFORMATION RESPONSIBILITY — All information submitted by the CLIENT is the CLIENT’s sole responsibility.",
-        "4. EFFECTIVENESS — This Agreement becomes valid after full payment of services and fees.",
-        "5. JURISDICTION — Rio de Janeiro/RJ, Brazil, with Florida (Orange County, USA) as an alternative venue.",
-        "6. PRICE — US$ 1,360 unless otherwise promoted.",
-        "7. FINAL PROVISIONS — LLC registration does not imply automatic hiring of monthly bookkeeping.",
-      ];
-      for (const b of blocks) {
-        const lines = doc.splitTextToSize(b, M.width);
-        doc.text(lines, M.l, y); y += 14 * lines.length + 4;
-      }
-    };
-
-    writePT();
     doc.addPage();
-    writeEN();
+    const blocksEN = [
+      "1. PURPOSE — Formation of a Florida LLC, obtaining the EIN with the IRS, and issuing Form W‑8BEN‑E upon company approval.",
+      "2. REGISTERED AGENT & ADDRESS — Provided for 12 (twelve) months from the contracting date; renewable with additional fees.",
+      "3. INFORMATION RESPONSIBILITY — All information submitted by the CLIENT is the CLIENT’s sole responsibility.",
+      "4. EFFECTIVENESS — This Agreement becomes valid after full payment of services and fees.",
+      "5. JURISDICTION — Rio de Janeiro/RJ, Brazil, with Florida (Orange County, USA) as an alternative venue.",
+      "6. PRICE — US$ 1,360 unless otherwise promoted.",
+      "7. FINAL PROVISIONS — LLC registration does not imply automatic hiring of monthly bookkeeping.",
+    ];
+    writeBlocks("SERVICE AGREEMENT — KASH Solutions", `Client: ${companyName || "[CLIENT NAME]"} · Tracking: ${tracking}`, blocksEN);
+
     return doc.output("bloburl");
   } catch (e) {
     console.error(e);
@@ -361,7 +353,7 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
       </div>
       <div className="grid md:grid-cols-3 gap-2">
         <div>
-          <input className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500")} placeholder="Órgão emissor" value={data.issuer} onChange={(e) => onChange("issuer", e.target.value)} />
+          <input className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Órgão emissor" value={data.issuer} onChange={(e) => onChange("issuer", e.target.value)} />
         </div>
         <div>
           <input type="date" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.docExpiry && "border-red-500")} value={data.docExpiry} onChange={(e) => onChange("docExpiry", e.target.value)} />
