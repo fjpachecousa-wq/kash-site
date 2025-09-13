@@ -12,6 +12,11 @@ const CONFIG = {
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
 function classNames(...cls) { return cls.filter(Boolean).join(" "); }
+function todayISO() {
+  const d = new Date();
+  const pad = (n)=> String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
 
 /* ================== HELPERS ================== */
 function calcAgeFullDate(dateStr) {
@@ -27,39 +32,18 @@ function isPercentTotalValid(members) {
   const sum = members.reduce((acc, m) => acc + (Number(m.percent || 0) || 0), 0);
   return Math.abs(sum - 100) < 0.001;
 }
-function todayISO() {
-  const d = new Date();
-  const pad = (n)=> String(n).padStart(2,"0");
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
-}
 
-/* ================== UI BÁSICOS ================== */
+/* ================== UI ================== */
 function KLogo({ size = 40 }) {
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
       <div className="absolute inset-0 rounded-2xl bg-slate-900" />
       <div className="absolute inset-[3px] rounded-xl bg-slate-800 shadow-inner" />
       <svg width={size * 0.7} height={size * 0.7} viewBox="0 0 64 64" className="absolute">
-        <defs>
-          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#34d399" />
-            <stop offset="100%" stopColor="#10b981" />
-          </linearGradient>
-        </defs>
+        <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stopColor="#34d399" /><stop offset="100%" stopColor="#10b981" /></linearGradient></defs>
         <path d="M14 8h8v48h-8z" fill="url(#g)" />
         <path d="M26 32l22-24h10L42 32l16 24H48L26 32z" fill="url(#g)" />
       </svg>
-    </div>
-  );
-}
-function Pill({ children }) {
-  return <span className="inline-flex items-center gap-2 rounded-full border border-emerald-500/20 bg-emerald-500/10 px-3 py-1 text-emerald-300 text-xs">{children}</span>;
-}
-function SectionTitle({ title, subtitle }) {
-  return (
-    <div>
-      <h3 className="text-2xl text-slate-100 font-semibold">{title}</h3>
-      {subtitle && <p className="text-slate-400 text-sm mt-1">{subtitle}</p>}
     </div>
   );
 }
@@ -72,8 +56,16 @@ function CTAButton({ children, variant = "primary", onClick, type = "button", di
     : "bg-slate-700 text-slate-100 hover:bg-slate-600";
   return <button type={type} onClick={onClick} disabled={disabled} className={classNames(base, styles)}>{children}</button>;
 }
+function SectionTitle({ title, subtitle }) {
+  return (
+    <div>
+      <h3 className="text-2xl text-slate-100 font-semibold">{title}</h3>
+      {subtitle && <p className="text-slate-400 text-sm mt-1">{subtitle}</p>}
+    </div>
+  );
+}
 
-/* ================== SIMULADOR ================== */
+/* ================== HERO/SERVICES/PRICING ================== */
 function DemoCalculator() {
   const [monthly, setMonthly] = useState(4000);
   const yearly = monthly * 12;
@@ -81,7 +73,7 @@ function DemoCalculator() {
   const saved = Math.max(0, withheld - 1360);
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-      <div className="flex items-center justify-between"><div className="text-slate-300">Estimativa de economia anual</div><Pill>Simulador</Pill></div>
+      <div className="flex items-center justify-between"><div className="text-slate-300">Estimativa de economia anual</div><span className="text-xs text-emerald-300">Simulador</span></div>
       <div className="mt-4">
         <input type="range" min={1000} max={20000} step={100} value={monthly} onChange={(e) => setMonthly(Number(e.target.value))} className="w-full" />
         <div className="mt-2 text-sm text-slate-400">Receita mensal: <span className="text-slate-200">US$ {monthly.toLocaleString()}</span></div>
@@ -89,38 +81,29 @@ function DemoCalculator() {
       <div className="mt-4 grid grid-cols-3 gap-3 text-center">
         <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Receita/ano</div><div className="text-lg text-slate-100">US$ {yearly.toLocaleString()}</div></div>
         <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Retenção 30%</div><div className="text-lg text-slate-100">US$ {withheld.toLocaleString()}</div></div>
-        <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-emerald-300">Economia potencial</div><div className="text-lg text-emerald-400">US$ {saved.toLocaleString()}</div></div>
+        <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Economia potencial</div><div className="text-lg text-emerald-400">US$ {saved.toLocaleString()}</div></div>
       </div>
     </div>
   );
 }
-
-/* ================== HERO ================== */
 function Hero({ onStart }) {
   return (
     <section className="pt-16 pb-10">
       <div className="max-w-6xl mx-auto px-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <KLogo size={42} />
-            <div>
-              <h1 className="text-2xl md:text-3xl font-semibold text-slate-100">KASH Solutions</h1>
-              <p className="text-slate-400 text-sm">KASH CORPORATE SOLUTIONS LLC · Florida LLC</p>
-            </div>
+        <div className="flex items-center gap-3">
+          <KLogo size={42} />
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold text-slate-100">KASH Solutions</h1>
+            <p className="text-slate-400 text-sm">KASH CORPORATE SOLUTIONS LLC · Florida LLC</p>
           </div>
         </div>
-
         <div className="mt-10 grid md:grid-cols-2 gap-8 items-start">
           <div>
             <h2 className="text-3xl md:text-4xl font-semibold text-slate-100">Abra sua LLC na Flórida e elimine a retenção de 30%.</h2>
-            <p className="mt-4 text-slate-300">Solução completa para criadores brasileiros que monetizam nos EUA: abertura da empresa, EIN, W‑8BEN‑E, endereço e agente por 12 meses.</p>
+            <p className="mt-4 text-slate-300">Abertura da empresa, EIN, W‑8BEN‑E, endereço e agente por 12 meses.</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <CTAButton onClick={onStart}>Começar agora</CTAButton>
               <a href="#como-funciona" className="inline-flex"><CTAButton variant="ghost">Como funciona</CTAButton></a>
-            </div>
-            <div className="mt-6 flex items-center gap-4 text-slate-400 text-sm">
-              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" />Endereço e agente por 12 meses</div>
-              <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-400" />Contrato digital bilíngue</div>
             </div>
           </div>
           <DemoCalculator />
@@ -129,8 +112,6 @@ function Hero({ onStart }) {
     </section>
   );
 }
-
-/* ================== SERVIÇOS ================== */
 function Services() {
   const items = [
     { t: "Abertura LLC Partnership", d: "Registro oficial na Flórida (Sunbiz)." },
@@ -155,8 +136,6 @@ function Services() {
     </section>
   );
 }
-
-/* ================== PREÇOS ================== */
 function Pricing({ onStart }) {
   const plans = [
     { name: "Abertura LLC", price: CONFIG.prices.llc, features: ["Endereço + Agente 12 meses", "EIN", "Operating Agreement", "W‑8BEN‑E"], cta: "Contratar", disabled: false },
@@ -186,8 +165,6 @@ function Pricing({ onStart }) {
     </section>
   );
 }
-
-/* ================== COMO FUNCIONA ================== */
 function HowItWorks() {
   const steps = [
     { t: "Consulta", d: "Alinhamento de expectativas (opcional)." },
@@ -214,112 +191,84 @@ function HowItWorks() {
   );
 }
 
-function FieldError({ msg }) { return msg ? <div className="text-red-400 text-xs mt-1">{msg}</div> : null; }
-
-/* ================== CONTRATO (texto padrão) ================== */
-function buildContractPT(companyName, tracking, dateISO) {
+/* ================== CONTRACT MODEL (exactly 11 clauses; Letter; date at bottom) ================== */
+function buildContractEN(companyName) {
   return [
-    "CONTRATO DE PRESTAÇÃO DE SERVIÇOS — KASH Solutions",
-    "",
-    "1. OBJETO – Formação de LLC na Flórida, obtenção do EIN junto ao IRS e emissão do W‑8BEN‑E, após aprovação do registro.",
-    "2. ENDEREÇO E AGENTE – Inclusos por 12 (doze) meses a partir da contratação; renováveis mediante cobrança adicional.",
-    "3. RESPONSABILIDADE – Todas as informações submetidas pelo CLIENTE são de sua exclusiva responsabilidade.",
-    "4. VIGÊNCIA – Este contrato entra em vigor após o pagamento integral das taxas e serviços.",
-    "5. JURISDIÇÃO – Rio de Janeiro/RJ, Brasil, podendo ser aplicado o foro da Flórida (Orange County, EUA).",
-    "6. PREÇO – US$ 1.360, salvo promoções publicadas.",
-    "7. DISPOSIÇÕES FINAIS – O registro da LLC não implica contratação automática de contabilidade mensal.",
-    "",
-    `Tracking: ${tracking}`,
-    `Data: ${dateISO}`
-  ].join("\n");
+    "SERVICE AGREEMENT – KASH Corporate Solutions",
+    `CLIENT: ${companyName}, identified by the information provided in the electronic form, hereinafter referred to as CLIENT. CONTRACTOR: KASH CORPORATE SOLUTIONS LLC, a limited liability company registered in the State of Florida, United States of America, hereinafter referred to as KASH CORPORATE.`,
+    "SECTION 1 – PURPOSE: This Agreement covers the registration of a limited liability company (LLC) in Florida, followed by the application with the IRS for issuance of the Employer Identification Number (EIN), upon approval of the company formation.",
+    "SECTION 2 – REGISTERED AGENT AND ADDRESS: KASH CORPORATE will provide: (a) a virtual business address in Florida for twelve (12) months; (b) a registered agent in Florida for twelve (12) months. After this period, services may be renewed with additional fees.",
+    "SECTION 3 – INFORMATION RESPONSIBILITY: All information provided by CLIENT is of his/her sole responsibility, including legal and civil liability for inaccuracies or false statements.",
+    "SECTION 4 – LIMITATIONS: This Agreement does not include: licenses/permits, tax filings, bookkeeping, or banking services.",
+    "SECTION 5 – COMPENSATION: CLIENT shall pay KASH CORPORATE the amount of US$ 1,360.00, in one single installment, at the time of hiring, through the official payment methods available on KASH CORPORATE’s website.",
+    "SECTION 6 – TERMINATION: KASH CORPORATE's obligations end after issuance of the EIN and delivery of digital documents to CLIENT.",
+    "SECTION 7 – TERM: This Agreement is effective on the signing date and remains valid until completion of services described herein.",
+    "SECTION 8 – VALIDITY CONDITION: This Agreement only becomes valid after full payment as per Section 5.",
+    "SECTION 9 – CASE TRACKING: After payment, CLIENT will receive a unique Tracking Number to monitor the process progress via KASH CORPORATE’s platform.",
+    "SECTION 10 – PUBLIC AGENCIES: Approval of company formation and EIN issuance depends exclusively on the respective government agencies (State of Florida and IRS). KASH CORPORATE does not guarantee timelines or approvals.",
+    "SECTION 11 – JURISDICTION: For disputes, the forum elected is Rio de Janeiro, Brazil, with optional jurisdiction in Orlando, Florida, USA, at CLIENT’s discretion."
+  ];
 }
-function buildContractEN(companyName, tracking, dateISO) {
+function buildContractPT(companyName) {
   return [
-    "SERVICE AGREEMENT — KASH Solutions",
-    "",
-    "1. PURPOSE – Formation of a Florida LLC, obtaining the EIN with the IRS, and issuing Form W‑8BEN‑E upon approval.",
-    "2. REGISTERED AGENT & ADDRESS – Provided for 12 (twelve) months from the contracting date; renewable with additional fees.",
-    "3. INFORMATION RESPONSIBILITY – All information submitted by the CLIENT is the CLIENT’s sole responsibility.",
-    "4. EFFECTIVENESS – This Agreement becomes valid after full payment of services and fees.",
-    "5. JURISDICTION – Rio de Janeiro/RJ, Brazil, with Florida (Orange County, USA) as an alternative venue.",
-    "6. PRICE – US$ 1,360 unless otherwise promoted.",
-    "7. FINAL PROVISIONS – LLC registration does not imply automatic hiring of monthly bookkeeping.",
-    "",
-    `Tracking: ${tracking}`,
-    `Date: ${dateISO}`
-  ].join("\n");
-}
-function ContractText({ companyName, tracking, dateISO }) {
-  return (
-    <div className="space-y-10 text-[13px] leading-6 text-slate-200">
-      <section>
-        <div className="text-base font-semibold text-slate-100">CONTRATO DE PRESTAÇÃO DE SERVIÇOS — KASH Solutions</div>
-        <ol className="list-decimal list-inside mt-3 space-y-2 text-slate-300">
-          <li><b>Objeto.</b> Formação de LLC na Flórida, obtenção do EIN junto ao IRS e emissão do W‑8BEN‑E, após aprovação do registro.</li>
-          <li><b>Endereço e Agente.</b> Inclusos por 12 meses; renováveis mediante cobrança adicional.</li>
-          <li><b>Responsabilidade.</b> Dados enviados pelo CLIENTE são de sua exclusiva responsabilidade.</li>
-          <li><b>Vigência.</b> Válido após pagamento integral das taxas e serviços.</li>
-          <li><b>Jurisdição.</b> Rio de Janeiro/RJ, Brasil, e alternativa em Orange County/FL, EUA.</li>
-          <li><b>Preço.</b> US$ 1.360.</li>
-          <li><b>Disposições finais.</b> Registro da LLC não implica contabilidade mensal.</li>
-        </ol>
-        <div className="text-xs text-slate-400 mt-4">Tracking: {tracking}</div>
-        <div className="text-xs text-slate-400">Data: {dateISO}</div>
-      </section>
-      <hr className="border-slate-700" />
-      <section>
-        <div className="text-base font-semibold text-slate-100">SERVICE AGREEMENT — KASH Solutions</div>
-        <ol className="list-decimal list-inside mt-3 space-y-2 text-slate-300">
-          <li><b>Purpose.</b> Formation of a Florida LLC, EIN with the IRS, and W‑8BEN‑E issuance upon approval.</li>
-          <li><b>Registered Agent & Address.</b> Provided for 12 months; renewable with fees.</li>
-          <li><b>Information responsibility.</b> All data is the CLIENT’s sole responsibility.</li>
-          <li><b>Effectiveness.</b> Valid after full payment of fees and services.</li>
-          <li><b>Jurisdiction.</b> Rio de Janeiro/RJ, Brazil; alternative venue in Orange County/FL, USA.</li>
-          <li><b>Price.</b> US$ 1,360.</li>
-          <li><b>Final provisions.</b> Registration does not imply monthly bookkeeping.</li>
-        </ol>
-        <div className="text-xs text-slate-400 mt-4">Tracking: {tracking}</div>
-        <div className="text-xs text-slate-400">Date: {dateISO}</div>
-      </section>
-    </div>
-  );
+    `CONTRATANTE: ${companyName}, identificado(a) pelas informações fornecidas no formulário eletrônico, doravante denominado(a) CLIENTE. CONTRATADA: KASH CORPORATE SOLUTIONS LLC, sociedade de responsabilidade limitada, registrada no Estado da Flórida, Estados Unidos da América, doravante denominada KASH CORPORATE SOLUTIONS LLC.`,
+    "CLÁUSULA 1ª – OBJETO: O presente contrato tem por objeto o registro de empresa (LLC) no Estado da Flórida, seguido da aplicação junto ao IRS para emissão do EIN, após a aprovação da constituição da empresa.",
+    "CLÁUSULA 2ª – AGENTE REGISTRADO E ENDEREÇO: A KASH CORPORATE fornecerá: (a) endereço comercial virtual por 12 (doze) meses; (b) agente registrado na Flórida por 12 (doze) meses. Após esse período, os serviços poderão ser renovados mediante cobrança.",
+    "CLÁUSULA 3ª – RESPONSABILIDADE DAS INFORMAÇÕES: Todas as informações prestadas pelo CLIENTE são de sua exclusiva responsabilidade, incluindo responsabilidade civil e criminal por eventuais incorreções.",
+    "CLÁUSULA 4ª – LIMITAÇÕES: Não estão incluídos: licenças/alvarás, serviços contábeis/fiscais ou serviços bancários.",
+    "CLÁUSULA 5ª – REMUNERAÇÃO: O CLIENTE pagará à KASH CORPORATE o valor de US$ 1.360,00, em parcela única e imediata, por meio dos canais oficiais no site da KASH CORPORATE.",
+    "CLÁUSULA 6ª – ENCERRAMENTO: As obrigações da KASH CORPORATE encerram-se após a emissão do EIN e a entrega dos documentos digitais ao CLIENTE.",
+    "CLÁUSULA 7ª – VIGÊNCIA: Este contrato entra em vigor na data da assinatura e permanece válido até a conclusão dos serviços aqui descritos.",
+    "CLÁUSULA 8ª – CONDIÇÃO DE VALIDADE: Este contrato somente terá validade após o pagamento integral previsto na Cláusula 5ª.",
+    "CLÁUSULA 9ª – ACOMPANHAMENTO: Após o pagamento, o CLIENTE receberá um Número de Rastreamento (Tracking Number) para acompanhar o progresso do processo na plataforma da KASH CORPORATE.",
+    "CLÁUSULA 10ª – ÓRGÃOS PÚBLICOS: A aprovação da constituição da empresa e a emissão do EIN dependem exclusivamente dos órgãos públicos competentes (Estado da Flórida e IRS). A KASH CORPORATE não garante prazos ou aprovações.",
+    "CLÁUSULA 11ª – FORO: Fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, com opção pelo foro de Orlando, Flórida – EUA, a critério do CLIENTE."
+  ];
 }
 
-/* ================== PDF (Times, 12pt, margens 1" e data ao final) ================== */
-function generateA4PdfLikeModel({ companyName, tracking, dateISO }) {
+/* ================== PDF (US Letter, Times 12, data/Tracking no rodapé) ================== */
+function generateLetterPdf({ companyName, tracking, dateISO }) {
   try {
     const { jsPDF } = window.jspdf || {};
     if (!jsPDF) return "";
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const M = { l: 72, r: 72, t: 72, b: 72 }; // 1 inch margins
+    const doc = new jsPDF({ unit: "pt", format: "letter" }); // 612 x 792 pt
+    const M = { l: 72, r: 72, t: 72, b: 72 }; // 1" margins
     const width = doc.internal.pageSize.getWidth() - M.l - M.r;
-    const write = (title, lines) => {
+    const writeBlock = (title, lines) => {
       let y = M.t;
-      doc.setFont("times", "bold"); doc.setFontSize(14);
+      doc.setFont("times", "bold"); doc.setFontSize(12);
       doc.text(title, M.l, y); y += 18;
       doc.setFont("times", ""); doc.setFontSize(12);
       lines.forEach((t) => {
         const arr = doc.splitTextToSize(t, width);
-        doc.text(arr, M.l, y);
-        y += (arr.length * 16);
+        doc.text(arr, M.l, y, { lineHeightFactor: 1.3 });
+        y += (arr.length * 15);
       });
+      return y;
     };
 
-    // PT
-    const pt = buildContractPT(companyName, tracking, dateISO).split("\n");
-    write("CONTRATO DE PRESTAÇÃO DE SERVIÇOS — KASH Solutions", pt.slice(2, -2)); // corpo principal
-    // rodapé com tracking + data
-    doc.setFont("times",""); doc.setFontSize(12);
-    doc.text(`Tracking: ${tracking}`, M.l, doc.internal.pageSize.getHeight() - M.b - 28);
-    doc.text(`Data: ${dateISO}`, M.l, doc.internal.pageSize.getHeight() - M.b - 12);
+    const en = buildContractEN(companyName);
+    const pt = buildContractPT(companyName);
 
-    // EN (segunda página)
-    doc.addPage();
-    const en = buildContractEN(companyName, tracking, dateISO).split("\n");
-    write("SERVICE AGREEMENT — KASH Solutions", en.slice(2, -2));
+    // Header simplified (no date here). Date will go to footer.
+    let y = writeBlock("SERVICE AGREEMENT – KASH Corporate Solutions", en.slice(1));
+    // Spacer then Portuguese header line as in the model: "— Portuguese Version Below —"
+    y += 10;
     doc.setFont("times",""); doc.setFontSize(12);
-    doc.text(`Tracking: ${tracking}`, M.l, doc.internal.pageSize.getHeight() - M.b - 28);
-    doc.text(`Date: ${dateISO}`, M.l, doc.internal.pageSize.getHeight() - M.b - 12);
+    doc.text("— Portuguese Version Below —", M.l, y); y += 18;
+    // Portuguese
+    pt.forEach((t) => {
+      const arr = doc.splitTextToSize(t, width);
+      doc.text(arr, M.l, y, { lineHeightFactor: 1.3 });
+      y += (arr.length * 15);
+    });
+
+    // Footer with Tracking + Date at the bottom (like the model)
+    const footerY = doc.internal.pageSize.getHeight() - M.b + 10;
+    doc.setFont("times",""); doc.setFontSize(12);
+    doc.text(`Tracking: ${tracking}`, M.l, footerY - 28);
+    doc.text(`Date: ${dateISO}`, M.l, footerY - 12);
+    doc.text(`Page 1 of 1 • ${tracking}`, doc.internal.pageSize.getWidth() - M.r - 140, footerY - 12);
 
     return doc.output("bloburl");
   } catch (e) {
@@ -328,15 +277,9 @@ function generateA4PdfLikeModel({ companyName, tracking, dateISO }) {
   }
 }
 
-/* ================== FORM WIZARD ================== */
+/* ================== FORM WIZARD (+ address FL logic, + Formspree, + tracking) ================== */
 const initialForm = {
-  company: {
-    companyName: "",
-    email: "",
-    phone: "",
-    hasFloridaAddress: false,
-    usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" },
-  },
+  company: { companyName: "", email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
   members: [
     { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
     { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
@@ -345,24 +288,16 @@ const initialForm = {
 };
 function formReducer(state, action) {
   switch (action.type) {
-    case "UPDATE_COMPANY":
-      return { ...state, company: { ...state.company, [action.field]: action.value } };
-    case "UPDATE_US_ADDRESS":
-      return { ...state, company: { ...state.company, usAddress: { ...state.company.usAddress, [action.field]: action.value } } };
-    case "UPDATE_MEMBER": {
-      const list = state.members.map((m, i) => i === action.index ? { ...m, [action.field]: action.value } : m);
-      return { ...state, members: list };
-    }
-    case "ADD_MEMBER":
-      return { ...state, members: [...state.members, { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" }] };
-    case "REMOVE_MEMBER":
-      return { ...state, members: state.members.filter((_, i) => i !== action.index) };
-    case "TOGGLE_ACCEPT":
-      return { ...state, accept: { ...state.accept, [action.key]: action.value } };
-    default:
-      return state;
+    case "UPDATE_COMPANY": return { ...state, company: { ...state.company, [action.field]: action.value } };
+    case "UPDATE_US_ADDRESS": return { ...state, company: { ...state.company, usAddress: { ...state.company.usAddress, [action.field]: action.value } } };
+    case "UPDATE_MEMBER": return { ...state, members: state.members.map((m,i)=> i===action.index ? { ...m, [action.field]: action.value } : m) };
+    case "ADD_MEMBER": return { ...state, members: [...state.members, { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" }] };
+    case "REMOVE_MEMBER": return { ...state, members: state.members.filter((_,i)=> i!==action.index) };
+    case "TOGGLE_ACCEPT": return { ...state, accept: { ...state.accept, [action.key]: action.value } };
+    default: return state;
   }
 }
+
 function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
   return (
     <div className="p-4 border border-slate-700 rounded-xl bg-slate-800 space-y-2">
@@ -373,21 +308,21 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
       <div className="grid md:grid-cols-2 gap-2">
         <div>
           <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.fullName && "border-red-500")} placeholder="Nome completo" value={data.fullName} onChange={(e) => onChange("fullName", e.target.value)} />
-          <FieldError msg={errors.fullName} />
+          <div className="text-red-400 text-xs">{errors.fullName || ""}</div>
         </div>
         <div>
           <input type="email" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.email && "border-red-500")} placeholder="E-mail do sócio" value={data.email} onChange={(e) => onChange("email", e.target.value)} />
-          <FieldError msg={errors.email} />
+          <div className="text-red-400 text-xs">{errors.email || ""}</div>
         </div>
       </div>
       <div className="grid md:grid-cols-2 gap-2">
         <div>
           <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.phone && "border-red-500")} placeholder="Telefone do sócio" value={data.phone} onChange={(e) => onChange("phone", e.target.value)} />
-          <FieldError msg={errors.phone} />
+          <div className="text-red-400 text-xs">{errors.phone || ""}</div>
         </div>
         <div>
           <input className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.passport && "border-red-500")} placeholder="Passaporte (ou RG)" value={data.passport} onChange={(e) => onChange("passport", e.target.value)} />
-          <FieldError msg={errors.passport} />
+          <div className="text-red-400 text-xs">{errors.passport || ""}</div>
         </div>
       </div>
       <div className="grid md:grid-cols-3 gap-2">
@@ -397,32 +332,29 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
         <div>
           <input type="date" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.docExpiry && "border-red-500")} value={data.docExpiry} onChange={(e) => onChange("docExpiry", e.target.value)} />
           <div className="text-[11px] text-slate-400 mt-1">Validade do documento</div>
-          <FieldError msg={errors.docExpiry} />
+          <div className="text-red-400 text-xs">{errors.docExpiry || ""}</div>
         </div>
         <div>
           <input type="date" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.birthdate && "border-red-500")} value={data.birthdate} onChange={(e) => onChange("birthdate", e.target.value)} />
           <div className="text-[11px] text-slate-400 mt-1">Data de nascimento</div>
-          <FieldError msg={errors.birthdate} />
+          <div className="text-red-400 text-xs">{errors.birthdate || ""}</div>
         </div>
       </div>
       <div>
         <input type="number" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.percent && "border-red-500")} placeholder="% de participação" value={data.percent} onChange={(e) => onChange("percent", e.target.value)} />
-        <FieldError msg={errors.percent} />
+        <div className="text-red-400 text-xs">{errors.percent || ""}</div>
       </div>
     </div>
   );
 }
 
-const US_STATES = [
-  "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"
-];
+const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 
-/* ======= Tracking Search (simples, sem rotas) ======= */
+/* ======= Tracking Search (inline) ======= */
 function TrackingSearch() {
   const [code, setCode] = useState("");
   const [result, setResult] = useState(null);
   const [notFound, setNotFound] = useState(false);
-
   const handleLookup = () => {
     try {
       const raw = localStorage.getItem(code.trim());
@@ -430,11 +362,8 @@ function TrackingSearch() {
       const data = JSON.parse(raw);
       setResult(data);
       setNotFound(false);
-    } catch (e) {
-      setResult(null); setNotFound(true);
-    }
+    } catch { setResult(null); setNotFound(true); }
   };
-
   return (
     <section className="py-12 border-t border-slate-800">
       <div className="max-w-4xl mx-auto px-4">
@@ -450,7 +379,7 @@ function TrackingSearch() {
             <div className="text-slate-400 text-sm mt-1">Recebido em {result.dateISO}. Empresa: {result.company?.companyName || "—"}</div>
             <div className="mt-4">
               <CTAButton onClick={() => {
-                const url = generateA4PdfLikeModel({ companyName: result.company?.companyName, tracking: result.tracking, dateISO: result.dateISO });
+                const url = generateLetterPdf({ companyName: result.company?.companyName, tracking: result.tracking, dateISO: result.dateISO });
                 if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${result.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
               }}>Baixar contrato (PDF)</CTAButton>
             </div>
@@ -461,22 +390,17 @@ function TrackingSearch() {
   );
 }
 
+/* ======= Form Wizard ======= */
+const initialErrors = { company: {}, members: [], accept: {} };
 function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
-  const [agreed, setAgreed] = useState(true); // marcado por padrão conforme solicitado
+  const [agreed, setAgreed] = useState(true); // marcado por padrão
   const [form, dispatch] = useReducer(formReducer, initialForm);
-  const [errors, setErrors] = useState({ company: {}, members: [], accept: {} });
+  const [errors, setErrors] = useState(initialErrors);
 
-  const updateCompany = (field, value) => dispatch({ type: "UPDATE_COMPANY", field, value });
-  const updateUS = (field, value) => dispatch({ type: "UPDATE_US_ADDRESS", field, value });
-  const updateMember = (index, field, value) => dispatch({ type: "UPDATE_MEMBER", index, field, value });
-  const addMember = () => dispatch({ type: "ADD_MEMBER" });
-  const removeMember = (index) => dispatch({ type: "REMOVE_MEMBER", index });
-  const toggleAccept = (key, value) => dispatch({ type: "TOGGLE_ACCEPT", key, value });
-
-  // Se o usuário marcar que possui endereço na Flórida, desabilita/limpa caixa de "limitações"
+  // Address logic
   useEffect(() => {
     if (form.company.hasFloridaAddress && form.accept.limitations) {
       dispatch({ type: "TOGGLE_ACCEPT", key: "limitations", value: false });
@@ -484,83 +408,79 @@ function FormWizard({ open, onClose }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.company.hasFloridaAddress]);
 
+  const updateCompany = (field, value) => dispatch({ type: "UPDATE_COMPANY", field, value });
+  const updateUS = (field, value) => dispatch({ type: "UPDATE_US_ADDRESS", field, value });
+  const updateMember = (index, field, value) => dispatch({ type: "UPDATE_MEMBER", index, field, value });
+  const addMember = () => dispatch({ type: "ADD_MEMBER" });
+  const removeMember = (i) => dispatch({ type: "REMOVE_MEMBER", index: i });
+  const toggleAccept = (k, v) => dispatch({ type: "TOGGLE_ACCEPT", key: k, value: v });
+
   function validate() {
     const { company, members, accept } = form;
     const errs = { company: {}, members: members.map(() => ({})), accept: {} };
-
     if (!company.companyName || company.companyName.length < 3) errs.company.companyName = "Informe o nome da LLC.";
     if (!emailRe.test(company.email || "")) errs.company.email = "E-mail inválido.";
     if (!phoneRe.test(company.phone || "")) errs.company.phone = "Telefone inválido.";
-
     if (company.hasFloridaAddress) {
-      if (!company.usAddress.line1 || company.usAddress.line1.length < 3) errs.company.line1 = "Endereço (Line 1) obrigatório.";
-      if (!company.usAddress.city) errs.company.city = "Cidade obrigatória.";
-      if (!company.usAddress.state) errs.company.state = "Estado obrigatório.";
+      if (!company.usAddress.line1) errs.company.line1 = "Address Line 1 obrigatório.";
+      if (!company.usAddress.city) errs.company.city = "City obrigatória.";
+      if (!company.usAddress.state) errs.company.state = "State obrigatório.";
       if (!company.usAddress.zip) errs.company.zip = "ZIP obrigatório.";
     }
-
     for (let i = 0; i < members.length; i++) {
       const m = members[i];
       if (!m.fullName || m.fullName.length < 5) errs.members[i].fullName = "Nome inválido.";
       if (!emailRe.test(m.email || "")) errs.members[i].email = "E-mail inválido.";
       if (!phoneRe.test(m.phone || "")) errs.members[i].phone = "Telefone inválido.";
       if (!m.passport || m.passport.length < 5) errs.members[i].passport = "Documento obrigatório.";
-      if (!m.docExpiry) errs.members[i].docExpiry = "Informe a validade do documento.";
-      if (!m.birthdate) errs.members[i].birthdate = "Data obrigatória.";
+      if (!m.docExpiry) errs.members[i].docExpiry = "Validade obrigatória.";
+      if (!m.birthdate) errs.members[i].birthdate = "Nascimento obrigatório.";
       if (!m.percent || Number(m.percent) <= 0) errs.members[i].percent = "% obrigatório.";
       if (m.birthdate && calcAgeFullDate(m.birthdate) < 18) errs.members[i].birthdate = "Precisa ter 18+.";
     }
     if (!isPercentTotalValid(members)) alert("A soma dos percentuais deve ser 100%.");
-
     if (!accept.responsibility) errs.accept.base = "Aceite a declaração de responsabilidade.";
-    if (!company.hasFloridaAddress && !accept.limitations) errs.accept.base = "Aceite as limitações (endereço/agente por 12 meses).";
-
-    const companyErrors = Object.keys(errs.company).length === 0;
-    const membersOk = errs.members.every((m) => Object.keys(m).length === 0);
-    const acceptsOk = accept.responsibility && (company.hasFloridaAddress || accept.limitations);
-
-    const ok = companyErrors && membersOk && acceptsOk && isPercentTotalValid(members);
+    if (!company.hasFloridaAddress && !accept.limitations) errs.accept.base = "Aceite as limitações (endereço/agente 12 meses).";
     setErrors(errs);
-    return { ok, errs };
+    const companyOk = Object.keys(errs.company).length === 0;
+    const membersOk = errs.members.every((m) => Object.keys(m).length === 0);
+    const acceptOk = accept.responsibility && (company.hasFloridaAddress || accept.limitations);
+    return companyOk && membersOk && acceptOk && isPercentTotalValid(members);
   }
 
   async function handleSubmit() {
-    const v = validate();
-    if (!v.ok) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     setLoading(true);
-    const mock = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-    setTracking(mock);
+    const code = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
+    setTracking(code);
     const dateISO = todayISO();
 
-    const contractPT = buildContractPT(form.company.companyName, mock, dateISO);
-    const contractEN = buildContractEN(form.company.companyName, mock, dateISO);
-
     const payload = {
-      tracking: mock,
+      tracking: code,
       dateISO,
-      agreed: true, // enviar marcado
+      agreed: true,
       company: form.company,
       members: form.members,
       accepts: form.accept,
-      contractPT,
-      contractEN,
+      contractEN: buildContractEN(form.company.companyName).join("\n"),
+      contractPT: buildContractPT(form.company.companyName).join("\n"),
       source: "kashsolutions.us",
     };
 
     try {
-      localStorage.setItem(mock, JSON.stringify(payload));
+      localStorage.setItem(code, JSON.stringify(payload));
       await fetch(CONFIG.formspreeEndpoint, {
         method: "POST",
         headers: { "Accept": "application/json", "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-    } catch (e) { console.warn("Formspree/local save error", e); }
+    } catch {}
+
     setLoading(false);
-    setStep(3); // Mostra tracking + contrato
+    setStep(3);
   }
 
   const { company, members, accept } = form;
-  const AErr = errors.company || {};
   const dateISO = todayISO();
 
   return (
@@ -574,70 +494,49 @@ function FormWizard({ open, onClose }) {
               <button className="text-slate-400 hover:text-slate-200" onClick={onClose}>Fechar</button>
             </div>
 
-            {/* Step 1: Formulário */}
+            {/* Step 1 */}
             {step === 1 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">1/2 — Dados iniciais da LLC</h4>
-
                 <div className="mt-4 grid gap-4">
                   <div>
-                    <label className="block text-sm text-slate-400" htmlFor="companyName">Nome da LLC</label>
-                    <input id="companyName" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", AErr.companyName && "border-red-500")} placeholder="Ex.: SUNSHINE MEDIA LLC" value={company.companyName} onChange={(e) => updateCompany("companyName", e.target.value)} />
-                    <FieldError msg={AErr.companyName} />
+                    <label className="block text-sm text-slate-400">Nome da LLC</label>
+                    <input className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Ex.: SUNSHINE MEDIA LLC" value={company.companyName} onChange={(e) => updateCompany("companyName", e.target.value)} />
+                    <div className="text-red-400 text-xs">{errors.company.companyName || ""}</div>
                   </div>
-
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-sm text-slate-400" htmlFor="companyEmail">E-mail principal</label>
-                      <input id="companyEmail" type="email" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", AErr.email && "border-red-500")} placeholder="email@exemplo.com" value={company.email} onChange={(e) => updateCompany("email", e.target.value)} />
-                      <FieldError msg={AErr.email} />
+                      <label className="block text-sm text-slate-400">E-mail principal</label>
+                      <input type="email" className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="email@exemplo.com" value={company.email} onChange={(e) => updateCompany("email", e.target.value)} />
+                      <div className="text-red-400 text-xs">{errors.company.email || ""}</div>
                     </div>
                     <div>
-                      <label className="block text-sm text-slate-400" htmlFor="companyPhone">Telefone principal</label>
-                      <input id="companyPhone" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", AErr.phone && "border-red-500")} placeholder="+1 (305) 123-4567" value={company.phone} onChange={(e) => updateCompany("phone", e.target.value)} />
-                      <FieldError msg={AErr.phone} />
+                      <label className="block text-sm text-slate-400">Telefone principal</label>
+                      <input className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="+1 (305) 123-4567" value={company.phone} onChange={(e) => updateCompany("phone", e.target.value)} />
+                      <div className="text-red-400 text-xs">{errors.company.phone || ""}</div>
                     </div>
                   </div>
-
-                  {/* Toggle: possui endereço na Flórida? */}
                   <div className="mt-2">
                     <label className="inline-flex items-center gap-2 text-sm text-slate-300">
                       <input type="checkbox" checked={company.hasFloridaAddress} onChange={(e) => updateCompany("hasFloridaAddress", e.target.checked)} />
                       <span>Possui endereço físico na Flórida?</span>
                     </label>
                   </div>
-
-                  {/* Se SIM, abrir campos de endereço USA */}
                   {company.hasFloridaAddress ? (
                     <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
                       <div className="text-slate-300 font-medium mb-2">Endereço da empresa (USA)</div>
-                      <div>
-                        <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", AErr.line1 && "border-red-500")} placeholder="Address Line 1" value={company.usAddress.line1} onChange={(e) => updateUS("line1", e.target.value)} />
-                        <FieldError msg={AErr.line1} />
-                      </div>
-                      <div className="mt-2">
-                        <input className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Address Line 2 (opcional)" value={company.usAddress.line2} onChange={(e) => updateUS("line2", e.target.value)} />
-                      </div>
-                      <div className="mt-2 grid md:grid-cols-3 gap-2">
-                        <div>
-                          <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", AErr.city && "border-red-500")} placeholder="City" value={company.usAddress.city} onChange={(e) => updateUS("city", e.target.value)} />
-                          <FieldError msg={AErr.city} />
-                        </div>
-                        <div>
-                          <select className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", AErr.state && "border-red-500")} value={company.usAddress.state} onChange={(e) => updateUS("state", e.target.value)}>
-                            {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
-                          </select>
-                          <FieldError msg={AErr.state} />
-                        </div>
-                        <div>
-                          <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", AErr.zip && "border-red-500")} placeholder="ZIP Code" value={company.usAddress.zip} onChange={(e) => updateUS("zip", e.target.value)} />
-                          <FieldError msg={AErr.zip} />
-                        </div>
+                      <input className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Address Line 1" value={company.usAddress.line1} onChange={(e) => updateUS("line1", e.target.value)} />
+                      <div className="grid md:grid-cols-3 gap-2 mt-2">
+                        <input className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="City" value={company.usAddress.city} onChange={(e) => updateUS("city", e.target.value)} />
+                        <select className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" value={company.usAddress.state} onChange={(e) => updateUS("state", e.target.value)}>
+                          {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                        <input className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="ZIP Code" value={company.usAddress.zip} onChange={(e) => updateUS("zip", e.target.value)} />
                       </div>
                     </div>
                   ) : (
                     <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
-                      Não possui endereço na Flórida — utilizaremos o <b>endereço e agente da KASH por 12 meses</b> incluídos no pacote.
+                      Não possui endereço na Flórida — usaremos o <b>endereço e agente da KASH por 12 meses</b> incluídos no pacote.
                     </div>
                   )}
                 </div>
@@ -648,7 +547,6 @@ function FormWizard({ open, onClose }) {
                     <MemberCard key={i} index={i} data={m} canRemove={members.length > 2} onChange={(field, value) => updateMember(i, field, value)} onRemove={() => removeMember(i)} errors={errors.members[i] || {}} />
                   ))}
                 </div>
-
                 <button onClick={addMember} className="mt-4 text-emerald-400 hover:underline">+ Adicionar sócio</button>
 
                 <div className="mt-6 space-y-3 text-sm text-slate-300">
@@ -661,23 +559,21 @@ function FormWizard({ open, onClose }) {
                     <span>Estou ciente de que endereço e agente da KASH são válidos por 12 meses.</span>
                   </label>
                   {company.hasFloridaAddress && <div className="text-[12px] text-slate-400 -mt-2">* Indisponível porque você informou endereço próprio na Flórida.</div>}
-                  {errors.accept.base && <div className="text-red-400 text-xs">{errors.accept.base}</div>}
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton onClick={() => { const v = validate(); if (v.ok) setStep(2); }}>Continuar</CTAButton>
+                  <CTAButton onClick={() => { if (validate()) setStep(2); }}>Continuar</CTAButton>
                 </div>
               </div>
             )}
 
-            {/* Step 2: Revisão */}
+            {/* Step 2 — Revisão */}
             {step === 2 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">2/2 — Revisão</h4>
-
                 <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="text-slate-300 font-medium">Empresa</div>
-                  <div className="mt-2 grid gap-y-1 text-sm">
+                  <div className="mt-2 text-sm text-slate-400">
                     <div><span className="text-slate-500">Nome: </span>{company.companyName || "—"}</div>
                     <div className="grid md:grid-cols-2 gap-x-6">
                       <div><span className="text-slate-500">E-mail: </span>{company.email || "—"}</div>
@@ -687,20 +583,18 @@ function FormWizard({ open, onClose }) {
                       <div className="mt-1">
                         <div className="text-slate-400">Endereço informado:</div>
                         <div>{company.usAddress.line1}</div>
-                        {company.usAddress.line2 && <div>{company.usAddress.line2}</div>}
                         <div>{company.usAddress.city}, {company.usAddress.state} {company.usAddress.zip}</div>
                       </div>
                     ) : (
-                      <div className="mt-1 text-slate-400">Será utilizado o endereço e agente da KASH por 12 meses.</div>
+                      <div className="mt-1">Será utilizado o endereço e agente da KASH por 12 meses.</div>
                     )}
                   </div>
                 </div>
-
                 <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 mt-4">
                   <div className="text-slate-300 font-medium">Sócios</div>
-                  <div className="mt-2 space-y-3">
+                  <div className="mt-2 space-y-3 text-sm text-slate-400">
                     {members.map((m, i) => (
-                      <div key={i} className="text-sm text-slate-400">
+                      <div key={i}>
                         <div className="font-medium text-slate-300">Sócio {i + 1}: {m.fullName || "—"}</div>
                         <div className="grid md:grid-cols-2 gap-x-6 gap-y-1">
                           <div><span className="text-slate-500">E-mail: </span>{m.email || "—"}</div>
@@ -723,26 +617,44 @@ function FormWizard({ open, onClose }) {
               </div>
             )}
 
-            {/* Step 3: Tracking + Contrato (Li e Concordo marcado) */}
+            {/* Step 3 — Tracking + Contrato junto na mesma tela (EN + PT) */}
             {step === 3 && (
               <div className="p-6">
                 <div className="text-center">
                   <h4 className="text-slate-100 font-medium">Dados enviados com sucesso</h4>
-                  <p className="text-slate-400 mt-2">Anote seu código de acompanhamento (tracking):</p>
+                  <p className="text-slate-400 mt-2">Seu código de acompanhamento (tracking):</p>
                   <div className="mt-2 text-emerald-400 text-xl font-bold">{tracking}</div>
                 </div>
 
                 <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="flex items-center justify-between">
-                    <div className="text-slate-300 font-medium">Contrato (PT & EN)</div>
+                    <div className="text-slate-300 font-medium">Contrato (EN + PT juntos)</div>
                     <button className="text-xs text-emerald-400 hover:underline" onClick={() => {
-                      const url = generateA4PdfLikeModel({ companyName: company.companyName, tracking, dateISO });
+                      const url = generateLetterPdf({ companyName: company.companyName, tracking, dateISO });
                       if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
                     }}>Baixar PDF</button>
                   </div>
-                  <div className="mt-4 max-h-[50vh] overflow-auto pr-2">
-                    <ContractText companyName={company.companyName} tracking={tracking} dateISO={dateISO} />
+
+                  {/* EN + PT in the same view */}
+                  <div className="mt-4 text-[13px] leading-6 text-slate-200 space-y-6 max-h-[55vh] overflow-auto pr-2">
+                    <div>
+                      <div className="font-semibold text-slate-100">SERVICE AGREEMENT – KASH Corporate Solutions</div>
+                      <div className="mt-2 space-y-2 text-slate-300">
+                        {buildContractEN(company.companyName).slice(1).map((p, idx) => <p key={idx}>{p}</p>)}
+                      </div>
+                    </div>
+                    <div className="text-slate-400">— Portuguese Version Below —</div>
+                    <div>
+                      <div className="font-semibold text-slate-100">CONTRATO — KASH Corporate Solutions</div>
+                      <div className="mt-2 space-y-2 text-slate-300">
+                        {buildContractPT(company.companyName).map((p, idx) => <p key={idx}>{p}</p>)}
+                      </div>
+                    </div>
+                    <div className="text-xs text-slate-400 border-t border-slate-700 pt-2">
+                      Tracking: {tracking} · Date: {dateISO}
+                    </div>
                   </div>
+
                   <label className="mt-4 flex items-center gap-2 text-sm text-slate-300">
                     <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
                     <span>Li e concordo com os termos acima.</span>
