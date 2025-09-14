@@ -191,7 +191,7 @@ function HowItWorks() {
   );
 }
 
-/* ================== CONTRACT MODEL (exactly 11 clauses; Letter; date at bottom) ================== */
+/* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
 function buildContractEN(companyName) {
   return [
     "SERVICE AGREEMENT – KASH Corporate Solutions",
@@ -226,49 +226,69 @@ function buildContractPT(companyName) {
   ];
 }
 
-/* ================== PDF (US Letter, Times 12, data/Tracking no rodapé) ================== */
+/* ================== PDF (US Letter, Times 10/9, espaçamento ajustado e sem sobreposição) ================== */
 function generateLetterPdf({ companyName, tracking, dateISO }) {
   try {
     const { jsPDF } = window.jspdf || {};
     if (!jsPDF) return "";
     const doc = new jsPDF({ unit: "pt", format: "letter" }); // 612 x 792 pt
     const M = { l: 72, r: 72, t: 72, b: 72 }; // 1" margins
-    const width = doc.internal.pageSize.getWidth() - M.l - M.r;
-    const writeBlock = (title, lines) => {
-      let y = M.t;
-      doc.setFont("times", "bold"); doc.setFontSize(12);
-      doc.text(title, M.l, y); y += 18;
-      doc.setFont("times", ""); doc.setFontSize(12);
-      lines.forEach((t) => {
-        const arr = doc.splitTextToSize(t, width);
-        doc.text(arr, M.l, y, { lineHeightFactor: 1.3 });
-        y += (arr.length * 15);
-      });
-      return y;
-    };
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const width = pageW - M.l - M.r;
 
+    const TITLE_SIZE = 10;  // conforme pedido
+    const BODY_SIZE  = 9;   // conforme pedido
+    const FOOT_SIZE  = 9;
+
+    const LINE_HEIGHT = 1.28;         // entrelinha suave p/ 9pt
+    const PARA_SPACING = 6;           // espaço extra ao fim de cada parágrafo
+
+    let y = M.t;
+
+    // Cabeçalho EN
+    doc.setFont("times", "bold"); doc.setFontSize(TITLE_SIZE);
+    doc.text("SERVICE AGREEMENT – KASH Corporate Solutions", M.l, y); y += 16;
+
+    // Corpo EN
+    doc.setFont("times", ""); doc.setFontSize(BODY_SIZE);
     const en = buildContractEN(companyName);
-    const pt = buildContractPT(companyName);
-
-    // Header simplified (no date here). Date will go to footer.
-    let y = writeBlock("SERVICE AGREEMENT – KASH Corporate Solutions", en.slice(1));
-    // Spacer then Portuguese header line as in the model: "— Portuguese Version Below —"
-    y += 10;
-    doc.setFont("times",""); doc.setFontSize(12);
-    doc.text("— Portuguese Version Below —", M.l, y); y += 18;
-    // Portuguese
-    pt.forEach((t) => {
-      const arr = doc.splitTextToSize(t, width);
-      doc.text(arr, M.l, y, { lineHeightFactor: 1.3 });
-      y += (arr.length * 15);
+    en.slice(1).forEach((paragraph) => {
+      const wrapped = doc.splitTextToSize(paragraph, width);
+      wrapped.forEach((line, idx) => {
+        if (y > pageH - M.b - 60) return;
+        doc.text(line, M.l, y, { lineHeightFactor: LINE_HEIGHT });
+        y += 12;
+      });
+      y += PARA_SPACING;
     });
 
-    // Footer with Tracking + Date at the bottom (like the model)
-    const footerY = doc.internal.pageSize.getHeight() - M.b + 10;
-    doc.setFont("times",""); doc.setFontSize(12);
-    doc.text(`Tracking: ${tracking}`, M.l, footerY - 28);
-    doc.text(`Date: ${dateISO}`, M.l, footerY - 12);
-    doc.text(`Page 1 of 1 • ${tracking}`, doc.internal.pageSize.getWidth() - M.r - 140, footerY - 12);
+    // Divisória
+    if (y < pageH - M.b - 60) {
+      doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
+      doc.text("— Portuguese Version Below —", M.l, y); y += 14;
+    }
+
+    // PT
+    const pt = buildContractPT(companyName);
+    pt.forEach((paragraph) => {
+      const wrapped = doc.splitTextToSize(paragraph, width);
+      wrapped.forEach((line) => {
+        if (y > pageH - M.b - 60) return;
+        doc.text(line, M.l, y, { lineHeightFactor: LINE_HEIGHT });
+        y += 12;
+      });
+      y += PARA_SPACING;
+    });
+
+    // Rodapé
+    doc.setFont("times",""); doc.setFontSize(FOOT_SIZE);
+    const footerY = pageH - M.b + 4;
+    doc.text(`Tracking: ${tracking}`, M.l, footerY - 18);
+    doc.text(`Date: ${dateISO}`, M.l, footerY - 6);
+    const pageStr = `Page 1 of 1 • ${tracking}`;
+    const pageStrW = doc.getTextWidth(pageStr);
+    doc.text(pageStr, pageW - M.r - pageStrW, footerY - 6);
 
     return doc.output("bloburl");
   } catch (e) {
@@ -405,7 +425,6 @@ function FormWizard({ open, onClose }) {
     if (form.company.hasFloridaAddress && form.accept.limitations) {
       dispatch({ type: "TOGGLE_ACCEPT", key: "limitations", value: false });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.company.hasFloridaAddress]);
 
   const updateCompany = (field, value) => dispatch({ type: "UPDATE_COMPANY", field, value });
@@ -617,7 +636,7 @@ function FormWizard({ open, onClose }) {
               </div>
             )}
 
-            {/* Step 3 — Tracking + Contrato junto na mesma tela (EN + PT) */}
+            {/* Step 3 — Tracking + Contrato (EN + PT na mesma tela) */}
             {step === 3 && (
               <div className="p-6">
                 <div className="text-center">
