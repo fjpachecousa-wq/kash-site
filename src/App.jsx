@@ -100,7 +100,7 @@ function Hero({ onStart }) {
         <div className="mt-10 grid md:grid-cols-2 gap-8 items-start">
           <div>
             <h2 className="text-3xl md:text-4xl font-semibold text-slate-100">Abra sua LLC na Flórida e elimine a retenção de 30%.</h2>
-            <p className="mt-4 text-slate-300">Abertura da empresa, EIN, W‑8BEN‑E, endereço e agente por 12 meses.</p>
+            <p className="mt-4 text-slate-300">Abertura da empresa, EIN, endereço e agente por 12 meses.</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <CTAButton onClick={onStart}>Começar agora</CTAButton>
               <a href="#como-funciona" className="inline-flex"><CTAButton variant="ghost">Como funciona</CTAButton></a>
@@ -137,7 +137,7 @@ function Services() {
 }
 function Pricing({ onStart }) {
   const plans = [
-    { name: "Abertura LLC", price: CONFIG.prices.llc, features: ["Endereço + Agente 12 meses", "EIN", "Operating Agreement", "W‑8BEN‑E"], cta: "Contratar", disabled: false },
+    { name: "Abertura LLC", price: CONFIG.prices.llc, features: ["Endereço + Agente 12 meses", "EIN", "Operating Agreement"], cta: "Contratar", disabled: false },
     { name: "KASH FLOW 30 (Mensal)", price: CONFIG.prices.flow30, features: ["Classificação contábil", "Relatórios mensais"], cta: "Assinar", disabled: true },
     { name: "KASH SCALE 5 (Mensal)", price: CONFIG.prices.scale5, features: ["Até 5 contratos", "Suporte prioritário", "W‑8BEN‑E (emitido no onboarding contábil)"], cta: "Assinar", disabled: true },
   ];
@@ -254,7 +254,7 @@ function generateLetterPdf({ companyName, tracking, dateISO }) {
     const en = buildContractEN(companyName);
     en.slice(1).forEach((paragraph) => {
       const wrapped = doc.splitTextToSize(paragraph, width);
-      wrapped.forEach((line, idx) => {
+      wrapped.forEach((line) => {
         if (y > pageH - M.b - 60) return;
         doc.text(line, M.l, y, { lineHeightFactor: LINE_HEIGHT });
         y += 12;
@@ -280,12 +280,12 @@ function generateLetterPdf({ companyName, tracking, dateISO }) {
       y += PARA_SPACING;
     });
 
-    // Rodapé
+    // Rodapé: Tracking + Date (esquerda). Direita: somente "Page 1 of 1" (sem tracking).
     doc.setFont("times",""); doc.setFontSize(FOOT_SIZE);
     const footerY = pageH - M.b + 4;
     doc.text(`Tracking: ${tracking}`, M.l, footerY - 18);
     doc.text(`Date: ${dateISO}`, M.l, footerY - 6);
-    const pageStr = `Page 1 of 1 • ${tracking}`;
+    const pageStr = "Page 1 of 1";
     const pageStrW = doc.getTextWidth(pageStr);
     doc.text(pageStr, pageW - M.r - pageStrW, footerY - 6);
 
