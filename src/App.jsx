@@ -226,68 +226,75 @@ function buildContractPT(companyName) {
 }
 
 /* ================== PDF (US Letter, Times 10/9) ================== */
+
 function generateLetterPdf({ companyName, tracking, dateISO }) {
   try {
     const { jsPDF } = window.jspdf || {};
     if (!jsPDF) return "";
-    const doc = new jsPDF({ unit: "pt", format: "letter" }); // 612 x 792 pt
-    const M = { l: 72, r: 72, t: 72, b: 72 }; // 1" margins
+    const doc = new jsPDF({ unit: "pt", format: "letter" }); // 612 x 792
+    const M = { l: 72, r: 72, t: 72, b: 72 };
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
-    const width = pageW - M.l - M.r;
+    const contentW = pageW - M.l - M.r;
 
-    const TITLE_SIZE = 10;      // título
-    const BODY_SIZE  = 9;       // corpo
-    const FOOT_SIZE  = 9;
-
-    const LINE_HEIGHT = 1.28;   // entrelinha
-    const PARA_SPACING = 6;     // espaço após parágrafos
-
+    const TITLE_SIZE = 10, BODY_SIZE = 9, FOOT_SIZE = 9;
+    const LINE_ADV = 12;            // avanço vertical por linha
+    const PARA_SPACING = 6;         // espaço ao final do parágrafo
+    const SAFE_BOTTOM = M.b + 60;   // reserva para rodapé
     let y = M.t;
 
-    // Cabeçalho EN
-    doc.setFont("times", "bold"); doc.setFontSize(TITLE_SIZE);
-    doc.text("SERVICE AGREEMENT – KASH Corporate Solutions", M.l, y); y += 16;
-
-    // Corpo EN
-    doc.setFont("times", ""); doc.setFontSize(BODY_SIZE);
-    const en = buildContractEN(companyName);
-    en.slice(1).forEach((paragraph) => {
-      const wrapped = doc.splitTextToSize(paragraph, width);
-      wrapped.forEach((line) => {
-        if (y > pageH - M.b - 60) return;
-        doc.text(line, M.l, y, { lineHeightFactor: LINE_HEIGHT });
-        y += 12;
-      });
-      y += PARA_SPACING;
-    });
-
-    // Divisória
-    if (y < pageH - M.b - 60) {
-      doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
-      doc.text("— Portuguese Version Below —", M.l, y); y += 14;
+    function ensureSpace(lines = 1) {
+      if (y + (lines * LINE_ADV) <= pageH - SAFE_BOTTOM) return;
+      doc.addPage();
+      y = M.t;
     }
 
-    // PT
-    const pt = buildContractPT(companyName);
-    pt.forEach((paragraph) => {
-      const wrapped = doc.splitTextToSize(paragraph, width);
-      wrapped.forEach((line) => {
-        if (y > pageH - M.b - 60) return;
-        doc.text(line, M.l, y, { lineHeightFactor: LINE_HEIGHT });
-        y += 12;
-      });
-      y += PARA_SPACING;
-    });
+    function writeParagraphs(paragraphs) {
+      doc.setFont("times", ""); doc.setFontSize(BODY_SIZE);
+      for (const p of paragraphs) {
+        const wrapped = doc.splitTextToSize(p, contentW);
+        for (const line of wrapped) {
+          ensureSpace(1);
+          doc.text(line, M.l, y);
+          y += LINE_ADV;
+        }
+        y += PARA_SPACING;
+      }
+    }
 
-    // Rodapé: ESQUERDA = Tracking + Date; DIREITA = apenas "Page 1 of 1"
-    doc.setFont("times",""); doc.setFontSize(FOOT_SIZE);
-    const footerY = pageH - M.b + 4;
-    doc.text(`Tracking: ${tracking}`, M.l, footerY - 18);
-    doc.text(`Date: ${dateISO}`, M.l, footerY - 6);
-    const pageStr = "Page 1 of 1";
-    const pageStrW = doc.getTextWidth(pageStr);
-    doc.text(pageStr, pageW - M.r - pageStrW, footerY - 6);
+    // Título (primeira página)
+    doc.setFont("times", "bold"); doc.setFontSize(TITLE_SIZE);
+    doc.text("SERVICE AGREEMENT – KASH Corporate Solutions", M.l, y);
+    y += 16;
+
+    // EN (pula a primeira frase pois é "header" do cliente/contratada)
+    const en = buildContractEN(companyName);
+    writeParagraphs(en.slice(1));
+
+    // Divisória antes do PT
+    ensureSpace(1);
+    doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
+    doc.text("— Portuguese Version Below —", M.l, y);
+    y += 14;
+
+    // PT (todas as cláusulas)
+    const pt = buildContractPT(companyName);
+    writeParagraphs(pt);
+
+    // Rodapés em todas as páginas
+    const total = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= total; i++) {
+      doc.setPage(i);
+      doc.setFont("times",""); doc.setFontSize(FOOT_SIZE);
+      const footerY = pageH - M.b + 4;
+      // Esquerda: Tracking + Date (somente na última linha aparece a Date)
+      doc.text(`Tracking: ${tracking}`, M.l, footerY - 18);
+      doc.text(`Date: ${dateISO}`, M.l, footerY - 6);
+      // Direita: paginação
+      const pageStr = `Page ${i} of ${total}`;
+      const w = doc.getTextWidth(pageStr);
+      doc.text(pageStr, pageW - M.r - w, footerY - 6);
+    }
 
     return doc.output("bloburl");
   } catch (e) {
