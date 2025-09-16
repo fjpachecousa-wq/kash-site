@@ -7,6 +7,7 @@ const CONFIG = {
   checkout: { stripeUrl: "" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
   formspreeEndpoint: "https://formspree.io/f/xblawgpk",
+  apiWebhook: "/api/formspree-hook", // <<< NOVO: grava no Supabase + contrato no Storage
 };
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -139,7 +140,7 @@ function Pricing({ onStart }) {
   const plans = [
     { name: "Abertura LLC", price: CONFIG.prices.llc, features: ["Endereço + Agente 12 meses", "EIN", "Operating Agreement"], cta: "Contratar", disabled: false },
     { name: "KASH FLOW 30 (Mensal)", price: CONFIG.prices.flow30, features: ["Classificação contábil", "Relatórios mensais"], cta: "Assinar", disabled: true },
-    { name: "KASH SCALE 5 (Mensal)", price: CONFIG.prices.scale5, features: ["Até 5 contratos", "Suporte prioritário", "W‑8BEN‑E (emitido no onboarding contábil)"], cta: "Assinar", disabled: true },
+    { name: "KASH SCALE 5 (Mensal)", price: CONFIG.prices.scale5, features: ["Até 5 contratos", "Suporte prioritário", "W-8BEN-E (emitido no onboarding contábil)"], cta: "Assinar", disabled: true },
   ];
   return (
     <section className="py-14 border-t border-slate-800">
@@ -630,6 +631,7 @@ function FormWizard({ open, onClose }) {
     };
 
     try {
+      // Salva localmente
       localStorage.setItem(code, JSON.stringify(payload));
 
       // index de trackings (últimos 50)
@@ -642,6 +644,16 @@ function FormWizard({ open, onClose }) {
         localStorage.setItem("KASH_TRACKINGS", JSON.stringify(filtered.slice(0,50)));
       } catch {}
 
+      // >>> NOVO: envia para o backend gravar no Supabase e subir o PDF ao Storage
+      try {
+        await fetch(CONFIG.apiWebhook, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      } catch { /* silencioso: não bloqueia a UX */ }
+
+      // Envia ao Formspree (e-mail / painel)
       await fetch(CONFIG.formspreeEndpoint, {
         method: "POST",
         headers: { "Accept": "application/json", "Content-Type": "application/json" },
