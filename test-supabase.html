@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Teste Supabase</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+  <h1>Teste de conexão Supabase</h1>
+  <pre id="output">Carregando...</pre>
+
+  <script>
+    const supabase = window.supabase.createClient(
+      "https://bvnpfjpjeczjvsyoytnj.supabase.co",   // seu Project URL
+      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."     // sua anon key
+    );
+
+    async function test() {
+      const { data, error } = await supabase.from("cases").select("*").limit(1);
+      document.getElementById("output").textContent = JSON.stringify({ data, error }, null, 2);
+    }
+
+    test();
+  </script>
+</body>
+</html>
