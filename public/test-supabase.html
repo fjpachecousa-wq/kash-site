@@ -1,19 +1,19 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
-  <title>Teste Supabase</title>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <title>Teste de conexão Supabase</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.3/dist/umd/supabase.min.js"></script>
 </head>
 <body>
   <h1>Teste de conexão Supabase</h1>
   <pre id="output">Carregando...</pre>
 
   <script>
-    const supabase = window.supabase.createClient(
-      "https://bvnpfjpjeczjvsyoytnj.supabase.co",   // seu Project URL
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."     // sua anon key
-    );
+    const SUPABASE_URL = "https://bvnpfjpjeczjvsyoytnj.supabase.co"; 
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ2bnBmampwZWN6anZzeW95dG5qIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc5NzcwNzgsImV4cCI6MjA3MzU1MzA3OH0.6guxkPinQ5q74vOP9jsJItiNtVDTY_nmY9Nb1wX2g4k";
+
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     async function test() {
       const { data, error } = await supabase.from("cases").select("*").limit(1);
