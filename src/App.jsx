@@ -226,21 +226,25 @@ function buildContractPT(companyName) {
 }
 
 /* ====== Acceptance (PT/EN) + Signature blocks (do not alter other flows) ====== */
+
 function _acceptanceClausePT(fullNameList, dateISO) {
   const dt = new Date(dateISO || new Date().toISOString());
-  return [
-    "ACEITE E DECLARAÇÃO",
-    "Declaro que LI E CONCORDO com todos os termos deste contrato.",
-    `Assinantes: ${fullNameList.length ? fullNameList.join("; ") : "—"}`,
+  const dataLocal = dt.toLocaleDateString();
+  const horaLocal = dt.toLocaleTimeString();
+  return `ACEITE E DECLARAÇÃO: Declaro que LI E CONCORDO com todos os termos deste contrato em ${dataLocal} e ${horaLocal}.`;
+}
+`,
     `Data/Hora: ${dt.toLocaleString()}`,
   ].join("\\n");
 }
+
 function _acceptanceClauseEN(fullNameList, dateISO) {
   const dt = new Date(dateISO || new Date().toISOString());
-  return [
-    "ACCEPTANCE AND DECLARATION",
-    "I hereby confirm that I HAVE READ AND AGREE to all terms of this agreement.",
-    `Signatories: ${fullNameList.length ? fullNameList.join("; ") : "—"}`,
+  const localDate = dt.toLocaleDateString();
+  const localTime = dt.toLocaleTimeString();
+  return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${localDate} at ${localTime}.`;
+}
+`,
     `Date/Time: ${dt.toLocaleString()}`,
   ].join("\\n");
 }
