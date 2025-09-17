@@ -1,3 +1,4 @@
+import jsPDF from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
 /* ================== CONFIG ================== */
@@ -269,99 +270,112 @@ Member ${i+1} Signature`).join("\\n\\n");
 
 /* ================== PDF (US Letter, Times 10/9) ================== */
 
-function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [] }) {
-  try {
-    const { jsPDF } = window.jspdf || {};
-    if (!jsPDF) return "";
-    const doc = new jsPDF({ unit: "pt", format: "letter" }); // 612 x 792
-    const M = { l: 72, r: 72, t: 72, b: 72 };
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
-    const contentW = pageW - M.l - M.r;
 
-    const TITLE_SIZE = 10, BODY_SIZE = 9, FOOT_SIZE = 9;
-    const LINE_ADV = 12;            // avanço vertical por linha
-    const PARA_SPACING = 6;         // espaço ao final do parágrafo
-    const SAFE_BOTTOM = M.b + 60;   // reserva para rodapé
-    let y = M.t;
+function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], company, members = [] }) {
+  // Best-effort resolve company & members
+  const _company = company || (typeof data !== "undefined" && data.company) || (typeof result !== "undefined" && result.company) || { companyName };
+  const _members = (members && members.length)
+    ? members
+    : (Array.isArray(memberNames) && memberNames.length ? memberNames.map(n=>({fullName:n})) 
+       : (typeof data !== "undefined" && Array.isArray(data.members) ? data.members 
+          : (typeof result !== "undefined" && Array.isArray(result.members) ? result.members : [])));
 
-    function ensureSpace(lines = 1) {
-      if (y + (lines * LINE_ADV) <= pageH - SAFE_BOTTOM) return;
-      doc.addPage();
-      y = M.t;
-    }
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const marginX = 40;
+  const maxW = doc.internal.pageSize.getWidth() - marginX * 2;
+  const pageH = doc.internal.pageSize.getHeight();
+  const names = _members.map(p => p.fullName).filter(Boolean);
 
-    function writeParagraphs(paragraphs) {
-      doc.setFont("times", ""); doc.setFontSize(BODY_SIZE);
-      for (const p of paragraphs) {
-        const wrapped = doc.splitTextToSize(p, contentW);
-        for (const line of wrapped) {
-          ensureSpace(1);
-          doc.text(line, M.l, y);
-          y += LINE_ADV;
-        }
-        y += PARA_SPACING;
-      }
-    }
+  // PT contract body
+  const ptBody = buildContractPT(companyName);
+  const ptText = (Array.isArray(ptBody) ? ptBody.join("\n") : String(ptBody));
+  const pt = [
+    `CONTRATO DE PRESTAÇÃO DE SERVIÇOS – ${companyName}`,
+    "",
+    ptText,
+    "",
+    _acceptanceClausePT(names, dateISO),
+    "",
+    "ASSINATURAS",
+    _signatureBlockPT(names)
+  ].join("\n");
 
-    // Título (primeira página)
-    doc.setFont("times", "bold"); doc.setFontSize(TITLE_SIZE);
-    doc.text("SERVICE AGREEMENT – KASH Corporate Solutions", M.l, y);
+  // EN contract body
+  const enBody = buildContractEN(companyName);
+  const enText = (Array.isArray(enBody) ? enBody.join("\n") : String(enBody));
+  const en = [
+    `SERVICE AGREEMENT – ${companyName}`,
+    "",
+    enText,
+    "",
+    _acceptanceClauseEN(names, dateISO),
+    "",
+    "SIGNATURES",
+    _signatureBlockEN(names)
+  ].join("\n");
+
+  // Application Data
+  const appLines = _applicationDataLines({
+    company: _company,
+    members: _members,
+    tracking,
+    dateISO
+  });
+
+  // Render PT
+  doc.setFont("Times", "Normal");
+  doc.setFontSize(12);
+  let y = 60;
+  const ptLines = doc.splitTextToSize(pt, maxW);
+  for (const line of ptLines) {
+    if (y > pageH - 60) { doc.addPage(); y = 60; }
+    doc.text(line, marginX, y);
     y += 16;
-
-    // EN (pula a primeira frase pois é "header" do cliente/contratada)
-    const en = buildContractEN(companyName);
-    writeParagraphs(en.slice(1));
-
-    
-// --- EN acceptance + signatures (unified) ---
-(function(){
-  const _names = Array.isArray(memberNames) ? memberNames : (Array.isArray(members)?members.map(m=>m.fullName).filter(Boolean):[]);
-  const _acc = _acceptanceClauseEN(_names, dateISO);
-  const _sig = _signatureBlockEN(_names);
-  ensureSpace(1); doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
-  writeParagraphs([_acc, "", "SIGNATURES", _sig].filter(Boolean));
-})();
-// Divisória antes do PT
-    ensureSpace(1);
-    doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
-    doc.text("— Portuguese Version Below —", M.l, y);
-    y += 14;
-
-    // PT (todas as cláusulas)
-    const pt = buildContractPT(companyName);
-    writeParagraphs(pt);
-
-    
-// --- PT acceptance + signatures (unified) ---
-(function(){
-  const _names = Array.isArray(memberNames) ? memberNames : (Array.isArray(members)?members.map(m=>m.fullName).filter(Boolean):[]);
-  const _acc = _acceptanceClausePT(_names, dateISO);
-  const _sig = _signatureBlockPT(_names);
-  ensureSpace(1); doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
-  writeParagraphs([_acc, "", "ASSINATURAS", _sig].filter(Boolean));
-})();
-// Rodapés em todas as páginas
-    const total = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= total; i++) {
-      doc.setPage(i);
-      doc.setFont("times",""); doc.setFontSize(FOOT_SIZE);
-      const footerY = pageH - M.b + 4;
-      // Esquerda: Tracking + Date (somente na última linha aparece a Date)
-      doc.text(`Tracking: ${tracking}`, M.l, footerY - 18);
-      doc.text(`Date: ${dateISO}`, M.l, footerY - 6);
-      // Direita: paginação
-      const pageStr = `Page ${i} of ${total}`;
-      const w = doc.getTextWidth(pageStr);
-      doc.text(pageStr, pageW - M.r - w, footerY - 6);
-    }
-
-    return doc.output("bloburl");
-  } catch (e) {
-    console.error(e);
-    return "";
   }
+
+  // EN (new page)
+  doc.addPage(); y = 60;
+  const enLines = doc.splitTextToSize(en, maxW);
+  for (const line of enLines) {
+    if (y > pageH - 60) { doc.addPage(); y = 60; }
+    doc.text(line, marginX, y);
+    y += 16;
+  }
+
+  // Application Data (new page)
+  doc.addPage(); y = 60;
+  const appWrapped = doc.splitTextToSize(appLines.join("\n"), maxW);
+  for (const line of appWrapped) {
+    if (y > pageH - 60) { doc.addPage(); y = 60; }
+    doc.text(line, marginX, y);
+    y += 16;
+  }
+
+  // Footer with local date/time + Tracking + page numbers
+  let dt = new Date();
+  if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
+    const [y2,m2,d2] = dateISO.split("-").map(Number);
+    const now = new Date();
+    dt = new Date(y2,(m2||1)-1,d2||1, now.getHours(), now.getMinutes(), now.getSeconds());
+  } else if (dateISO) {
+    const p = new Date(dateISO);
+    if (!isNaN(p)) dt = p;
+  }
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+    doc.setFontSize(8);
+    doc.text(`${dt.toLocaleDateString()} ${dt.toLocaleTimeString()} · TN: ${tracking}`, 40, ph - 20);
+    doc.text(`Page ${i} of ${pageCount}`, pw - 40, ph - 20, { align: "right" });
+  }
+
+  const fileName = `KASH_Contract_${tracking}.pdf`;
+  doc.save(fileName);
+  return { doc, fileName };
 }
+
 
 /* ================== FORM WIZARD (+ address FL logic, + Formspree, + tracking) ================== */
 const initialForm = {
@@ -936,75 +950,50 @@ export default function App() {
   );
 }
 
-/* ===== Application Data PDF (company + members; SAME Tracking) ===== */
-function generateApplicantPdf(packet) {
-  try {
-    const doc = new jsPDF({ unit: "pt", format: "a4" });
-    const pageW = doc.internal.pageSize.getWidth();
-    const pageH = doc.internal.pageSize.getHeight();
-    const marginX = 40;
-    const maxW = pageW - marginX * 2;
-    const safe = v => (v === undefined || v === null ? "" : String(v));
-    const company = packet?.company || {};
-    const members = Array.isArray(packet?.members) ? packet.members
-                    : (Array.isArray(packet?.members?.list) ? packet.members.list : []);
-    const tracking = packet?.tracking || packet?.trackingNumber || "";
-    const dateISO = packet?.dateISO || new Date().toISOString();
-    // Local datetime
-    let dt = new Date();
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
-      const [y,m,d] = dateISO.split("-").map(Number);
-      const now = new Date();
-      dt = new Date(y,(m||1)-1,d||1, now.getHours(), now.getMinutes(), now.getSeconds());
-    } else {
-      const parsed = new Date(dateISO);
-      if (!isNaN(parsed)) dt = parsed;
-    }
-    const when = `${dt.toLocaleDateString()} ${dt.toLocaleTimeString()}`;
-    const out = [];
-    out.push("APPLICATION DATA (KASH Corporate Solutions LLC)");
-    out.push("");
-    out.push(`Tracking: ${tracking}`);
-    out.push(`Date/Time: ${when}`);
-    out.push("");
-    out.push("— Company —");
-    out.push(`Legal Name: ${safe(company.companyName)}`);
-    if (company.companyAltName) out.push(`Alt/DBA: ${safe(company.companyAltName)}`);
-    if (company.hasFloridaAddress !== undefined) out.push(`Has Florida Address: ${company.hasFloridaAddress ? "Yes" : "No"}`);
-    if (company.hasFloridaAddress && company.floridaAddress) out.push(`Florida Address: ${safe(company.floridaAddress)}`);
-    if (company.email) out.push(`Email: ${safe(company.email)}`);
-    if (company.phone) out.push(`Phone: ${safe(company.phone)}`);
-    if (company.website) out.push(`Website: ${safe(company.website)}`);
-    out.push("");
-    out.push("— Members —");
-    if (members && members.length) {
-      members.forEach((m, i) => {
-        const full = safe(m.fullName || m.name);
-        const role = safe(m.role);
-        const idoc = safe(m.idOrPassport || m.document);
-        const addr = safe(m.address || m.addressLine);
-        const email = safe(m.email);
-        out.push(`${i+1}. ${full}${role ? " – "+role : ""}${idoc ? " – "+idoc : ""}`);
-        if (addr) out.push(`   Address: ${addr}`);
-        if (email) out.push(`   Email: ${email}`);
-      });
-    } else {
-      out.push("(none)");
-    }
-    out.push("");
-    doc.setFont("Times","Normal");
-    doc.setFontSize(12);
-    let y = 60;
-    const lines = doc.splitTextToSize(out.join("\\n"), maxW);
-    for (const line of lines) {
-      if (y > pageH - 60) { doc.addPage(); y = 60; }
-      doc.text(line, marginX, y);
-      y += 16;
-    }
-    const fileName = `Application_Data_${(company.companyName || "LLC").replace(/\\s+/g,"_")}_${tracking || "TN"}.pdf`;
-    return { doc, fileName };
-  } catch (e) {
-    console.error("generateApplicantPdf error:", e);
-    return null;
+/* ===== Application Data content (for unified PDF) ===== */
+function _applicationDataLines({ company = {}, members = [], tracking, dateISO }) {
+  const safe = v => (v == null ? "" : String(v));
+  let dt = new Date();
+  if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
+    const [y,m,d] = dateISO.split("-").map(Number);
+    const now = new Date();
+    dt = new Date(y, (m||1)-1, d||1, now.getHours(), now.getMinutes(), now.getSeconds());
+  } else if (dateISO) {
+    const p = new Date(dateISO);
+    if (!isNaN(p)) dt = p;
   }
+  const when = `${dt.toLocaleDateString()} ${dt.toLocaleTimeString()}`;
+
+  const lines = [];
+  lines.push("APPLICATION DATA (KASH Corporate Solutions LLC)");
+  lines.push("");
+  lines.push(`Tracking: ${tracking || ""}`);
+  lines.push(`Date/Time: ${when}`);
+  lines.push("");
+  lines.push("— Company —");
+  lines.push(`Legal Name: ${safe(company.companyName)}`);
+  if (company.companyAltName) lines.push(`Alt/DBA: ${safe(company.companyAltName)}`);
+  if (company.hasFloridaAddress !== undefined) lines.push(`Has Florida Address: ${company.hasFloridaAddress ? "Yes" : "No"}`);
+  if (company.hasFloridaAddress && company.floridaAddress) lines.push(`Florida Address: ${safe(company.floridaAddress)}`);
+  if (company.email) lines.push(`Email: ${safe(company.email)}`);
+  if (company.phone) lines.push(`Phone: ${safe(company.phone)}`);
+  if (company.website) lines.push(`Website: ${safe(company.website)}`);
+  lines.push("");
+  lines.push("— Members —");
+  if (Array.isArray(members) && members.length) {
+    members.forEach((m, i) => {
+      const full = safe(m.fullName || m.name);
+      const role = safe(m.role);
+      const idoc = safe(m.idOrPassport || m.document);
+      const addr = safe(m.address || m.addressLine);
+      const email = safe(m.email);
+      lines.push(`${i + 1}. ${full}${role ? " – " + role : ""}${idoc ? " – " + idoc : ""}`);
+      if (addr) lines.push(`   Address: ${addr}`);
+      if (email) lines.push(`   Email: ${email}`);
+    });
+  } else {
+    lines.push("(none)");
+  }
+  lines.push("");
+  return lines;
 }
