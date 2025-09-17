@@ -224,7 +224,7 @@ function buildContractPT(companyName) {
     "CLÁUSULA 11ª – FORO: Fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, com opção pelo foro de Orlando, Flórida – EUA, a critério do CLIENTE."
   ];
 }
-/* ====== Acceptance (PT/EN) + Signatures (helpers; non-invasive) ====== */
+/* ====== ACCEPTANCE + SIGNATURES (helpers) ====== */
 function _acceptanceClausePT(fullNameList, dateISO) {
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
@@ -314,9 +314,9 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [] })
     writeParagraphs(en.slice(1));
 
     
-// Inject EN acceptance + signatures (non-invasive)
+// Inject EN acceptance + signatures
 (function(){
-  const names = Array.isArray(memberNames) ? memberNames : (Array.isArray(members)?members.map(m=>m.fullName).filter(Boolean):[]);
+  const names = Array.isArray(memberNames) ? memberNames : [];
   const acc = _acceptanceClauseEN(names, dateISO);
   const sig = _signatureBlockEN(names);
   ensureSpace(1); doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
@@ -333,9 +333,9 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [] })
     writeParagraphs(pt);
 
     
-// Inject PT acceptance + signatures (non-invasive)
+// Inject PT acceptance + signatures
 (function(){
-  const names = Array.isArray(memberNames) ? memberNames : (Array.isArray(members)?members.map(m=>m.fullName).filter(Boolean):[]);
+  const names = Array.isArray(memberNames) ? memberNames : [];
   const acc = _acceptanceClausePT(names, dateISO);
   const sig = _signatureBlockPT(names);
   ensureSpace(1); doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
@@ -936,7 +936,7 @@ export default function App() {
   );
 }
 
-/* ====== Applicant Data PDF (company + members + flags; uses SAME Tracking) ====== */
+/* ====== Applicant Data PDF (company + members; SAME Tracking) ====== */
 function generateApplicantPdf(packet) {
   try {
     const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -962,22 +962,22 @@ function generateApplicantPdf(packet) {
     }
     const when = `${dt.toLocaleDateString()} ${dt.toLocaleTimeString()}`;
 
-    const lines = [];
-    lines.push("APPLICATION DATA (KASH Corporate Solutions LLC)");
-    lines.push("");
-    lines.push(`Tracking: ${tracking}`);
-    lines.push(`Date/Time: ${when}`);
-    lines.push("");
-    lines.push("— Company —");
-    lines.push(`Legal Name: ${safe(company.companyName)}`);
-    if (company.companyAltName) lines.push(`Alt/DBA: ${safe(company.companyAltName)}`);
-    if (company.hasFloridaAddress !== undefined) lines.push(`Has Florida Address: ${company.hasFloridaAddress ? "Yes" : "No"}`);
-    if (company.hasFloridaAddress && company.floridaAddress) lines.push(`Florida Address: ${safe(company.floridaAddress)}`);
-    if (company.email) lines.push(`Email: ${safe(company.email)}`);
-    if (company.phone) lines.push(`Phone: ${safe(company.phone)}`);
-    if (company.website) lines.push(`Website: ${safe(company.website)}`);
-    lines.push("");
-    lines.push("— Members —");
+    const out = [];
+    out.push("APPLICATION DATA (KASH Corporate Solutions LLC)");
+    out.push("");
+    out.push(`Tracking: ${tracking}`);
+    out.push(`Date/Time: ${when}`);
+    out.push("");
+    out.push("— Company —");
+    out.push(`Legal Name: ${safe(company.companyName)}`);
+    if (company.companyAltName) out.push(`Alt/DBA: ${safe(company.companyAltName)}`);
+    if (company.hasFloridaAddress !== undefined) out.push(`Has Florida Address: ${company.hasFloridaAddress ? "Yes" : "No"}`);
+    if (company.hasFloridaAddress && company.floridaAddress) out.push(`Florida Address: ${safe(company.floridaAddress)}`);
+    if (company.email) out.push(`Email: ${safe(company.email)}`);
+    if (company.phone) out.push(`Phone: ${safe(company.phone)}`);
+    if (company.website) out.push(`Website: ${safe(company.website)}`);
+    out.push("");
+    out.push("— Members —");
     if (members && members.length) {
       members.forEach((m, i) => {
         const full = safe(m.fullName || m.name);
@@ -985,25 +985,20 @@ function generateApplicantPdf(packet) {
         const idoc = safe(m.idOrPassport || m.document);
         const addr = safe(m.address || m.addressLine);
         const email = safe(m.email);
-        lines.push(`${i + 1}. ${full}${role ? " – " + role : ""}${idoc ? " – " + idoc : ""}`);
-        if (addr) lines.push(`   Address: ${addr}`);
-        if (email) lines.push(`   Email: ${email}`);
+        out.push(`${i + 1}. ${full}${role ? " – " + role : ""}${idoc ? " – " + idoc : ""}`);
+        if (addr) out.push(`   Address: ${addr}`);
+        if (email) out.push(`   Email: ${email}`);
       });
     } else {
-      lines.push("(none)");
+      out.push("(none)");
     }
-    lines.push("");
-    if (packet?.agreeToTerms !== undefined) {
-      lines.push("— Declarations —");
-      lines.push(`I Agree (Li e Concordo): ${packet.agreeToTerms ? "Yes" : "No"}`);
-      lines.push("");
-    }
+    out.push("");
 
     doc.setFont("Times", "Normal");
     doc.setFontSize(12);
     let y = 60;
-    const linesWrapped = doc.splitTextToSize(lines.join("\\n"), maxW);
-    for (const line of linesWrapped) {
+    const lines = doc.splitTextToSize(out.join("\\n"), maxW);
+    for (const line of lines) {
       if (y > pageH - 60) { doc.addPage(); y = 60; }
       doc.text(line, marginX, y);
       y += 16;
@@ -1011,7 +1006,7 @@ function generateApplicantPdf(packet) {
 
     const fileName = `Application_Data_${(company.companyName || "LLC").replace(/\\s+/g,"_")}_${tracking || "TN"}.pdf`;
     return { doc, fileName };
-  } catch (e) {
+  } catch(e) {
     console.error("generateApplicantPdf error:", e);
     return null;
   }
