@@ -225,9 +225,37 @@ function buildContractPT(companyName) {
   ];
 }
 
+/* ====== Acceptance (PT/EN) + Signature blocks (do not alter other flows) ====== */
+function _acceptanceClausePT(fullNameList, dateISO) {
+  const dt = new Date(dateISO || new Date().toISOString());
+  return [
+    "ACEITE E DECLARAÇÃO",
+    "Declaro que LI E CONCORDO com todos os termos deste contrato.",
+    `Assinantes: ${fullNameList.length ? fullNameList.join("; ") : "—"}`,
+    `Data/Hora: ${dt.toLocaleString()}`,
+  ].join("\\n");
+}
+function _acceptanceClauseEN(fullNameList, dateISO) {
+  const dt = new Date(dateISO || new Date().toISOString());
+  return [
+    "ACCEPTANCE AND DECLARATION",
+    "I hereby confirm that I HAVE READ AND AGREE to all terms of this agreement.",
+    `Signatories: ${fullNameList.length ? fullNameList.join("; ") : "—"}`,
+    `Date/Time: ${dt.toLocaleString()}`,
+  ].join("\\n");
+}
+function _signatureBlockPT(names) {
+  if (!names || names.length === 0) return "";
+  return names.map((n, i) => `____________________________________________\\n${n}\\nAssinatura do Sócio ${i+1}`).join("\\n\\n");
+}
+function _signatureBlockEN(names) {
+  if (!names || names.length === 0) return "";
+  return names.map((n, i) => `____________________________________________\\n${n}\\nMember ${i+1} Signature`).join("\\n\\n");
+}
+
 /* ================== PDF (US Letter, Times 10/9) ================== */
 
-function generateLetterPdf({ companyName, tracking, dateISO }) {
+function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [] }) {
   try {
     const { jsPDF } = window.jspdf || {};
     if (!jsPDF) return "";
@@ -270,6 +298,15 @@ function generateLetterPdf({ companyName, tracking, dateISO }) {
     // EN (pula a primeira frase pois é "header" do cliente/contratada)
     const en = buildContractEN(companyName);
     writeParagraphs(en.slice(1));
+    // >>> Inject acceptance + signatures (EN) – minimal, non-invasive
+    (function(){
+      const names = Array.isArray(memberNames) ? memberNames : [];
+      const acc = _acceptanceClauseEN(names, dateISO);
+      const sig = _signatureBlockEN(names);
+      ensureSpace(1); doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
+      writeParagraphs([acc, "", "SIGNATURES", sig].filter(Boolean));
+    })();
+
 
     // Divisória antes do PT
     ensureSpace(1);
@@ -280,6 +317,15 @@ function generateLetterPdf({ companyName, tracking, dateISO }) {
     // PT (todas as cláusulas)
     const pt = buildContractPT(companyName);
     writeParagraphs(pt);
+    // >>> Inject acceptance + signatures (PT) – minimal, non-invasive
+    (function(){
+      const names = Array.isArray(memberNames) ? memberNames : [];
+      const acc = _acceptanceClausePT(names, dateISO);
+      const sig = _signatureBlockPT(names);
+      ensureSpace(1); doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
+      writeParagraphs([acc, "", "ASSINATURAS", sig].filter(Boolean));
+    })();
+
 
     // Rodapés em todas as páginas
     const total = doc.internal.getNumberOfPages();
@@ -422,7 +468,7 @@ function TrackingSearch() {
             </div>
             <div className="mt-4">
               <CTAButton onClick={() => {
-                const url = generateLetterPdf({ companyName: result.company?.companyName, tracking: result.tracking, dateISO: result.dateISO });
+                const url = generateLetterPdf({ companyName: result.company?.companyName, tracking: result.tracking, dateISO: result.dateISO, memberNames: (result.members||[]).map(m=>m.fullName).filter(Boolean) , memberNames: (typeof members!=='undefined' && Array.isArray(members) ? members.map(m=>m.fullName).filter(Boolean) : (typeof result!=='undefined' && result.members ? result.members.map(m=>m.fullName).filter(Boolean) : (typeof data!=='undefined' && data.members ? data.members.map(m=>m.fullName).filter(Boolean) : []))) });
                 if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${result.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
               }}>Baixar contrato (PDF)</CTAButton>
             </div>
@@ -456,7 +502,7 @@ function MyTrackings() {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
-                  const url = generateLetterPdf({ companyName: data.company?.companyName, tracking: data.tracking, dateISO: data.dateISO });
+                  const url = generateLetterPdf({ companyName: data.company?.companyName, tracking: data.tracking, dateISO: data.dateISO , memberNames: (typeof members!=='undefined' && Array.isArray(members) ? members.map(m=>m.fullName).filter(Boolean) : (typeof result!=='undefined' && result.members ? result.members.map(m=>m.fullName).filter(Boolean) : (typeof data!=='undefined' && data.members ? data.members.map(m=>m.fullName).filter(Boolean) : []))) });
                   if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${data.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
                 }}>Baixar PDF</CTAButton>
                 <CTAButton onClick={() => {
