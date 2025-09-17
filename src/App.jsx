@@ -224,36 +224,34 @@ function buildContractPT(companyName) {
     "CLÁUSULA 11ª – FORO: Fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, com opção pelo foro de Orlando, Flórida – EUA, a critério do CLIENTE."
   ];
 }
-/* ====== Acceptance (PT/EN) + Signatures (helpers; minimal invasive) ====== */
+/* ===== Acceptance (PT/EN) + Signatures (helpers) ===== */
 function _acceptanceClausePT(fullNameList, dateISO) {
-  // Local time even when dateISO is date-only "YYYY-MM-DD"
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
     const [y,m,d] = dateISO.split("-").map(Number);
     const now = new Date();
-    dt = new Date(y, (m||1)-1, d||1, now.getHours(), now.getMinutes(), now.getSeconds());
+    dt = new Date(y,(m||1)-1,d||1, now.getHours(), now.getMinutes(), now.getSeconds());
   } else if (dateISO) {
     const parsed = new Date(dateISO);
     if (!isNaN(parsed)) dt = parsed;
   }
-  const dataLocal = dt.toLocaleDateString();
-  const horaLocal = dt.toLocaleTimeString();
-  return `ACEITE E DECLARAÇÃO: Declaro que LI E CONCORDO com todos os termos deste contrato em ${dataLocal} e ${horaLocal}.`;
+  const d = dt.toLocaleDateString();
+  const t = dt.toLocaleTimeString();
+  return `ACEITE E DECLARAÇÃO: Declaro que LI E CONCORDO com todos os termos deste contrato em ${d} e ${t}.`;
 }
 function _acceptanceClauseEN(fullNameList, dateISO) {
-  // Local time even when dateISO is date-only "YYYY-MM-DD"
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
     const [y,m,d] = dateISO.split("-").map(Number);
     const now = new Date();
-    dt = new Date(y, (m||1)-1, d||1, now.getHours(), now.getMinutes(), now.getSeconds());
+    dt = new Date(y,(m||1)-1,d||1, now.getHours(), now.getMinutes(), now.getSeconds());
   } else if (dateISO) {
     const parsed = new Date(dateISO);
     if (!isNaN(parsed)) dt = parsed;
   }
-  const localDate = dt.toLocaleDateString();
-  const localTime = dt.toLocaleTimeString();
-  return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${localDate} at ${localTime}.`;
+  const d = dt.toLocaleDateString();
+  const t = dt.toLocaleTimeString();
+  return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${d} at ${t}.`;
 }
 function _signatureBlockPT(names) {
   if (!names || !names.length) return "";
@@ -316,9 +314,9 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [] })
     writeParagraphs(en.slice(1));
 
     
-// >>> Inject EN acceptance + signatures (end of EN contract)
+// --- EN acceptance + signatures (unified) ---
 (function(){
-  const _names = Array.isArray(memberNames) ? memberNames : [];
+  const _names = Array.isArray(memberNames) ? memberNames : (Array.isArray(members)?members.map(m=>m.fullName).filter(Boolean):[]);
   const _acc = _acceptanceClauseEN(_names, dateISO);
   const _sig = _signatureBlockEN(_names);
   ensureSpace(1); doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
@@ -335,9 +333,9 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [] })
     writeParagraphs(pt);
 
     
-// >>> Inject PT acceptance + signatures (end of PT contract)
+// --- PT acceptance + signatures (unified) ---
 (function(){
-  const _names = Array.isArray(memberNames) ? memberNames : [];
+  const _names = Array.isArray(memberNames) ? memberNames : (Array.isArray(members)?members.map(m=>m.fullName).filter(Boolean):[]);
   const _acc = _acceptanceClausePT(_names, dateISO);
   const _sig = _signatureBlockPT(_names);
   ensureSpace(1); doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
@@ -484,7 +482,7 @@ function TrackingSearch() {
             </div>
             <div className="mt-4">
               <CTAButton onClick={() => {
-                const url = generateLetterPdf({ companyName: result.company?.companyName, tracking: result.tracking, dateISO: result.dateISO, memberNames: (result.members||[]).map(m=>m.fullName).filter(Boolean) });
+                const url = generateLetterPdf({ companyName: result.company?.companyName, tracking: result.tracking, dateISO: result.dateISO });
                 if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${result.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
               }}>Baixar contrato (PDF)</CTAButton>
             </div>
@@ -938,7 +936,7 @@ export default function App() {
   );
 }
 
-/* ====== Application Data PDF (Company + Members; SAME Tracking) ====== */
+/* ===== Application Data PDF (company + members; SAME Tracking) ===== */
 function generateApplicantPdf(packet) {
   try {
     const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -946,23 +944,23 @@ function generateApplicantPdf(packet) {
     const pageH = doc.internal.pageSize.getHeight();
     const marginX = 40;
     const maxW = pageW - marginX * 2;
-    const safe = (v) => (v === undefined || v === null ? "" : String(v));
+    const safe = v => (v === undefined || v === null ? "" : String(v));
     const company = packet?.company || {};
-    const members = Array.isArray(packet?.members) ? packet.members : (Array.isArray(packet?.members?.list) ? packet.members.list : []);
+    const members = Array.isArray(packet?.members) ? packet.members
+                    : (Array.isArray(packet?.members?.list) ? packet.members.list : []);
     const tracking = packet?.tracking || packet?.trackingNumber || "";
     const dateISO = packet?.dateISO || new Date().toISOString();
     // Local datetime
     let dt = new Date();
-    if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
       const [y,m,d] = dateISO.split("-").map(Number);
       const now = new Date();
-      dt = new Date(y, (m||1)-1, d||1, now.getHours(), now.getMinutes(), now.getSeconds());
-    } else if (dateISO) {
+      dt = new Date(y,(m||1)-1,d||1, now.getHours(), now.getMinutes(), now.getSeconds());
+    } else {
       const parsed = new Date(dateISO);
       if (!isNaN(parsed)) dt = parsed;
     }
     const when = `${dt.toLocaleDateString()} ${dt.toLocaleTimeString()}`;
-
     const out = [];
     out.push("APPLICATION DATA (KASH Corporate Solutions LLC)");
     out.push("");
@@ -986,7 +984,7 @@ function generateApplicantPdf(packet) {
         const idoc = safe(m.idOrPassport || m.document);
         const addr = safe(m.address || m.addressLine);
         const email = safe(m.email);
-        out.push(`${i + 1}. ${full}${role ? " – " + role : ""}${idoc ? " – " + idoc : ""}`);
+        out.push(`${i+1}. ${full}${role ? " – "+role : ""}${idoc ? " – "+idoc : ""}`);
         if (addr) out.push(`   Address: ${addr}`);
         if (email) out.push(`   Email: ${email}`);
       });
@@ -994,10 +992,7 @@ function generateApplicantPdf(packet) {
       out.push("(none)");
     }
     out.push("");
-    out.push("— Declarations —");
-    out.push("I Agree (Li e Concordo): Yes");
-
-    doc.setFont("Times", "Normal");
+    doc.setFont("Times","Normal");
     doc.setFontSize(12);
     let y = 60;
     const lines = doc.splitTextToSize(out.join("\\n"), maxW);
@@ -1008,7 +1003,7 @@ function generateApplicantPdf(packet) {
     }
     const fileName = `Application_Data_${(company.companyName || "LLC").replace(/\\s+/g,"_")}_${tracking || "TN"}.pdf`;
     return { doc, fileName };
-  } catch(e) {
+  } catch (e) {
     console.error("generateApplicantPdf error:", e);
     return null;
   }
