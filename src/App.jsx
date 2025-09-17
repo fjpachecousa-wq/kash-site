@@ -1,4 +1,4 @@
-import jsPDF from "jspdf";
+import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
 /* ================== CONFIG ================== */
@@ -272,7 +272,7 @@ Member ${i+1} Signature`).join("\\n\\n");
 
 
 function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], company, members = [] }) {
-  // Best-effort resolve company & members
+  // Resolve company/members from whatever exists in scope
   const _company = company || (typeof data !== "undefined" && data.company) || (typeof result !== "undefined" && result.company) || { companyName };
   const _members = (members && members.length)
     ? members
@@ -286,7 +286,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   const pageH = doc.internal.pageSize.getHeight();
   const names = _members.map(p => p.fullName).filter(Boolean);
 
-  // PT contract body
+  // PT
   const ptBody = buildContractPT(companyName);
   const ptText = (Array.isArray(ptBody) ? ptBody.join("\n") : String(ptBody));
   const pt = [
@@ -300,7 +300,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
     _signatureBlockPT(names)
   ].join("\n");
 
-  // EN contract body
+  // EN
   const enBody = buildContractEN(companyName);
   const enText = (Array.isArray(enBody) ? enBody.join("\n") : String(enBody));
   const en = [
@@ -351,7 +351,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
     y += 16;
   }
 
-  // Footer with local date/time + Tracking + page numbers
+  // Footer (local date/time + tracking + page numbers)
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
     const [y2,m2,d2] = dateISO.split("-").map(Number);
