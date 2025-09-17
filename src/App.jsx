@@ -259,7 +259,6 @@ function _acceptanceClauseEN(fullNameList, dateISO) {
   const localTime = dt.toLocaleTimeString();
   return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${localDate} at ${localTime}.`;
 }
-}
 function _signatureBlockPT(names) {
   if (!names || names.length === 0) return "";
   return names.map((n, i) => `____________________________________________\\n${n}\\nAssinatura do Sócio ${i+1}`).join("\\n\\n");
