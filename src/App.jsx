@@ -224,43 +224,45 @@ function buildContractPT(companyName) {
     "CLÁUSULA 11ª – FORO: Fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, com opção pelo foro de Orlando, Flórida – EUA, a critério do CLIENTE."
   ];
 }
-/* ====== ACCEPTANCE + SIGNATURES (helpers) ====== */
+/* ====== Acceptance (PT/EN) + Signatures (helpers; minimal invasive) ====== */
 function _acceptanceClausePT(fullNameList, dateISO) {
+  // Local time even when dateISO is date-only "YYYY-MM-DD"
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
     const [y,m,d] = dateISO.split("-").map(Number);
     const now = new Date();
     dt = new Date(y, (m||1)-1, d||1, now.getHours(), now.getMinutes(), now.getSeconds());
   } else if (dateISO) {
-    const p = new Date(dateISO);
-    if (!isNaN(p)) dt = p;
+    const parsed = new Date(dateISO);
+    if (!isNaN(parsed)) dt = parsed;
   }
   const dataLocal = dt.toLocaleDateString();
   const horaLocal = dt.toLocaleTimeString();
   return `ACEITE E DECLARAÇÃO: Declaro que LI E CONCORDO com todos os termos deste contrato em ${dataLocal} e ${horaLocal}.`;
 }
 function _acceptanceClauseEN(fullNameList, dateISO) {
+  // Local time even when dateISO is date-only "YYYY-MM-DD"
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
     const [y,m,d] = dateISO.split("-").map(Number);
     const now = new Date();
     dt = new Date(y, (m||1)-1, d||1, now.getHours(), now.getMinutes(), now.getSeconds());
   } else if (dateISO) {
-    const p = new Date(dateISO);
-    if (!isNaN(p)) dt = p;
+    const parsed = new Date(dateISO);
+    if (!isNaN(parsed)) dt = parsed;
   }
   const localDate = dt.toLocaleDateString();
   const localTime = dt.toLocaleTimeString();
   return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${localDate} at ${localTime}.`;
 }
 function _signatureBlockPT(names) {
-  if (!names || names.length === 0) return "";
+  if (!names || !names.length) return "";
   return names.map((n, i) => `____________________________________________
 ${n}
 Assinatura do Sócio ${i+1}`).join("\\n\\n");
 }
 function _signatureBlockEN(names) {
-  if (!names || names.length === 0) return "";
+  if (!names || !names.length) return "";
   return names.map((n, i) => `____________________________________________
 ${n}
 Member ${i+1} Signature`).join("\\n\\n");
@@ -314,13 +316,13 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [] })
     writeParagraphs(en.slice(1));
 
     
-// Inject EN acceptance + signatures
+// >>> Inject EN acceptance + signatures (end of EN contract)
 (function(){
-  const names = Array.isArray(memberNames) ? memberNames : [];
-  const acc = _acceptanceClauseEN(names, dateISO);
-  const sig = _signatureBlockEN(names);
+  const _names = Array.isArray(memberNames) ? memberNames : [];
+  const _acc = _acceptanceClauseEN(_names, dateISO);
+  const _sig = _signatureBlockEN(_names);
   ensureSpace(1); doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
-  writeParagraphs([acc, "", "SIGNATURES", sig].filter(Boolean));
+  writeParagraphs([_acc, "", "SIGNATURES", _sig].filter(Boolean));
 })();
 // Divisória antes do PT
     ensureSpace(1);
@@ -333,13 +335,13 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [] })
     writeParagraphs(pt);
 
     
-// Inject PT acceptance + signatures
+// >>> Inject PT acceptance + signatures (end of PT contract)
 (function(){
-  const names = Array.isArray(memberNames) ? memberNames : [];
-  const acc = _acceptanceClausePT(names, dateISO);
-  const sig = _signatureBlockPT(names);
+  const _names = Array.isArray(memberNames) ? memberNames : [];
+  const _acc = _acceptanceClausePT(_names, dateISO);
+  const _sig = _signatureBlockPT(_names);
   ensureSpace(1); doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
-  writeParagraphs([acc, "", "ASSINATURAS", sig].filter(Boolean));
+  writeParagraphs([_acc, "", "ASSINATURAS", _sig].filter(Boolean));
 })();
 // Rodapés em todas as páginas
     const total = doc.internal.getNumberOfPages();
@@ -936,7 +938,7 @@ export default function App() {
   );
 }
 
-/* ====== Applicant Data PDF (company + members; SAME Tracking) ====== */
+/* ====== Application Data PDF (Company + Members; SAME Tracking) ====== */
 function generateApplicantPdf(packet) {
   try {
     const doc = new jsPDF({ unit: "pt", format: "a4" });
@@ -944,13 +946,12 @@ function generateApplicantPdf(packet) {
     const pageH = doc.internal.pageSize.getHeight();
     const marginX = 40;
     const maxW = pageW - marginX * 2;
-
     const safe = (v) => (v === undefined || v === null ? "" : String(v));
     const company = packet?.company || {};
     const members = Array.isArray(packet?.members) ? packet.members : (Array.isArray(packet?.members?.list) ? packet.members.list : []);
     const tracking = packet?.tracking || packet?.trackingNumber || "";
     const dateISO = packet?.dateISO || new Date().toISOString();
-
+    // Local datetime
     let dt = new Date();
     if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
       const [y,m,d] = dateISO.split("-").map(Number);
@@ -993,6 +994,8 @@ function generateApplicantPdf(packet) {
       out.push("(none)");
     }
     out.push("");
+    out.push("— Declarations —");
+    out.push("I Agree (Li e Concordo): Yes");
 
     doc.setFont("Times", "Normal");
     doc.setFontSize(12);
@@ -1003,7 +1006,6 @@ function generateApplicantPdf(packet) {
       doc.text(line, marginX, y);
       y += 16;
     }
-
     const fileName = `Application_Data_${(company.companyName || "LLC").replace(/\\s+/g,"_")}_${tracking || "TN"}.pdf`;
     return { doc, fileName };
   } catch(e) {
