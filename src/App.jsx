@@ -243,7 +243,6 @@ function _acceptanceClausePT(fullNameList, dateISO) {
   const horaLocal = dt.toLocaleTimeString();
   return `ACEITE E DECLARAÇÃO: Declaro que LI E CONCORDO com todos os termos deste contrato em ${dataLocal} e ${horaLocal}.`;
 }
-}
 
 function _acceptanceClauseEN(fullNameList, dateISO) {
   // Use local date/time to avoid UTC parsing of "YYYY-MM-DD" (which shows 20:00:00 in ET)
