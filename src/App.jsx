@@ -227,17 +227,41 @@ function buildContractPT(companyName) {
 
 /* ====== Acceptance (PT/EN) + Signature blocks (do not alter other flows) ====== */
 
+
 function _acceptanceClausePT(fullNameList, dateISO) {
-  const dt = new Date(dateISO || new Date().toISOString());
+  // Use local date/time to avoid UTC parsing of "YYYY-MM-DD" (which shows 20:00:00 in ET)
+  let dt = new Date();
+  if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
+    const [y,m,d] = dateISO.split("-").map(Number);
+    const now = new Date();
+    dt = new Date(y, (m||1)-1, d||1, now.getHours(), now.getMinutes(), now.getSeconds());
+  } else if (dateISO) {
+    const parsed = new Date(dateISO);
+    if (!isNaN(parsed)) dt = parsed;
+  }
   const dataLocal = dt.toLocaleDateString();
   const horaLocal = dt.toLocaleTimeString();
   return `ACEITE E DECLARAÇÃO: Declaro que LI E CONCORDO com todos os termos deste contrato em ${dataLocal} e ${horaLocal}.`;
 }
+e ${horaLocal}.`;
+}
+
 function _acceptanceClauseEN(fullNameList, dateISO) {
-  const dt = new Date(dateISO || new Date().toISOString());
+  // Use local date/time to avoid UTC parsing of "YYYY-MM-DD" (which shows 20:00:00 in ET)
+  let dt = new Date();
+  if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
+    const [y,m,d] = dateISO.split("-").map(Number);
+    const now = new Date();
+    dt = new Date(y, (m||1)-1, d||1, now.getHours(), now.getMinutes(), now.getSeconds());
+  } else if (dateISO) {
+    const parsed = new Date(dateISO);
+    if (!isNaN(parsed)) dt = parsed;
+  }
   const localDate = dt.toLocaleDateString();
   const localTime = dt.toLocaleTimeString();
   return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${localDate} at ${localTime}.`;
+}
+at ${localTime}.`;
 }
 function _signatureBlockPT(names) {
   if (!names || names.length === 0) return "";
