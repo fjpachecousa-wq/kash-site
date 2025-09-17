@@ -224,36 +224,30 @@ function buildContractPT(companyName) {
     "CLÁUSULA 11ª – FORO: Fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, com opção pelo foro de Orlando, Flórida – EUA, a critério do CLIENTE."
   ];
 }
-
-/* ====== Acceptance (PT/EN) + Signature blocks (do not alter other flows) ====== */
-
-
+/* ====== Acceptance (PT/EN) + Signatures (helpers; non-invasive) ====== */
 function _acceptanceClausePT(fullNameList, dateISO) {
-  // Use local date/time to avoid UTC parsing of "YYYY-MM-DD" (which shows 20:00:00 in ET)
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
     const [y,m,d] = dateISO.split("-").map(Number);
     const now = new Date();
     dt = new Date(y, (m||1)-1, d||1, now.getHours(), now.getMinutes(), now.getSeconds());
   } else if (dateISO) {
-    const parsed = new Date(dateISO);
-    if (!isNaN(parsed)) dt = parsed;
+    const p = new Date(dateISO);
+    if (!isNaN(p)) dt = p;
   }
   const dataLocal = dt.toLocaleDateString();
   const horaLocal = dt.toLocaleTimeString();
   return `ACEITE E DECLARAÇÃO: Declaro que LI E CONCORDO com todos os termos deste contrato em ${dataLocal} e ${horaLocal}.`;
 }
-
 function _acceptanceClauseEN(fullNameList, dateISO) {
-  // Use local date/time to avoid UTC parsing of "YYYY-MM-DD" (which shows 20:00:00 in ET)
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
     const [y,m,d] = dateISO.split("-").map(Number);
     const now = new Date();
     dt = new Date(y, (m||1)-1, d||1, now.getHours(), now.getMinutes(), now.getSeconds());
   } else if (dateISO) {
-    const parsed = new Date(dateISO);
-    if (!isNaN(parsed)) dt = parsed;
+    const p = new Date(dateISO);
+    if (!isNaN(p)) dt = p;
   }
   const localDate = dt.toLocaleDateString();
   const localTime = dt.toLocaleTimeString();
@@ -261,12 +255,17 @@ function _acceptanceClauseEN(fullNameList, dateISO) {
 }
 function _signatureBlockPT(names) {
   if (!names || names.length === 0) return "";
-  return names.map((n, i) => `____________________________________________\\n${n}\\nAssinatura do Sócio ${i+1}`).join("\\n\\n");
+  return names.map((n, i) => `____________________________________________
+${n}
+Assinatura do Sócio ${i+1}`).join("\\n\\n");
 }
 function _signatureBlockEN(names) {
   if (!names || names.length === 0) return "";
-  return names.map((n, i) => `____________________________________________\\n${n}\\nMember ${i+1} Signature`).join("\\n\\n");
+  return names.map((n, i) => `____________________________________________
+${n}
+Member ${i+1} Signature`).join("\\n\\n");
 }
+
 
 /* ================== PDF (US Letter, Times 10/9) ================== */
 
@@ -313,17 +312,17 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [] })
     // EN (pula a primeira frase pois é "header" do cliente/contratada)
     const en = buildContractEN(companyName);
     writeParagraphs(en.slice(1));
-    // >>> Inject acceptance + signatures (EN) – minimal, non-invasive
-    (function(){
-      const names = Array.isArray(memberNames) ? memberNames : [];
-      const acc = _acceptanceClauseEN(names, dateISO);
-      const sig = _signatureBlockEN(names);
-      ensureSpace(1); doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
-      writeParagraphs([acc, "", "SIGNATURES", sig].filter(Boolean));
-    })();
 
-
-    // Divisória antes do PT
+    
+// Inject EN acceptance + signatures (non-invasive)
+(function(){
+  const names = Array.isArray(memberNames) ? memberNames : (Array.isArray(members)?members.map(m=>m.fullName).filter(Boolean):[]);
+  const acc = _acceptanceClauseEN(names, dateISO);
+  const sig = _signatureBlockEN(names);
+  ensureSpace(1); doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
+  writeParagraphs([acc, "", "SIGNATURES", sig].filter(Boolean));
+})();
+// Divisória antes do PT
     ensureSpace(1);
     doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
     doc.text("— Portuguese Version Below —", M.l, y);
@@ -332,17 +331,17 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [] })
     // PT (todas as cláusulas)
     const pt = buildContractPT(companyName);
     writeParagraphs(pt);
-    // >>> Inject acceptance + signatures (PT) – minimal, non-invasive
-    (function(){
-      const names = Array.isArray(memberNames) ? memberNames : [];
-      const acc = _acceptanceClausePT(names, dateISO);
-      const sig = _signatureBlockPT(names);
-      ensureSpace(1); doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
-      writeParagraphs([acc, "", "ASSINATURAS", sig].filter(Boolean));
-    })();
 
-
-    // Rodapés em todas as páginas
+    
+// Inject PT acceptance + signatures (non-invasive)
+(function(){
+  const names = Array.isArray(memberNames) ? memberNames : (Array.isArray(members)?members.map(m=>m.fullName).filter(Boolean):[]);
+  const acc = _acceptanceClausePT(names, dateISO);
+  const sig = _signatureBlockPT(names);
+  ensureSpace(1); doc.setFont("times",""); doc.setFontSize(BODY_SIZE);
+  writeParagraphs([acc, "", "ASSINATURAS", sig].filter(Boolean));
+})();
+// Rodapés em todas as páginas
     const total = doc.internal.getNumberOfPages();
     for (let i = 1; i <= total; i++) {
       doc.setPage(i);
@@ -483,7 +482,7 @@ function TrackingSearch() {
             </div>
             <div className="mt-4">
               <CTAButton onClick={() => {
-                const url = generateLetterPdf({ companyName: result.company?.companyName, tracking: result.tracking, dateISO: result.dateISO, memberNames: (result.members||[]).map(m=>m.fullName).filter(Boolean) , memberNames: (typeof members!=='undefined' && Array.isArray(members) ? members.map(m=>m.fullName).filter(Boolean) : (typeof result!=='undefined' && result.members ? result.members.map(m=>m.fullName).filter(Boolean) : (typeof data!=='undefined' && data.members ? data.members.map(m=>m.fullName).filter(Boolean) : []))) });
+                const url = generateLetterPdf({ companyName: result.company?.companyName, tracking: result.tracking, dateISO: result.dateISO, memberNames: (result.members||[]).map(m=>m.fullName).filter(Boolean) });
                 if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${result.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
               }}>Baixar contrato (PDF)</CTAButton>
             </div>
@@ -517,7 +516,7 @@ function MyTrackings() {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
-                  const url = generateLetterPdf({ companyName: data.company?.companyName, tracking: data.tracking, dateISO: data.dateISO , memberNames: (typeof members!=='undefined' && Array.isArray(members) ? members.map(m=>m.fullName).filter(Boolean) : (typeof result!=='undefined' && result.members ? result.members.map(m=>m.fullName).filter(Boolean) : (typeof data!=='undefined' && data.members ? data.members.map(m=>m.fullName).filter(Boolean) : []))) });
+                  const url = generateLetterPdf({ companyName: data.company?.companyName, tracking: data.tracking, dateISO: data.dateISO });
                   if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${data.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
                 }}>Baixar PDF</CTAButton>
                 <CTAButton onClick={() => {
@@ -935,4 +934,85 @@ export default function App() {
       <FormWizard open={open} onClose={() => setOpen(false)} />
     </div>
   );
+}
+
+/* ====== Applicant Data PDF (company + members + flags; uses SAME Tracking) ====== */
+function generateApplicantPdf(packet) {
+  try {
+    const doc = new jsPDF({ unit: "pt", format: "a4" });
+    const pageW = doc.internal.pageSize.getWidth();
+    const pageH = doc.internal.pageSize.getHeight();
+    const marginX = 40;
+    const maxW = pageW - marginX * 2;
+
+    const safe = (v) => (v === undefined || v === null ? "" : String(v));
+    const company = packet?.company || {};
+    const members = Array.isArray(packet?.members) ? packet.members : (Array.isArray(packet?.members?.list) ? packet.members.list : []);
+    const tracking = packet?.tracking || packet?.trackingNumber || "";
+    const dateISO = packet?.dateISO || new Date().toISOString();
+
+    let dt = new Date();
+    if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
+      const [y,m,d] = dateISO.split("-").map(Number);
+      const now = new Date();
+      dt = new Date(y, (m||1)-1, d||1, now.getHours(), now.getMinutes(), now.getSeconds());
+    } else if (dateISO) {
+      const parsed = new Date(dateISO);
+      if (!isNaN(parsed)) dt = parsed;
+    }
+    const when = `${dt.toLocaleDateString()} ${dt.toLocaleTimeString()}`;
+
+    const lines = [];
+    lines.push("APPLICATION DATA (KASH Corporate Solutions LLC)");
+    lines.push("");
+    lines.push(`Tracking: ${tracking}`);
+    lines.push(`Date/Time: ${when}`);
+    lines.push("");
+    lines.push("— Company —");
+    lines.push(`Legal Name: ${safe(company.companyName)}`);
+    if (company.companyAltName) lines.push(`Alt/DBA: ${safe(company.companyAltName)}`);
+    if (company.hasFloridaAddress !== undefined) lines.push(`Has Florida Address: ${company.hasFloridaAddress ? "Yes" : "No"}`);
+    if (company.hasFloridaAddress && company.floridaAddress) lines.push(`Florida Address: ${safe(company.floridaAddress)}`);
+    if (company.email) lines.push(`Email: ${safe(company.email)}`);
+    if (company.phone) lines.push(`Phone: ${safe(company.phone)}`);
+    if (company.website) lines.push(`Website: ${safe(company.website)}`);
+    lines.push("");
+    lines.push("— Members —");
+    if (members && members.length) {
+      members.forEach((m, i) => {
+        const full = safe(m.fullName || m.name);
+        const role = safe(m.role);
+        const idoc = safe(m.idOrPassport || m.document);
+        const addr = safe(m.address || m.addressLine);
+        const email = safe(m.email);
+        lines.push(`${i + 1}. ${full}${role ? " – " + role : ""}${idoc ? " – " + idoc : ""}`);
+        if (addr) lines.push(`   Address: ${addr}`);
+        if (email) lines.push(`   Email: ${email}`);
+      });
+    } else {
+      lines.push("(none)");
+    }
+    lines.push("");
+    if (packet?.agreeToTerms !== undefined) {
+      lines.push("— Declarations —");
+      lines.push(`I Agree (Li e Concordo): ${packet.agreeToTerms ? "Yes" : "No"}`);
+      lines.push("");
+    }
+
+    doc.setFont("Times", "Normal");
+    doc.setFontSize(12);
+    let y = 60;
+    const linesWrapped = doc.splitTextToSize(lines.join("\\n"), maxW);
+    for (const line of linesWrapped) {
+      if (y > pageH - 60) { doc.addPage(); y = 60; }
+      doc.text(line, marginX, y);
+      y += 16;
+    }
+
+    const fileName = `Application_Data_${(company.companyName || "LLC").replace(/\\s+/g,"_")}_${tracking || "TN"}.pdf`;
+    return { doc, fileName };
+  } catch (e) {
+    console.error("generateApplicantPdf error:", e);
+    return null;
+  }
 }
