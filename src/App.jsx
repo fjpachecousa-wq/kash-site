@@ -7,7 +7,6 @@ const CONFIG = {
   checkout: { stripeUrl: "" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
   formspreeEndpoint: "https://formspree.io/f/xblawgpk",
-  apiWebhook: "/api/formspree-hook", // <<< NOVO: grava no Supabase + contrato no Storage
 };
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -643,15 +642,6 @@ function FormWizard({ open, onClose }) {
         filtered.unshift(entry);
         localStorage.setItem("KASH_TRACKINGS", JSON.stringify(filtered.slice(0,50)));
       } catch {}
-
-      // >>> NOVO: envia para o backend gravar no Supabase e subir o PDF ao Storage
-      try {
-        await fetch(CONFIG.apiWebhook, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      } catch { /* silencioso: não bloqueia a UX */ }
 
       // Envia ao Formspree (e-mail / painel)
       await fetch(CONFIG.formspreeEndpoint, {
