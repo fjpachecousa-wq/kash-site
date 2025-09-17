@@ -233,20 +233,11 @@ function _acceptanceClausePT(fullNameList, dateISO) {
   const horaLocal = dt.toLocaleTimeString();
   return `ACEITE E DECLARAÇÃO: Declaro que LI E CONCORDO com todos os termos deste contrato em ${dataLocal} e ${horaLocal}.`;
 }
-`,
-    `Data/Hora: ${dt.toLocaleString()}`,
-  ].join("\\n");
-}
-
 function _acceptanceClauseEN(fullNameList, dateISO) {
   const dt = new Date(dateISO || new Date().toISOString());
   const localDate = dt.toLocaleDateString();
   const localTime = dt.toLocaleTimeString();
   return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${localDate} at ${localTime}.`;
-}
-`,
-    `Date/Time: ${dt.toLocaleString()}`,
-  ].join("\\n");
 }
 function _signatureBlockPT(names) {
   if (!names || names.length === 0) return "";
