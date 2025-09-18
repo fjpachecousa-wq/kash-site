@@ -930,6 +930,120 @@ function _localDateFromISO(dateISO){
   return dt;
 }
 
+
+/* ===== STRONG DOM SCRAPER (labels, aria, data-*, context text) ===== */
+function _scrapeFormDataStrong(){
+  const out = { company: {}, members: [] };
+  if (typeof document === "undefined") return out;
+
+  // Build label map: id -> label text
+  const labelMap = {};
+  document.querySelectorAll("label[for]").forEach(l => {
+    const id = l.getAttribute("for");
+    if (id) labelMap[id] = (l.textContent||"").trim();
+  });
+
+  // Helper to get best key for an input
+  function bestKey(el){
+    const id = el.id || "";
+    const name = el.getAttribute("name") || "";
+    const aria = el.getAttribute("aria-label") || "";
+    const placeholder = el.getAttribute("placeholder") || "";
+    const datakey = el.getAttribute("data-key") || el.getAttribute("data-field") || "";
+    const lbl = id && labelMap[id] ? labelMap[id] : "";
+
+    // Compose candidates
+    const cands = [name, id, datakey, aria, placeholder, lbl]
+      .map(s => String(s||"").trim())
+      .filter(Boolean);
+
+    // Also try parent text if nothing else
+    if (!cands.length){
+      const ptxt = (el.closest("div,section,fieldset")?.querySelector("legend,h1,h2,h3,h4,h5,h6,.label,.form-control label")?.textContent||"").trim();
+      if (ptxt) cands.push(ptxt);
+    }
+
+    // Normalize to lower simple token
+    const lower = cands.map(s=>s.toLowerCase());
+
+    // Map to known canonical keys
+    function has(strs){ return lower.some(x => strs.some(s=> x.includes(s))); }
+
+    if (has(["email","e-mail"])) return "email";
+    if (has(["phone","telefone","celular"])) return "phone";
+    if (has(["site","website","url"])) return "website";
+    if (has(["ein"])) return "ein";
+    if (has(["florida address","endereco florida","endereço florida","address"])) return "floridaAddress";
+    if (has(["legal name","company name","empresa","razão social","razao social"])) return "companyName";
+    if (has(["dba","alt name","nome fantasia"])) return "companyAltName";
+
+    // Members heuristics
+    if (has(["member","sócio","socio","owner","partner","shareholder","director"])) {
+      // Try to infer member field type
+      if (has(["email"])) return "member_email";
+      if (has(["address","endereco","endereço"])) return "member_address";
+      if (has(["role","cargo","função","funcao","position","title"])) return "member_role";
+      if (has(["document","passport","doc","rg","cpf","id"])) return "member_id";
+      return "member_name";
+    }
+
+    // fallback
+    return (name || id || datakey || aria || placeholder || lbl || "").toLowerCase();
+  }
+
+  // Gather inputs/selects/textareas
+  const nodes = Array.from(document.querySelectorAll("input, select, textarea"));
+  const bag = {};
+  nodes.forEach(el => {
+    const type = (el.getAttribute("type")||"").toLowerCase();
+    if (type==="checkbox" || type==="radio"){
+      if (!el.checked) return;
+    }
+    const val = (el.value!=null ? String(el.value) : "").trim();
+    if (!val) return;
+    const key = bestKey(el);
+    if (!key) return;
+    if (!bag[key]) bag[key] = [];
+    bag[key].push(val);
+  });
+
+  // Company
+  function first(keys){ for (const k of keys){ if (bag[k]?.length) return bag[k][0]; } return ""; }
+  out.company.companyName = first(["companyName","companyname","empresa","legalname"]) || "";
+  out.company.companyAltName = first(["companyAltName","dba","altname"]) || "";
+  out.company.email = first(["email","companyemail","e-mail"]) || "";
+  out.company.phone = first(["phone","telefone"]) || "";
+  out.company.website = first(["website","site","url"]) || "";
+  out.company.ein = first(["ein"]) || "";
+  out.company.floridaAddress = first(["floridaAddress","address"]) || "";
+
+  // Members: group by index if possible, else sequential
+  // We detect sequential groups by DOM order: name -> role -> id -> email -> address
+  const seq = [];
+  const memberEntries = [];
+  nodes.forEach(el => {
+    const key = bestKey(el);
+    const val = (el.value!=null ? String(el.value) : "").trim();
+    if (!val) return;
+    if (key.startsWith("member_") || key==="member_name"){
+      memberEntries.push({ key, val });
+    }
+  });
+  // Try to reconstruct groups of 5 fields per member
+  let curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
+  memberEntries.forEach(({key,val}) => {
+    if (key==="member_name"){ if (curr.fullName) { seq.push(curr); curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" }; } curr.fullName = val; }
+    else if (key==="member_role"){ curr.role = val; }
+    else if (key==="member_id"){ curr.idOrPassport = val; }
+    else if (key==="member_email"){ curr.email = val; }
+    else if (key==="member_address"){ curr.address = val; }
+  });
+  if (curr.fullName) seq.push(curr);
+  out.members = seq.filter(m => m.fullName);
+
+  return out;
+}
+
 export default function App() {
   const [open, setOpen] = useState(false);
   return (
