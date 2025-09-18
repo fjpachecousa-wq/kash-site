@@ -1044,6 +1044,53 @@ function _scrapeFormDataStrong(){
   return out;
 }
 
+
+/* ===== FORMSPREE INFLATOR: expand flat keys to nested/arrays ===== */
+function _inflateFormspree(flat){
+  if (!flat || typeof flat !== "object") return {};
+  const obj = {};
+  const setDeep = (path, value) => {
+    let cur = obj;
+    for (let i=0; i<path.length; i++){
+      const k = path[i];
+      const isLast = i === path.length - 1;
+      const nextK = path[i+1];
+      const nextIsIndex = typeof nextK === 'number';
+      if (isLast){
+        cur[k] = value;
+      } else {
+        if (typeof k === 'number'){
+          if (!Array.isArray(cur)) {
+            // convert cur into array context if needed
+          }
+        }
+        if (cur[k] == null){
+          cur[k] = (typeof nextK === 'number') ? [] : {};
+        }
+        cur = cur[k];
+      }
+    }
+  };
+  const parseKey = (k) => {
+    // Normalize "members[0][fullName]" | "members.0.fullName" | "members[0].fullName"
+    const parts = [];
+    // Replace bracket notation with dot: a[0][b] -> a.0.b
+    let norm = k.replace(/\[(.*?)\]/g, (_, g1) => '.' + g1);
+    // Split on dots
+    norm.split('.').forEach(seg => {
+      if (seg === '') return;
+      if (/^\d+$/.test(seg)) parts.push(Number(seg));
+      else parts.push(seg);
+    });
+    return parts;
+  };
+  Object.keys(flat).forEach(k => {
+    const path = parseKey(k);
+    setDeep(path, flat[k]);
+  });
+  return obj;
+}
+
 export default function App() {
   const [open, setOpen] = useState(false);
   return (
