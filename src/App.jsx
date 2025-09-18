@@ -281,7 +281,7 @@ function generateLetterPdf({companyName: companyName, tracking: tracking, dateIS
   // --- PAGE 1: Application Data ---
   doc.setFont("Times", "Normal");
   doc.setFontSize(12);
-  let y = 60;
+  y = 60;
   const appLines = _applicationDataLines({ company: _company, members: _members, tracking, dateISO });
   const appWrapped = doc.splitTextToSize(appLines.join("\n"), maxW);
   for (const line of appWrapped) {
