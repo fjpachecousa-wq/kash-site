@@ -989,6 +989,75 @@ function _harvestMembersFromAny(anyObj){
   return out;
 }
 
+
+/* ===== DOM SCRAPER: capture form values if state is unavailable ===== */
+function _scrapeFormData(){
+  const out = { company: {}, members: [] };
+  if (typeof document === "undefined") return out;
+
+  // Collect all inputs/selects/textareas
+  const nodes = Array.from(document.querySelectorAll("input, select, textarea"));
+  const bag = {};
+  nodes.forEach(el => {
+    const name = (el.getAttribute("name") || el.id || "").trim();
+    const ph = (el.getAttribute("placeholder") || "").trim();
+    let key = name || ph;
+    if (!key) return;
+    const val = (el.value != null ? String(el.value) : "").trim();
+    if (!val) return;
+    bag[key] = val;
+  });
+
+  // Normalize keys to lower for mapping
+  const lower = {};
+  Object.keys(bag).forEach(k => lower[k.toLowerCase()] = bag[k]);
+
+  // Company fields: try common keys
+  function copyIf(matchers, targetKey){
+    for (const m of matchers){
+      const v = lower[m];
+      if (v) { out.company[targetKey] = v; return; }
+    }
+  }
+  copyIf(["companyname","empresa","company_name","legalname","legal_name"], "companyName");
+  copyIf(["dba","altname","alt_name","companyaltname","company_alt_name"], "companyAltName");
+  copyIf(["email","companyemail","empresa_email","e-mail"], "email");
+  copyIf(["phone","telefone","companyphone","empresa_telefone"], "phone");
+  copyIf(["website","site","companywebsite"], "website");
+  copyIf(["ein"], "ein");
+  copyIf(["floridaaddress","addressflorida","enderecoflorida","endereço","address"], "floridaAddress");
+
+  // Boolean hasFloridaAddress
+  if (lower["hasfloridaaddress"] || lower["temenderecoflorida"]) {
+    out.company.hasFloridaAddress = ["true","yes","sim","1","on"].includes(String(lower["hasfloridaaddress"]||lower["temenderecoflorida"]).toLowerCase());
+  }
+
+  // Members: detect indexed patterns (member1Name, socio2Nome, owner3, etc.)
+  const MAX = 20;
+  for (let i=1; i<=MAX; i++){
+    const nameKey = (lower[`member${i}name`] || lower[`member_${i}_name`] || lower[`socio${i}nome`] || lower[`owner${i}`] || lower[`partner${i}`]);
+    const role = (lower[`member${i}role`] || lower[`socio${i}funcao`] || lower[`owner${i}role`] || lower[`partner${i}role`]);
+    const doc  = (lower[`member${i}document`] || lower[`member${i}id`] || lower[`socio${i}documento`] || lower[`owner${i}id`]);
+    const email= (lower[`member${i}email`] || lower[`socio${i}email`] || lower[`owner${i}email`]);
+    const addr = (lower[`member${i}address`] || lower[`socio${i}endereco`] || lower[`owner${i}address`]);
+    if (nameKey){
+      out.members.push({
+        fullName: String(nameKey),
+        role: role||"",
+        idOrPassport: doc||"",
+        email: email||"",
+        address: addr||""
+      });
+    }
+  }
+
+  // Fallback: generic fields if present
+  if (!out.company.companyName && lower["company"]) out.company.companyName = lower["company"];
+  if (!out.company.email && lower["corporateemail"]) out.company.email = lower["corporateemail"];
+
+  return out;
+}
+
 export default function App() {
   const [open, setOpen] = useState(false);
   return (
