@@ -254,10 +254,8 @@ function _acceptanceClauseEN(fullNameList, dateISO) {
   const t = dt.toLocaleTimeString();
   return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${d} at ${t}.`;
 }
-function _signatureBlockPT(names) { return (Array.isArray(names) ? names.filter(Boolean) : []).join("
-"); }
-function _signatureBlockEN(names) { return (Array.isArray(names) ? names.filter(Boolean) : []).join("
-"); }
+function _signatureBlockPT(names) { return (Array.isArray(names) ? names.filter(Boolean) : []).join("\n"); }
+function _signatureBlockEN(names) { return (Array.isArray(names) ? names.filter(Boolean) : []).join("\n"); }
 
 
 /* ================== PDF (US Letter, Times 10/9) ================== */
