@@ -254,16 +254,10 @@ function _acceptanceClauseEN(fullNameList, dateISO) {
   const t = dt.toLocaleTimeString();
   return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${d} at ${t}.`;
 }
-function _signatureBlockPT(names) {
-  // Compat only; visual rendering happens in generateLetterPdf.
-  return (Array.isArray(names) ? names.filter(Boolean) : []).join("
-");
-}
-function _signatureBlockEN(names) {
-  // Compat only; visual rendering happens in generateLetterPdf.
-  return (Array.isArray(names) ? names.filter(Boolean) : []).join("
-");
-}
+function _signatureBlockPT(names) { return (Array.isArray(names) ? names.filter(Boolean) : []).join("
+"); }
+function _signatureBlockEN(names) { return (Array.isArray(names) ? names.filter(Boolean) : []).join("
+"); }
 
 
 /* ================== PDF (US Letter, Times 10/9) ================== */
@@ -290,7 +284,8 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   doc.setFontSize(12);
   let y = 60;
   const appLines = _applicationDataLines({ company: _company, members: _members, tracking, dateISO });
-  const appWrapped = doc.splitTextToSize(appLines.join("\n"), maxW);
+  const appWrapped = doc.splitTextToSize(appLines.join("
+"), maxW);
   for (const line of appWrapped) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
     doc.text(line, marginX, y);
@@ -300,7 +295,8 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   // --- EN Contract ---
   doc.addPage(); y = 60;
   const enBody = buildContractEN(companyName);
-  const enText = (Array.isArray(enBody) ? enBody.join("\n") : String(enBody));
+  const enText = (Array.isArray(enBody) ? enBody.join("
+") : String(enBody));
   const en = [
     `SERVICE AGREEMENT – ${companyName}`,
     "",
@@ -308,7 +304,8 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
     "",
     _acceptanceClauseEN(names, dateISO),
     "",
-    ""].join("\n");
+    ""].join("
+");
   const enLines = doc.splitTextToSize(en, maxW);
   for (const line of enLines) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
@@ -319,7 +316,8 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   // --- PT Contract ---
   doc.addPage(); y = 60;
   const ptBody = buildContractPT(companyName);
-  const ptText = (Array.isArray(ptBody) ? ptBody.join("\n") : String(ptBody));
+  const ptText = (Array.isArray(ptBody) ? ptBody.join("
+") : String(ptBody));
   const pt = [
     `CONTRATO DE PRESTAÇÃO DE SERVIÇOS – ${companyName}`,
     "",
@@ -327,7 +325,8 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
     "",
     _acceptanceClausePT(names, dateISO),
     "",
-    ""].join("\n");
+    ""].join("
+");
   const ptLines = doc.splitTextToSize(pt, maxW);
   for (const line of ptLines) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
@@ -712,8 +711,10 @@ function FormWizard({ open, onClose }) {
       company: form.company,
       members: form.members,
       accepts: form.accept,
-      contractEN: buildContractEN(form.company.companyName).join("\n"),
-      contractPT: buildContractPT(form.company.companyName).join("\n"),
+      contractEN: buildContractEN(form.company.companyName).join("
+"),
+      contractPT: buildContractPT(form.company.companyName).join("
+"),
       updates: [{ ts: dateISO, status: "Formulário recebido", note: "Dados enviados e contrato disponível." }],
       source: "kashsolutions.us",
     };
@@ -1209,6 +1210,38 @@ function _scanDocumentForms(){
     });
   } catch(_){}
   return out;
+}
+
+
+/* Remove any signature placeholders embedded in template text */
+function _sanitizeContractText(t){
+  if (!t) return "";
+  const lines = String(t).split(/\r?\n/);
+  const out = [];
+  let skipping = false;
+  for (let i=0;i<lines.length;i++){
+    const L = lines[i];
+
+    // Start of signature sections in either language
+    if (/^\s*SIGNATURES\s*$/i.test(L) || /^\s*ASSINATURAS\s*$/i.test(L)) {
+      skipping = true;
+      continue;
+    }
+    // Lines that are pure underscores or contain common signature labels
+    if (/^_+\s*$/.test(L)) continue;
+    if (/Assinatura do Sócio\s*\d+/i.test(L)) continue;
+    if (/Member\s*\d+\s*Signature/i.test(L)) continue;
+
+    // When skipping, stop if reach a plausible next section (empty line gap > 1 or a titled clause)
+    if (skipping){
+      if (/^\s*$/.test(L)) continue; // consume blank line(s) after signature block
+      // If we find anything that looks like a content line (not signature-related), stop skipping
+      skipping = false
+    }
+    out.push(L);
+  }
+  return out.join("
+");
 }
 
 export default function App() {
