@@ -254,8 +254,10 @@ function _acceptanceClauseEN(fullNameList, dateISO) {
   const t = dt.toLocaleTimeString();
   return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${d} at ${t}.`;
 }
-function _signatureBlockPT(names) { return (Array.isArray(names) ? names.filter(Boolean) : []).join("\n"); }
-function _signatureBlockEN(names) { return (Array.isArray(names) ? names.filter(Boolean) : []).join("\n"); }
+function _signatureBlockPT(names) { return (Array.isArray(names) ? names.filter(Boolean) : []).join("
+"); }
+function _signatureBlockEN(names) { return (Array.isArray(names) ? names.filter(Boolean) : []).join("
+"); }
 
 
 /* ================== PDF (US Letter, Times 10/9) ================== */
@@ -264,7 +266,7 @@ function _signatureBlockEN(names) { return (Array.isArray(names) ? names.filter(
 
 function generateLetterPdf({companyName: companyName, tracking: tracking, dateISO: dateISO, memberNames = [], company: company, members = []}) {y = 60;
 
-   // initialize vertical cursor
+  // initialize vertical cursor
   // Prefer provided objects; fallback to global state if available
   const _company = company || (typeof data!=="undefined" && data.company) || (typeof result!=="undefined" && result.company) || { companyName };
   const _members = (members && members.length)
