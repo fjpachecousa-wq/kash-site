@@ -271,36 +271,36 @@ Member ${i+1} Signature`).join("\\n\\n");
 /* ================== PDF (US Letter, Times 10/9) ================== */
 
 
+
 function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], company, members = [] }) {
-  // Resolve company/members robustly
-  const _company = company || (typeof data !== "undefined" && data.company) || (typeof result !== "undefined" && result.company) || { companyName };
+  // Prefer provided objects; fallback to global state if available
+  const _company = company || (typeof data!=="undefined" && data.company) || (typeof result!=="undefined" && result.company) || { companyName };
   const _members = (members && members.length)
     ? members
     : (Array.isArray(memberNames) && memberNames.length ? memberNames.map(n=>({fullName:n})) 
-       : (typeof data !== "undefined" && Array.isArray(data.members) ? data.members 
-          : (typeof result !== "undefined" && Array.isArray(result.members) ? result.members : [])));
+       : (typeof data!=="undefined" && Array.isArray(data.members) ? data.members 
+          : (typeof result!=="undefined" && Array.isArray(result.members) ? result.members : [])));
+  const names = _members.map(p => p.fullName || p.name).filter(Boolean);
 
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const marginX = 40;
   const maxW = doc.internal.pageSize.getWidth() - marginX * 2;
   const pageH = doc.internal.pageSize.getHeight();
-  const names = _members.map(p => p.fullName).filter(Boolean);
 
-  // PT
-  const ptBody = buildContractPT(companyName);
-  const ptText = (Array.isArray(ptBody) ? ptBody.join("\n") : String(ptBody));
-  const pt = [
-    `CONTRATO DE PRESTAÇÃO DE SERVIÇOS – ${companyName}`,
-    "",
-    ptText,
-    "",
-    _acceptanceClausePT(names, dateISO),
-    "",
-    "ASSINATURAS",
-    _signatureBlockPT(names)
-  ].join("\n");
+  // --- PAGE 1: Application Data ---
+  doc.setFont("Times", "Normal");
+  doc.setFontSize(12);
+  let y = 60;
+  const appLines = _applicationDataLines({ company: _company, members: _members, tracking, dateISO });
+  const appWrapped = doc.splitTextToSize(appLines.join("\n"), maxW);
+  for (const line of appWrapped) {
+    if (y > pageH - 60) { doc.addPage(); y = 60; }
+    doc.text(line, marginX, y);
+    y += 16;
+  }
 
-  // EN
+  // --- EN Contract ---
+  doc.addPage(); y = 60;
   const enBody = buildContractEN(companyName);
   const enText = (Array.isArray(enBody) ? enBody.join("\n") : String(enBody));
   const en = [
@@ -313,28 +313,6 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
     "SIGNATURES",
     _signatureBlockEN(names)
   ].join("\n");
-
-  // Application Data
-  const appLines = _applicationDataLines({
-    company: _company,
-    members: _members,
-    tracking,
-    dateISO
-  });
-
-  // Render PT
-  doc.setFont("Times", "Normal");
-  doc.setFontSize(12);
-  let y = 60;
-  const ptLines = doc.splitTextToSize(pt, maxW);
-  for (const line of ptLines) {
-    if (y > pageH - 60) { doc.addPage(); y = 60; }
-    doc.text(line, marginX, y);
-    y += 16;
-  }
-
-  // EN (new page)
-  doc.addPage(); y = 60;
   const enLines = doc.splitTextToSize(en, maxW);
   for (const line of enLines) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
@@ -342,25 +320,29 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
     y += 16;
   }
 
-  // Application Data (new page)
+  // --- PT Contract ---
   doc.addPage(); y = 60;
-  const appWrapped = doc.splitTextToSize(appLines.join("\n"), maxW);
-  for (const line of appWrapped) {
+  const ptBody = buildContractPT(companyName);
+  const ptText = (Array.isArray(ptBody) ? ptBody.join("\n") : String(ptBody));
+  const pt = [
+    `CONTRATO DE PRESTAÇÃO DE SERVIÇOS – ${companyName}`,
+    "",
+    ptText,
+    "",
+    _acceptanceClausePT(names, dateISO),
+    "",
+    "ASSINATURAS",
+    _signatureBlockPT(names)
+  ].join("\n");
+  const ptLines = doc.splitTextToSize(pt, maxW);
+  for (const line of ptLines) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
     doc.text(line, marginX, y);
     y += 16;
   }
 
   // Footer (local date/time + tracking + page numbers)
-  let dt = new Date();
-  if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
-    const [y2,m2,d2] = dateISO.split("-").map(Number);
-    const now = new Date();
-    dt = new Date(y2,(m2||1)-1,d2||1, now.getHours(), now.getMinutes(), now.getSeconds());
-  } else if (dateISO) {
-    const p = new Date(dateISO);
-    if (!isNaN(p)) dt = p;
-  }
+  const dt = _localDateFromISO(dateISO);
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
@@ -375,6 +357,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   doc.save(fileName);
   return { doc, fileName };
 }
+
 
 
 /* ================== FORM WIZARD (+ address FL logic, + Formspree, + tracking) ================== */
@@ -931,6 +914,20 @@ function Footer() {
       </div>
     </footer>
   );
+}
+
+
+function _localDateFromISO(dateISO){
+  let dt = new Date();
+  if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
+    const [y,m,d] = dateISO.split("-").map(Number);
+    const now = new Date();
+    dt = new Date(y, (m||1)-1, d||1, now.getHours(), now.getMinutes(), now.getSeconds());
+  } else if (dateISO) {
+    const p = new Date(dateISO);
+    if (!isNaN(p)) dt = p;
+  }
+  return dt;
 }
 
 export default function App() {
