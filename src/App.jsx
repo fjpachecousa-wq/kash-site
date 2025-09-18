@@ -273,44 +273,46 @@ Member ${i+1} Signature`).join("\\n\\n");
 
 
 function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], company, members = [] }) {
-  const collected = _collectAppData({ companyName, tracking, dateISO, company, members, memberNames });
-  const _company = collected.company;
-  const _members = collected.members;
-  const _tracking = collected.tracking;
-  const _dateISO = collected.dateISO;
-  const names = _members.map(p => p.fullName).filter(Boolean);
+  // Prefer provided objects; fallback to global state if available
+  const _company = company || (typeof data!=="undefined" && data.company) || (typeof result!=="undefined" && result.company) || { companyName };
+  const _members = (members && members.length)
+    ? members
+    : (Array.isArray(memberNames) && memberNames.length ? memberNames.map(n=>({fullName:n})) 
+       : (typeof data!=="undefined" && Array.isArray(data.members) ? data.members 
+          : (typeof result!=="undefined" && Array.isArray(result.members) ? result.members : [])));
+  const names = _members.map(p => p.fullName || p.name).filter(Boolean);
 
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const marginX = 40;
   const maxW = doc.internal.pageSize.getWidth() - marginX * 2;
   const pageH = doc.internal.pageSize.getHeight();
 
-  // PAGE 1: Application Data
+  // --- PAGE 1: Application Data ---
   doc.setFont("Times", "Normal");
   doc.setFontSize(12);
   let y = 60;
-  const appLines = _applicationDataLines({ company: _company, members: _members, tracking: _tracking, dateISO: _dateISO });
-  const appWrapped = doc.splitTextToSize(appLines.join("\\n"), maxW);
+  const appLines = _applicationDataLines({ company: _company, members: _members, tracking, dateISO });
+  const appWrapped = doc.splitTextToSize(appLines.join("\n"), maxW);
   for (const line of appWrapped) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
     doc.text(line, marginX, y);
     y += 16;
   }
 
-  // EN contract
+  // --- EN Contract ---
   doc.addPage(); y = 60;
   const enBody = buildContractEN(companyName);
-  const enText = (Array.isArray(enBody) ? enBody.join("\\n") : String(enBody));
+  const enText = (Array.isArray(enBody) ? enBody.join("\n") : String(enBody));
   const en = [
     `SERVICE AGREEMENT – ${companyName}`,
     "",
     enText,
     "",
-    _acceptanceClauseEN(names, _dateISO),
+    _acceptanceClauseEN(names, dateISO),
     "",
     "SIGNATURES",
     _signatureBlockEN(names)
-  ].join("\\n");
+  ].join("\n");
   const enLines = doc.splitTextToSize(en, maxW);
   for (const line of enLines) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
@@ -318,20 +320,20 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
     y += 16;
   }
 
-  // PT contract
+  // --- PT Contract ---
   doc.addPage(); y = 60;
   const ptBody = buildContractPT(companyName);
-  const ptText = (Array.isArray(ptBody) ? ptBody.join("\\n") : String(ptBody));
+  const ptText = (Array.isArray(ptBody) ? ptBody.join("\n") : String(ptBody));
   const pt = [
     `CONTRATO DE PRESTAÇÃO DE SERVIÇOS – ${companyName}`,
     "",
     ptText,
     "",
-    _acceptanceClausePT(names, _dateISO),
+    _acceptanceClausePT(names, dateISO),
     "",
     "ASSINATURAS",
     _signatureBlockPT(names)
-  ].join("\\n");
+  ].join("\n");
   const ptLines = doc.splitTextToSize(pt, maxW);
   for (const line of ptLines) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
@@ -339,30 +341,19 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
     y += 16;
   }
 
-  // Footer
-  const dt = (function(){
-    let dt0 = new Date();
-    if (_dateISO && /^\\d{4}-\\d{2}-\\d{2}$/.test(_dateISO)) {
-      const [y2,m2,d2] = _dateISO.split("-").map(Number);
-      const now = new Date();
-      dt0 = new Date(y2,(m2||1)-1,d2||1, now.getHours(), now.getMinutes(), now.getSeconds());
-    } else if (_dateISO) {
-      const p = new Date(_dateISO);
-      if (!isNaN(p)) dt0 = p;
-    }
-    return dt0;
-  })();
+  // Footer (local date/time + tracking + page numbers)
+  const dt = _localDateFromISO(dateISO);
   const pageCount = doc.internal.getNumberOfPages();
   for (let i = 1; i <= pageCount; i++) {
     doc.setPage(i);
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
     doc.setFontSize(8);
-    doc.text(`${dt.toLocaleDateString()} ${dt.toLocaleTimeString()} · TN: ${_tracking}`, 40, ph - 20);
+    doc.text(`${dt.toLocaleDateString()} ${dt.toLocaleTimeString()} · TN: ${tracking}`, 40, ph - 20);
     doc.text(`Page ${i} of ${pageCount}`, pw - 40, ph - 20, { align: "right" });
   }
 
-  const fileName = `KASH_Contract_${_tracking}.pdf`;
+  const fileName = `KASH_Contract_${tracking}.pdf`;
   doc.save(fileName);
   return { doc, fileName };
 }
@@ -926,136 +917,17 @@ function Footer() {
 }
 
 
-/* ===== MEMBERS HARVESTER: extract members from any object shape ===== */
-function _toMember(o){
-  if (!o) return null;
-  const n = o.fullName || o.name || o.nome || o.memberName || o.socio || o.partner || o.owner || "";
-  if (!String(n).trim()) return null;
-  return {
-    fullName: String(n).trim(),
-    role: (o.role || o.funcao || o.position || o.cargo || o.title || "").toString(),
-    idOrPassport: (o.idOrPassport || o.document || o.passport || o.doc || o.rg || o.cpf || "").toString(),
-    email: (o.email || o.mail || "").toString(),
-    address: (o.address || o.addressLine || o.endereco || "").toString()
-  };
-}
-
-function _harvestMembersFromAny(anyObj){
-  const out = [];
-
-  function pushAll(arr){
-    if (Array.isArray(arr)) {
-      arr.forEach((m)=>{
-        const mm = _toMember(m);
-        if (mm) out.push(mm);
-      });
-    }
+function _localDateFromISO(dateISO){
+  let dt = new Date();
+  if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
+    const [y,m,d] = dateISO.split("-").map(Number);
+    const now = new Date();
+    dt = new Date(y, (m||1)-1, d||1, now.getHours(), now.getMinutes(), now.getSeconds());
+  } else if (dateISO) {
+    const p = new Date(dateISO);
+    if (!isNaN(p)) dt = p;
   }
-
-  if (!anyObj || typeof anyObj !== "object") return out;
-
-  // 1) Common array keys
-  pushAll(anyObj.members);
-  pushAll(anyObj.membersList);
-  pushAll(anyObj.socios);
-  pushAll(anyObj.sociosList);
-  pushAll(anyObj.owners);
-  pushAll(anyObj.ownersList);
-  pushAll(anyObj.partners);
-  pushAll(anyObj.partnersList);
-  pushAll(anyObj.applicants);
-  pushAll(anyObj.shareholders);
-  pushAll(anyObj.directors);
-
-  // 2) Indexed fields: member1Name, member2Name; socio1Nome...
-  const MAX = 15;
-  for (let i = 1; i <= MAX; i++){
-    const cand = {
-      fullName: anyObj[`member${i}Name`] || anyObj[`member_${i}_name`] || anyObj[`member${i}`]
-              || anyObj[`socio${i}Nome`] || anyObj[`socio${i}`] || anyObj[`partner${i}`] || anyObj[`owner${i}`],
-      role: anyObj[`member${i}Role`] || anyObj[`socio${i}Funcao`] || anyObj[`partner${i}Role`] || anyObj[`owner${i}Role`],
-      idOrPassport: anyObj[`member${i}Id`] || anyObj[`member${i}Document`] || anyObj[`socio${i}Documento`] || anyObj[`owner${i}Id`],
-      email: anyObj[`member${i}Email`] || anyObj[`socio${i}Email`] || anyObj[`owner${i}Email`],
-      address: anyObj[`member${i}Address`] || anyObj[`socio${i}Endereco`] || anyObj[`owner${i}Address`]
-    };
-    const t = _toMember(cand);
-    if (t) out.push(t);
-  }
-
-  // 3) Flat fallback: single "memberName" fields
-  const single = _toMember(anyObj);
-  if (single && !out.length) out.push(single);
-
-  return out;
-}
-
-
-/* ===== DOM SCRAPER: capture form values if state is unavailable ===== */
-function _scrapeFormData(){
-  const out = { company: {}, members: [] };
-  if (typeof document === "undefined") return out;
-
-  // Collect all inputs/selects/textareas
-  const nodes = Array.from(document.querySelectorAll("input, select, textarea"));
-  const bag = {};
-  nodes.forEach(el => {
-    const name = (el.getAttribute("name") || el.id || "").trim();
-    const ph = (el.getAttribute("placeholder") || "").trim();
-    let key = name || ph;
-    if (!key) return;
-    const val = (el.value != null ? String(el.value) : "").trim();
-    if (!val) return;
-    bag[key] = val;
-  });
-
-  // Normalize keys to lower for mapping
-  const lower = {};
-  Object.keys(bag).forEach(k => lower[k.toLowerCase()] = bag[k]);
-
-  // Company fields: try common keys
-  function copyIf(matchers, targetKey){
-    for (const m of matchers){
-      const v = lower[m];
-      if (v) { out.company[targetKey] = v; return; }
-    }
-  }
-  copyIf(["companyname","empresa","company_name","legalname","legal_name"], "companyName");
-  copyIf(["dba","altname","alt_name","companyaltname","company_alt_name"], "companyAltName");
-  copyIf(["email","companyemail","empresa_email","e-mail"], "email");
-  copyIf(["phone","telefone","companyphone","empresa_telefone"], "phone");
-  copyIf(["website","site","companywebsite"], "website");
-  copyIf(["ein"], "ein");
-  copyIf(["floridaaddress","addressflorida","enderecoflorida","endereço","address"], "floridaAddress");
-
-  // Boolean hasFloridaAddress
-  if (lower["hasfloridaaddress"] || lower["temenderecoflorida"]) {
-    out.company.hasFloridaAddress = ["true","yes","sim","1","on"].includes(String(lower["hasfloridaaddress"]||lower["temenderecoflorida"]).toLowerCase());
-  }
-
-  // Members: detect indexed patterns (member1Name, socio2Nome, owner3, etc.)
-  const MAX = 20;
-  for (let i=1; i<=MAX; i++){
-    const nameKey = (lower[`member${i}name`] || lower[`member_${i}_name`] || lower[`socio${i}nome`] || lower[`owner${i}`] || lower[`partner${i}`]);
-    const role = (lower[`member${i}role`] || lower[`socio${i}funcao`] || lower[`owner${i}role`] || lower[`partner${i}role`]);
-    const doc  = (lower[`member${i}document`] || lower[`member${i}id`] || lower[`socio${i}documento`] || lower[`owner${i}id`]);
-    const email= (lower[`member${i}email`] || lower[`socio${i}email`] || lower[`owner${i}email`]);
-    const addr = (lower[`member${i}address`] || lower[`socio${i}endereco`] || lower[`owner${i}address`]);
-    if (nameKey){
-      out.members.push({
-        fullName: String(nameKey),
-        role: role||"",
-        idOrPassport: doc||"",
-        email: email||"",
-        address: addr||""
-      });
-    }
-  }
-
-  // Fallback: generic fields if present
-  if (!out.company.companyName && lower["company"]) out.company.companyName = lower["company"];
-  if (!out.company.email && lower["corporateemail"]) out.company.email = lower["corporateemail"];
-
-  return out;
+  return dt;
 }
 
 export default function App() {
