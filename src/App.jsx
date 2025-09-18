@@ -272,7 +272,7 @@ Member ${i+1} Signature`).join("\\n\\n");
 
 
 function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], company, members = [] }) {
-  // Resolve company/members from whatever exists in scope
+  // Resolve company/members robustly
   const _company = company || (typeof data !== "undefined" && data.company) || (typeof result !== "undefined" && result.company) || { companyName };
   const _members = (members && members.length)
     ? members
