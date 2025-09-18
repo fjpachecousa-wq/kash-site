@@ -12,7 +12,7 @@ const CONFIG = {
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
-function classNames(...cls) { return cls.filter(Boolean).join(" "); }
+function classNames(...cls) { return cls.filter(Boolean).join("\n"); }
 function todayISO() {
   const d = new Date();
   const pad = (n)=> String(n).padStart(2,"0");
@@ -254,10 +254,8 @@ function _acceptanceClauseEN(fullNameList, dateISO) {
   const t = dt.toLocaleTimeString();
   return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${d} at ${t}.`;
 }
-function _signatureBlockPT(names) { return (Array.isArray(names) ? names.filter(Boolean) : []).join("
-"); }
-function _signatureBlockEN(names) { return (Array.isArray(names) ? names.filter(Boolean) : []).join("
-"); }
+function _signatureBlockPT(names) { return (Array.isArray(names) ? names.filter(Boolean) : []).join("\n"); }
+function _signatureBlockEN(names) { return (Array.isArray(names) ? names.filter(Boolean) : []).join("\n"); }
 
 
 /* ================== PDF (US Letter, Times 10/9) ================== */
@@ -284,8 +282,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   doc.setFontSize(12);
   let y = 60;
   const appLines = _applicationDataLines({ company: _company, members: _members, tracking, dateISO });
-  const appWrapped = doc.splitTextToSize(appLines.join("
-"), maxW);
+  const appWrapped = doc.splitTextToSize(appLines.join("\n"), maxW);
   for (const line of appWrapped) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
     doc.text(line, marginX, y);
@@ -295,8 +292,8 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   // --- EN Contract ---
   doc.addPage(); y = 60;
   const enBody = buildContractEN(companyName);
-  const enText = (Array.isArray(enBody) ? enBody.join("
-") : String(enBody));
+  let enText = (Array.isArray(enBody) ? enBody.join("\n") : String(enBody));
+ enText = _sanitizeContractText(enText);
   const en = [
     `SERVICE AGREEMENT – ${companyName}`,
     "",
@@ -304,8 +301,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
     "",
     _acceptanceClauseEN(names, dateISO),
     "",
-    ""].join("
-");
+    ""].join("\n");
   const enLines = doc.splitTextToSize(en, maxW);
   for (const line of enLines) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
@@ -316,8 +312,8 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   // --- PT Contract ---
   doc.addPage(); y = 60;
   const ptBody = buildContractPT(companyName);
-  const ptText = (Array.isArray(ptBody) ? ptBody.join("
-") : String(ptBody));
+  let ptText = (Array.isArray(ptBody) ? ptBody.join("\n") : String(ptBody));
+ ptText = _sanitizeContractText(ptText);
   const pt = [
     `CONTRATO DE PRESTAÇÃO DE SERVIÇOS – ${companyName}`,
     "",
@@ -325,8 +321,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
     "",
     _acceptanceClausePT(names, dateISO),
     "",
-    ""].join("
-");
+    ""].join("\n");
   const ptLines = doc.splitTextToSize(pt, maxW);
   for (const line of ptLines) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
@@ -711,10 +706,8 @@ function FormWizard({ open, onClose }) {
       company: form.company,
       members: form.members,
       accepts: form.accept,
-      contractEN: buildContractEN(form.company.companyName).join("
-"),
-      contractPT: buildContractPT(form.company.companyName).join("
-"),
+      contractEN: buildContractEN(form.company.companyName).join("\n"),
+      contractPT: buildContractPT(form.company.companyName).join("\n"),
       updates: [{ ts: dateISO, status: "Formulário recebido", note: "Dados enviados e contrato disponível." }],
       source: "kashsolutions.us",
     };
@@ -1240,8 +1233,7 @@ function _sanitizeContractText(t){
     }
     out.push(L);
   }
-  return out.join("
-");
+  return out.join("\n");
 }
 
 export default function App() {
