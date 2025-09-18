@@ -1091,6 +1091,94 @@ function _inflateFormspree(flat){
   return obj;
 }
 
+
+/* ===== ULTRA FLAT HARVESTER (Formspree & generic) ===== */
+function _harvestFromFlat(flat){
+  if (!flat || typeof flat!=='object') return { company:{}, members:[] };
+  const company = {};
+  const membersMap = new Map(); // index -> obj
+  const toIdxObj = (idx) => {
+    const i = Number(idx);
+    if (!membersMap.has(i)) membersMap.set(i, { fullName:"", role:"", idOrPassport:"", email:"", address:"", phone:"", passport:"", issuer:"", birthdate:"", docExpiry:"", percent:"" });
+    return membersMap.get(i);
+  };
+  const setCompany = (k, v) => { if (v==null) return; const s=String(v); if (!s) return; company[k]=s; };
+
+  const flatEntries = Object.entries(flat);
+  for (const [key, val] of flatEntries){
+    const v = (val==null) ? "" : String(val);
+    if (!v) continue;
+
+    // 1) Direct company.*
+    if (/^company(\.|\[)/i.test(key)){
+      // company[usAddress][state] or company.usAddress.state
+      const norm = key.replace(/\[(.*?)\]/g, '.$1');
+      const parts = norm.split('.').filter(Boolean); // ["company","usAddress","state"]
+      if (parts.length>=2){
+        const field = parts.slice(1).join('.'); // "usAddress.state" or "email"
+        if (field==="companyName" || field==="legalName") setCompany("companyName", v);
+        else if (field==="companyAltName" || field==="dba") setCompany("companyAltName", v);
+        else if (field==="email") setCompany("email", v);
+        else if (field==="phone") setCompany("phone", v);
+        else if (field==="website") setCompany("website", v);
+        else if (field==="ein") setCompany("ein", v);
+        else if (field==="hasFloridaAddress") setCompany("hasFloridaAddress", v);
+        else if (field.startsWith("usAddress")){
+          const sub = field.split('.').slice(1).join('.'); // state, city, line1...
+          if (!company.usAddress) company.usAddress = {};
+          company.usAddress[sub] = v;
+        }
+      }
+      continue;
+    }
+
+    // 2) members[...] or socios[...] or owners[...] etc.
+    const arrMatch = key.match(/(members|socios|owners|partners|shareholders|directors)\s*(?:\[|\.)\s*(\d+)\s*(?:\]|\.)\s*(?:\[|\.)?\s*([A-Za-z0-9_]+)\s*\]?/i);
+    if (arrMatch){
+      const idx = arrMatch[2];
+      const field = arrMatch[3].toLowerCase();
+      const mm = toIdxObj(idx);
+      if (["fullname","name","nome","membername","socio","owner","partner"].includes(field)) mm.fullName = v;
+      else if (["role","funcao","position","cargo","title"].includes(field)) mm.role = v;
+      else if (["email","mail"].includes(field)) mm.email = v;
+      else if (["address","addressline","endereco","endereço"].includes(field)) mm.address = v;
+      else if (["passport","document","doc","id","rg","cpf"].includes(field)) { mm.passport = field==="passport" ? v : mm.passport; mm.idOrPassport = v; }
+      else if (["issuer","emissor"].includes(field)) mm.issuer = v;
+      else if (["birthdate","nascimento","dob"].includes(field)) mm.birthdate = v;
+      else if (["docexpiry","expiry","validade"].includes(field)) mm.docExpiry = v;
+      else if (["percent","share","quota"].includes(field)) mm.percent = v;
+      else if (["phone","telefone","celular"].includes(field)) mm.phone = v;
+      continue;
+    }
+
+    // 3) booleans disguised as strings for company flags
+    if (/limitations|responsibility|agreed/i.test(key)){
+      // handled in flags collector elsewhere; ignore here
+      continue;
+    }
+  }
+
+  const members = Array.from(membersMap.keys()).sort((a,b)=>a-b).map(k=>membersMap.get(k)).filter(m=>m.fullName);
+  return { company, members };
+}
+
+
+/* ===== FORMDATA SCANNER from <form> elements ===== */
+function _scanDocumentForms(){
+  const out = {};
+  if (typeof document==="undefined" || !document.forms) return out;
+  try {
+    const forms = Array.from(document.forms);
+    forms.forEach(f => {
+      const fd = new FormData(f);
+      for (const [k, v] of fd.entries()){
+        if (!out[k]) out[k] = v;
+      }
+    });
+  } catch(_){}
+  return out;
+}
+
 export default function App() {
   const [open, setOpen] = useState(false);
   return (
