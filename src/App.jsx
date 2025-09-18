@@ -229,9 +229,9 @@ function buildContractPT(companyName) {
 function _acceptanceClausePT(fullNameList, dateISO) {
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
-    const [y,m,d] = dateISO.split("-").map(Number);
+    const [yy, mm, dd] = dateISO.split("-").map(Number);
     const now = new Date();
-    dt = new Date(y,(m||1)-1,d||1, now.getHours(), now.getMinutes(), now.getSeconds());
+    dt = new Date(yy,(mm||1)-1,(dd||1), now.getHours(), now.getMinutes(), now.getSeconds());
   } else if (dateISO) {
     const parsed = new Date(dateISO);
     if (!isNaN(parsed)) dt = parsed;
@@ -243,9 +243,9 @@ function _acceptanceClausePT(fullNameList, dateISO) {
 function _acceptanceClauseEN(fullNameList, dateISO) {
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
-    const [y,m,d] = dateISO.split("-").map(Number);
+    const [yy, mm, dd] = dateISO.split("-").map(Number);
     const now = new Date();
-    dt = new Date(y,(m||1)-1,d||1, now.getHours(), now.getMinutes(), now.getSeconds());
+    dt = new Date(yy,(mm||1)-1,(dd||1), now.getHours(), now.getMinutes(), now.getSeconds());
   } else if (dateISO) {
     const parsed = new Date(dateISO);
     if (!isNaN(parsed)) dt = parsed;
@@ -286,7 +286,7 @@ function generateLetterPdf({companyName: companyName, tracking: tracking, dateIS
   const appWrapped = doc.splitTextToSize(appLines.join("\n"), maxW);
   for (const line of appWrapped) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
-    doc.text(line, marginX, y);
+    if (typeof y !== 'number') { y = 60; } doc.text(line, marginX, y);
     y += 16;
   }
 
@@ -306,7 +306,7 @@ function generateLetterPdf({companyName: companyName, tracking: tracking, dateIS
   const enLines = doc.splitTextToSize(en, maxW);
   for (const line of enLines) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
-    doc.text(line, marginX, y);
+    if (typeof y !== 'number') { y = 60; } doc.text(line, marginX, y);
     y += 16;
   }
 
@@ -326,7 +326,7 @@ function generateLetterPdf({companyName: companyName, tracking: tracking, dateIS
   const ptLines = doc.splitTextToSize(pt, maxW);
   for (const line of ptLines) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
-    doc.text(line, marginX, y);
+    if (typeof y !== 'number') { y = 60; } doc.text(line, marginX, y);
     y += 16;
   }
 
@@ -338,8 +338,8 @@ function generateLetterPdf({companyName: companyName, tracking: tracking, dateIS
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
     doc.setFontSize(8);
-    doc.text(`${dt.toLocaleDateString()} ${dt.toLocaleTimeString()} · TN: ${tracking}`, 40, ph - 20);
-    doc.text(`Page ${i} of ${pageCount}`, pw - 40, ph - 20, { align: "right" });
+    if (typeof y !== 'number') { y = 60; } doc.text(`${dt.toLocaleDateString()} ${dt.toLocaleTimeString()} · TN: ${tracking}`, 40, ph - 20);
+    if (typeof y !== 'number') { y = 60; } doc.text(`Page ${i} of ${pageCount}`, pw - 40, ph - 20, { align: "right" });
   }
 
   const fileName = `KASH_Contract_${tracking}.pdf`;
@@ -351,7 +351,7 @@ function generateLetterPdf({companyName: companyName, tracking: tracking, dateIS
   if (y > pageH - 100) { doc.addPage(); y = 60; }
   doc.setFont("Times", "bold");
   doc.setFontSize(12);
-  doc.text("ASSINATURAS", marginX, y);
+  if (typeof y !== 'number') { y = 60; } doc.text("ASSINATURAS", marginX, y);
   y += 22;
 
   let _mistralSetPT = false;
@@ -359,7 +359,7 @@ function generateLetterPdf({companyName: companyName, tracking: tracking, dateIS
   doc.setFontSize(24);
   (names || []).filter(Boolean).forEach(n => {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
-    doc.text(String(n), marginX, y);
+    if (typeof y !== 'number') { y = 60; } doc.text(String(n), marginX, y);
     y += 28;
   });
   // restaurar padrão
@@ -370,7 +370,7 @@ function generateLetterPdf({companyName: companyName, tracking: tracking, dateIS
   if (y > pageH - 100) { doc.addPage(); y = 60; }
   doc.setFont("Times", "bold");
   doc.setFontSize(12);
-  doc.text("SIGNATURES", marginX, y);
+  if (typeof y !== 'number') { y = 60; } doc.text("SIGNATURES", marginX, y);
   y += 22;
 
   let _mistralSetEN = false;
@@ -378,7 +378,7 @@ function generateLetterPdf({companyName: companyName, tracking: tracking, dateIS
   doc.setFontSize(24);
   (names || []).filter(Boolean).forEach(n => {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
-    doc.text(String(n), marginX, y);
+    if (typeof y !== 'number') { y = 60; } doc.text(String(n), marginX, y);
     y += 28;
   });
   // restore defaults
@@ -947,7 +947,7 @@ function Footer() {
 function _localDateFromISO(dateISO){
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
-    const [y,m,d] = dateISO.split("-").map(Number);
+    const [yy, mm, dd] = dateISO.split("-").map(Number);
     const now = new Date();
     dt = new Date(y, (m||1)-1, d||1, now.getHours(), now.getMinutes(), now.getSeconds());
   } else if (dateISO) {
@@ -1259,7 +1259,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
   const safe = v => (v == null ? "" : String(v));
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
-    const [y,m,d] = dateISO.split("-").map(Number);
+    const [yy, mm, dd] = dateISO.split("-").map(Number);
     const now = new Date();
     dt = new Date(y, (m||1)-1, d||1, now.getHours(), now.getMinutes(), now.getSeconds());
   } else if (dateISO) {
