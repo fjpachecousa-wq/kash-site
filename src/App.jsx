@@ -263,6 +263,7 @@ function _signatureBlockEN(names) { return (Array.isArray(names) ? names.filter(
 
 
 function generateLetterPdf({companyName: companyName, tracking: tracking, dateISO: dateISO, memberNames = [], company: company, members = []}) {
+  let y = 60; // initialize vertical cursor
   // Prefer provided objects; fallback to global state if available
   const _company = company || (typeof data!=="undefined" && data.company) || (typeof result!=="undefined" && result.company) || { companyName };
   const _members = (members && members.length)
