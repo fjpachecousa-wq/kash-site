@@ -255,16 +255,14 @@ function _acceptanceClauseEN(fullNameList, dateISO) {
   return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${d} at ${t}.`;
 }
 function _signatureBlockPT(names) {
-  if (!names || !names.length) return "";
-  return names.map((n, i) => `____________________________________________
-${n}
-Assinatura do Sócio ${i+1}`).join("\\n\\n");
+  // Compat only; visual rendering happens in generateLetterPdf.
+  return (Array.isArray(names) ? names.filter(Boolean) : []).join("
+");
 }
 function _signatureBlockEN(names) {
-  if (!names || !names.length) return "";
-  return names.map((n, i) => `____________________________________________
-${n}
-Member ${i+1} Signature`).join("\\n\\n");
+  // Compat only; visual rendering happens in generateLetterPdf.
+  return (Array.isArray(names) ? names.filter(Boolean) : []).join("
+");
 }
 
 
@@ -310,9 +308,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
     "",
     _acceptanceClauseEN(names, dateISO),
     "",
-    "SIGNATURES",
-    _signatureBlockEN(names)
-  ].join("\n");
+    ""].join("\n");
   const enLines = doc.splitTextToSize(en, maxW);
   for (const line of enLines) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
@@ -331,9 +327,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
     "",
     _acceptanceClausePT(names, dateISO),
     "",
-    "ASSINATURAS",
-    _signatureBlockPT(names)
-  ].join("\n");
+    ""].join("\n");
   const ptLines = doc.splitTextToSize(pt, maxW);
   for (const line of ptLines) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
@@ -357,6 +351,44 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   doc.save(fileName);
   return { doc, fileName };
 }
+
+  // ---- Assinaturas (PT): Somente nomes dos membros em "Mistral" (fallback Times-Italic)
+  if (y > pageH - 100) { doc.addPage(); y = 60; }
+  doc.setFont("Times", "bold");
+  doc.setFontSize(12);
+  doc.text("ASSINATURAS", marginX, y);
+  y += 22;
+
+  let _mistralSetPT = false;
+  try { doc.setFont("Mistral", "normal"); _mistralSetPT = true; } catch(e) { doc.setFont("Times", "italic"); }
+  doc.setFontSize(24);
+  (names || []).filter(Boolean).forEach(n => {
+    if (y > pageH - 60) { doc.addPage(); y = 60; }
+    doc.text(String(n), marginX, y);
+    y += 28;
+  });
+  // restaurar padrão
+  doc.setFont("Times", "Normal");
+  doc.setFontSize(12);
+
+  // ---- Signatures (EN): Only member names in "Mistral" (fallback Times-Italic)
+  if (y > pageH - 100) { doc.addPage(); y = 60; }
+  doc.setFont("Times", "bold");
+  doc.setFontSize(12);
+  doc.text("SIGNATURES", marginX, y);
+  y += 22;
+
+  let _mistralSetEN = false;
+  try { doc.setFont("Mistral", "normal"); _mistralSetEN = true; } catch(e) { doc.setFont("Times", "italic"); }
+  doc.setFontSize(24);
+  (names || []).filter(Boolean).forEach(n => {
+    if (y > pageH - 60) { doc.addPage(); y = 60; }
+    doc.text(String(n), marginX, y);
+    y += 28;
+  });
+  // restore defaults
+  doc.setFont("Times", "Normal");
+  doc.setFontSize(12);
 
 
 
