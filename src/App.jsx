@@ -255,15 +255,17 @@ function _acceptanceClauseEN(fullNameList, dateISO) {
   return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${d} at ${t}.`;
 }
 function _signatureBlockPT(names) { return (Array.isArray(names) ? names.filter(Boolean) : []).join("\n"); }
-function _signatureBlockEN(names) { return (Array.isArray(names) ? names.filter(Boolean) : []).join("\n"); }
+function _signatureBlockEN(names) { return (Array.isArray(names) ? names.filter(Boolean) : []).join("
+"); }
 
 
 /* ================== PDF (US Letter, Times 10/9) ================== */
 
 
 
-function generateLetterPdf({companyName: companyName, tracking: tracking, dateISO: dateISO, memberNames = [], company: company, members = []}) {
-  let y = 60; // initialize vertical cursor
+function generateLetterPdf({companyName: companyName, tracking: tracking, dateISO: dateISO, memberNames = [], company: company, members = []}) {y = 60;
+
+   // initialize vertical cursor
   // Prefer provided objects; fallback to global state if available
   const _company = company || (typeof data!=="undefined" && data.company) || (typeof result!=="undefined" && result.company) || { companyName };
   const _members = (members && members.length)
@@ -286,7 +288,7 @@ function generateLetterPdf({companyName: companyName, tracking: tracking, dateIS
   const appWrapped = doc.splitTextToSize(appLines.join("\n"), maxW);
   for (const line of appWrapped) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
-    if (typeof y !== 'number') { y = 60; } doc.text(line, marginX, y);
+    if (typeof y !== 'number') { y = 60; } if (typeof y !== 'number') { y = 60; } doc.text(line, marginX, y);
     y += 16;
   }
 
@@ -306,7 +308,7 @@ function generateLetterPdf({companyName: companyName, tracking: tracking, dateIS
   const enLines = doc.splitTextToSize(en, maxW);
   for (const line of enLines) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
-    if (typeof y !== 'number') { y = 60; } doc.text(line, marginX, y);
+    if (typeof y !== 'number') { y = 60; } if (typeof y !== 'number') { y = 60; } doc.text(line, marginX, y);
     y += 16;
   }
 
@@ -326,7 +328,7 @@ function generateLetterPdf({companyName: companyName, tracking: tracking, dateIS
   const ptLines = doc.splitTextToSize(pt, maxW);
   for (const line of ptLines) {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
-    if (typeof y !== 'number') { y = 60; } doc.text(line, marginX, y);
+    if (typeof y !== 'number') { y = 60; } if (typeof y !== 'number') { y = 60; } doc.text(line, marginX, y);
     y += 16;
   }
 
@@ -338,8 +340,8 @@ function generateLetterPdf({companyName: companyName, tracking: tracking, dateIS
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
     doc.setFontSize(8);
-    if (typeof y !== 'number') { y = 60; } doc.text(`${dt.toLocaleDateString()} ${dt.toLocaleTimeString()} · TN: ${tracking}`, 40, ph - 20);
-    if (typeof y !== 'number') { y = 60; } doc.text(`Page ${i} of ${pageCount}`, pw - 40, ph - 20, { align: "right" });
+    if (typeof y !== 'number') { y = 60; } if (typeof y !== 'number') { y = 60; } doc.text(`${dt.toLocaleDateString()} ${dt.toLocaleTimeString()} · TN: ${tracking}`, 40, ph - 20);
+    if (typeof y !== 'number') { y = 60; } if (typeof y !== 'number') { y = 60; } doc.text(`Page ${i} of ${pageCount}`, pw - 40, ph - 20, { align: "right" });
   }
 
   const fileName = `KASH_Contract_${tracking}.pdf`;
@@ -351,7 +353,7 @@ function generateLetterPdf({companyName: companyName, tracking: tracking, dateIS
   if (y > pageH - 100) { doc.addPage(); y = 60; }
   doc.setFont("Times", "bold");
   doc.setFontSize(12);
-  if (typeof y !== 'number') { y = 60; } doc.text("ASSINATURAS", marginX, y);
+  if (typeof y !== 'number') { y = 60; } if (typeof y !== 'number') { y = 60; } doc.text("ASSINATURAS", marginX, y);
   y += 22;
 
   let _mistralSetPT = false;
@@ -359,7 +361,7 @@ function generateLetterPdf({companyName: companyName, tracking: tracking, dateIS
   doc.setFontSize(24);
   (names || []).filter(Boolean).forEach(n => {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
-    if (typeof y !== 'number') { y = 60; } doc.text(String(n), marginX, y);
+    if (typeof y !== 'number') { y = 60; } if (typeof y !== 'number') { y = 60; } doc.text(String(n), marginX, y);
     y += 28;
   });
   // restaurar padrão
@@ -370,7 +372,7 @@ function generateLetterPdf({companyName: companyName, tracking: tracking, dateIS
   if (y > pageH - 100) { doc.addPage(); y = 60; }
   doc.setFont("Times", "bold");
   doc.setFontSize(12);
-  if (typeof y !== 'number') { y = 60; } doc.text("SIGNATURES", marginX, y);
+  if (typeof y !== 'number') { y = 60; } if (typeof y !== 'number') { y = 60; } doc.text("SIGNATURES", marginX, y);
   y += 22;
 
   let _mistralSetEN = false;
@@ -378,7 +380,7 @@ function generateLetterPdf({companyName: companyName, tracking: tracking, dateIS
   doc.setFontSize(24);
   (names || []).filter(Boolean).forEach(n => {
     if (y > pageH - 60) { doc.addPage(); y = 60; }
-    if (typeof y !== 'number') { y = 60; } doc.text(String(n), marginX, y);
+    if (typeof y !== 'number') { y = 60; } if (typeof y !== 'number') { y = 60; } doc.text(String(n), marginX, y);
     y += 28;
   });
   // restore defaults
@@ -949,7 +951,7 @@ function _localDateFromISO(dateISO){
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
     const [yy, mm, dd] = dateISO.split("-").map(Number);
     const now = new Date();
-    dt = new Date(y, (m||1)-1, d||1, now.getHours(), now.getMinutes(), now.getSeconds());
+    dt = new Date(yy, (mm||1)-1, (dd||1), now.getHours(), now.getMinutes(), now.getSeconds());
   } else if (dateISO) {
     const p = new Date(dateISO);
     if (!isNaN(p)) dt = p;
@@ -1261,7 +1263,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
     const [yy, mm, dd] = dateISO.split("-").map(Number);
     const now = new Date();
-    dt = new Date(y, (m||1)-1, d||1, now.getHours(), now.getMinutes(), now.getSeconds());
+    dt = new Date(yy, (mm||1)-1, (dd||1), now.getHours(), now.getMinutes(), now.getSeconds());
   } else if (dateISO) {
     const p = new Date(dateISO);
     if (!isNaN(p)) dt = p;
