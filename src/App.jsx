@@ -1062,7 +1062,7 @@ export default function App() {
 }
 
 /* ===== Application Data content (for unified PDF) ===== */
-function _applicationDataLines({ company = {}, members = [], tracking, dateISO }) {
+function _applicationDataLines({ company = {}, members = [], tracking, dateISO, flags = {}, source = '', updates = [] }) {
   const safe = v => (v == null ? "" : String(v));
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
@@ -1089,7 +1089,36 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO }
   if (company.email) lines.push(`Email: ${safe(company.email)}`);
   if (company.phone) lines.push(`Phone: ${safe(company.phone)}`);
   if (company.website) lines.push(`Website: ${safe(company.website)}`);
+  if (company.usAddress) {
+    const a = company.usAddress;
+    const a1 = safe(a.line1), a2 = safe(a.line2), city = safe(a.city), st = safe(a.state), zip = safe(a.zip);
+    const addrLine = [a1, a2].filter(Boolean).join(', ');
+    if (addrLine) lines.push(`US Address: ${addrLine}`);
+    const cityLine = [city, st, zip].filter(Boolean).join(', ');
+    if (cityLine) lines.push(`US City/State/ZIP: ${cityLine}`);
+  }
   lines.push("");
+  lines.push("— Consents / Declarations —");
+  if (typeof flags==="object" && flags) {
+    if (typeof flags.limitations!=="undefined") lines.push(`Limitations: ${String(flags.limitations)}`);
+    if (typeof flags.responsibility!=="undefined") lines.push(`Responsibility: ${String(flags.responsibility)}`);
+    if (typeof flags.agreed!=="undefined") lines.push(`Agreed: ${String(flags.agreed)}`);
+  }
+  lines.push("");
+  if (source) { lines.push("— Source —"); lines.push(String(source)); lines.push(""); }
+  if (Array.isArray(updates) && updates.length) {
+    lines.push("— Updates —");
+    updates.forEach((u, idx)=>{
+      try {
+        const note = (u && (u.note||u.message||u.msg)) ? String(u.note||u.message||u.msg) : "";
+        const st = (u && u.status) ? String(u.status) : "";
+        const ts = (u && (u.ts||u.date)) ? String(u.ts||u.date) : "";
+        const line = [`${idx+1}.`, st, note, ts].filter(Boolean).join(" — ");
+        if (line) lines.push(line);
+      } catch(_) {}
+    });
+    lines.push("");
+  }
   lines.push("— Members —");
   if (Array.isArray(members) && members.length) {
     members.forEach((m, i) => {
