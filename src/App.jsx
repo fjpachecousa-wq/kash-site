@@ -5,7 +5,7 @@ import React, { useReducer, useState, useEffect } from "react";
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
-  checkout: { stripeUrl: "" }, // futuro
+  checkout: { stripeUrl: "" }, // cole aqui seu Payment Link do Stripe (ex.: https://buy.stripe.com/...)
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
   formspreeEndpoint: "https://formspree.io/f/xblawgpk",
 };
@@ -155,7 +155,7 @@ function Pricing({ onStart }) {
                 {p.features.map((f) => <li key={f}>{f}</li>)}
               </ul>
               <div className="mt-5 flex flex-col items-center gap-1">
-                <CTAButton onClick={onStart} disabled={p.disabled}>{p.cta}</CTAButton>
+                <CTAButton onClick={() => { if (p.name === "Abertura LLC" && CONFIG.checkout.stripeUrl) { window.location.href = CONFIG.checkout.stripeUrl; } else { onStart(); } }} disabled={p.disabled}>{p.cta}</CTAButton>
                 {p.disabled && <span className="text-xs text-slate-500">Em breve</span>}
               </div>
             </div>
@@ -893,9 +893,21 @@ function FormWizard({ open, onClose }) {
                     <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
                     <span>Li e concordo com os termos acima.</span>
                   </label>
-                  <div className="mt-4 flex justify-end">
-                    <CTAButton onClick={onClose} disabled={!agreed}>Concluir</CTAButton>
-                  </div>
+                  <div className="mt-4 flex justify-between">
+  {/* Botão sempre visível, habilita só quando concorda e há stripeUrl */}
+<CTAButton
+  onClick={() => window.location.href = CONFIG.checkout.stripeUrl}
+  disabled={!agreed || !CONFIG.checkout.stripeUrl}
+>
+  Pagar US$ 1,360 (Stripe)
+</CTAButton>
+{!CONFIG.checkout.stripeUrl && (
+  <span className="ml-2 text-xs text-slate-500">Cole o Payment Link em CONFIG.checkout.stripeUrl</span>
+)}
+  <div className="flex justify-end">
+    <CTAButton onClick={onClose} disabled={!agreed}>Concluir</CTAButton>
+  </div>
+</div>
                 </div>
               </div>
             )}
