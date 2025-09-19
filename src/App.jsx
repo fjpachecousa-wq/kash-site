@@ -256,14 +256,22 @@ function _acceptanceClauseEN(fullNameList, dateISO) {
 }
 function _signatureBlockPT(names) {
   if (!names || !names.length) return "";
-  return names.map((n) => `${n}`).join("\n\n");
-}
+  return "
+" + names.map((n) => `${n}`).join("
 
+");
+}
+Assinatura do Sócio ${i+1}`).join("\\n\\n");
+}
 function _signatureBlockEN(names) {
   if (!names || !names.length) return "";
-  return names.map((n) => `${n}`).join("\n\n");
-}
+  return "
+" + names.map((n) => `${n}`).join("
 
+");
+}
+Member ${i+1} Signature`).join("\\n\\n");
+}
 
 
 /* ================== PDF (US Letter, Times 10/9) ================== */
