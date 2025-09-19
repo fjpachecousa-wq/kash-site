@@ -5,7 +5,7 @@ import React, { useReducer, useState, useEffect } from "react";
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
-  checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // cole aqui seu Payment Link do Stripe (ex.: https://buy.stripe.com/...)
+  checkout: { stripeUrl: "" }, // cole aqui seu Payment Link do Stripe (ex.: https://buy.stripe.com/...)
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
   formspreeEndpoint: "https://formspree.io/f/xblawgpk",
 };
@@ -155,7 +155,7 @@ function Pricing({ onStart }) {
                 {p.features.map((f) => <li key={f}>{f}</li>)}
               </ul>
               <div className="mt-5 flex flex-col items-center gap-1">
-                <CTAButton onClick={() => { if (p.name === "Abertura LLC" && CONFIG.checkout.stripeUrl) { window.location.href = CONFIG.checkout.stripeUrl; } else { onStart(); } }} disabled={p.disabled}>{p.cta}</CTAButton>
+                <CTAButton onClick={onStart} disabled={p.disabled}>{p.cta}</CTAButton>
                 {p.disabled && <span className="text-xs text-slate-500">Em breve</span>}
               </div>
             </div>
@@ -617,7 +617,7 @@ function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
-  const [agreed, setAgreed] = useState(true); // "Li e concordo"
+  const [agreed, setAgreed] = useState(false); // "Li e concordo"
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState(initialErrors);
 
