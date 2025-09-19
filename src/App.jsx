@@ -256,20 +256,18 @@ function _acceptanceClauseEN(fullNameList, dateISO) {
 }
 function _signatureBlockPT(names) {
   if (!names || !names.length) return "";
-  return "
-" + names.map((n) => `${n}`).join("
-
-");
+  // uma linha em branco antes do primeiro nome; apenas nomes, sem rótulos/traços
+  return "\n" + names.map((n) => `${n}`).join("\n\n");
 }
+
 Assinatura do Sócio ${i+1}`).join("\\n\\n");
 }
 function _signatureBlockEN(names) {
   if (!names || !names.length) return "";
-  return "
-" + names.map((n) => `${n}`).join("
-
-");
+  // one blank line before the first name; names only, no labels/underscores
+  return "\n" + names.map((n) => `${n}`).join("\n\n");
 }
+
 Member ${i+1} Signature`).join("\\n\\n");
 }
 
