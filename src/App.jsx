@@ -5,7 +5,7 @@ import React, { useReducer, useState, useEffect } from "react";
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
-  checkout: { stripeUrl: "" }, // cole aqui seu Payment Link do Stripe (ex.: https://buy.stripe.com/...)
+  checkout: { stripeUrl: "" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
   formspreeEndpoint: "https://formspree.io/f/xblawgpk",
 };
@@ -617,7 +617,7 @@ function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
-  const [agreed, setAgreed] = useState(false); // "Li e concordo"
+  const [agreed, setAgreed] = useState(true); // "Li e concordo"
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState(initialErrors);
 
@@ -893,21 +893,9 @@ function FormWizard({ open, onClose }) {
                     <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
                     <span>Li e concordo com os termos acima.</span>
                   </label>
-                  <div className="mt-4 flex justify-between">
-  {/* Botão sempre visível, habilita só quando concorda e há stripeUrl */}
-<CTAButton
-  onClick={() => window.location.href = CONFIG.checkout.stripeUrl}
-  disabled={!agreed || !CONFIG.checkout.stripeUrl}
->
-  Pagar US$ 1,360 (Stripe)
-</CTAButton>
-{!CONFIG.checkout.stripeUrl && (
-  <span className="ml-2 text-xs text-slate-500">Cole o Payment Link em CONFIG.checkout.stripeUrl</span>
-)}
-  <div className="flex justify-end">
-    <CTAButton onClick={onClose} disabled={!agreed}>Concluir</CTAButton>
-  </div>
-</div>
+                  <div className="mt-4 flex items-center justify-between gap-2">
+                    <CTAButton onClick={onClose} disabled={!agreed}>Concluir</CTAButton>
+                  </div>
                 </div>
               </div>
             )}
