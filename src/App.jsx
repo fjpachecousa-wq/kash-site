@@ -5,7 +5,7 @@ import React, { useReducer, useState, useEffect } from "react";
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
-  checkout: { stripeUrl: "" }, // cole aqui seu Payment Link do Stripe (ex.: https://buy.stripe.com/...)
+  checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // cole aqui seu Payment Link do Stripe (ex.: https://buy.stripe.com/...)
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
   formspreeEndpoint: "https://formspree.io/f/xblawgpk",
 };
