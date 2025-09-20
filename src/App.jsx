@@ -481,7 +481,7 @@ function TrackingSearch() {
             </div>
             <div className="mt-4">
               <CTAButton onClick={() => {
-                const url = generateLetterPdf({ companyName: result.company?.companyName, tracking: result.tracking, dateISO: result.dateISO, company: result.company, members: (result.members || []), tracking: result.tracking, dateISO: result.dateISO });
+                const url = generateLetterPdf({ companyName: result.company?.companyName, company: result.company, members: (result.members || []), tracking: result.tracking, dateISO: result.dateISO });
                 if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${result.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
               }}>Baixar contrato (PDF)</CTAButton>
             </div>
@@ -515,7 +515,7 @@ function MyTrackings() {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
-                  const url = generateLetterPdf({ companyName: data.company?.companyName, tracking: data.tracking, dateISO: data.dateISO, company: data.company, members: (data.members || []), tracking: data.tracking, dateISO: data.dateISO });
+                  const url = generateLetterPdf({ companyName: data.company?.companyName, company: data.company, members: (data.members || []), tracking: data.tracking, dateISO: data.dateISO });
                   if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${data.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
                 }}>Baixar PDF</CTAButton>
                 <CTAButton onClick={() => {
