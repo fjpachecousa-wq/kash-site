@@ -903,8 +903,7 @@ function FormWizard({ open, onClose }) {
     </CTAButton>
   </div>
   <div className="flex justify-end">
-    <CTAButton onClick={onClose} disabled={!agreed}>Concluir</CTAButton>
-  </div>
+</div>
 </div>
                 </div>
               </div>
