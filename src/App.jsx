@@ -5,7 +5,7 @@ import React, { useReducer, useState, useEffect } from "react";
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
-  checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
+  checkout: { stripeUrl: "" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
   formspreeEndpoint: "https://formspree.io/f/xblawgpk",
 };
@@ -480,7 +480,7 @@ function TrackingSearch() {
               </div>
             </div>
             <div className="mt-4">
-              <CTAButton onClick={() = disabled={!agreed}> {
+              <CTAButton  disabled={!agreed} onClick={() => {
                 const url = generateLetterPdf({ companyName: result.company?.companyName, tracking: result.tracking, dateISO: result.dateISO, company: result.company, members: (result.members || []), tracking: result.tracking, dateISO: result.dateISO });
                 if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${result.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
               }}>Baixar contrato (PDF)</CTAButton>
@@ -894,14 +894,7 @@ function FormWizard({ open, onClose }) {
                     <span>Li e concordo com os termos acima.</span>
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2">
-  <CTAButton onClick={() => window.location.href = CONFIG.checkout.stripeUrl} disabled={!agreed || !CONFIG.checkout.stripeUrl}>
-    Pagar US$ 1,360 (Stripe)
-  </CTAButton>
-</div>
-<div className="flex justify-end">
-  <CTAButton onClick={onClose} disabled={!agreed}>Concluir</CTAButton>
-</div>
+                    <CTAButton onClick={onClose} disabled={!agreed}>Concluir</CTAButton>
                   </div>
                 </div>
               </div>
