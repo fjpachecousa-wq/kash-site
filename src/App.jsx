@@ -483,7 +483,7 @@ function TrackingSearch() {
               <CTAButton onClick={() => {
                 const url = generateLetterPdf({ companyName: result.company?.companyName, company: result.company, members: (result.members || []), tracking: result.tracking, dateISO: result.dateISO });
                 if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${result.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
-              }} disabled={!agreed || !paid}>Baixar contrato (PDF)</CTAButton>
+              }}>Baixar contrato (PDF)</CTAButton>
             </div>
           </div>
         )}
@@ -517,7 +517,7 @@ function MyTrackings() {
                   const data = JSON.parse(raw);
                   const url = generateLetterPdf({ companyName: data.company?.companyName, company: data.company, members: (data.members || []), tracking: data.tracking, dateISO: data.dateISO });
                   if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${data.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
-                } disabled={!agreed || !paid}>Baixar PDF</CTAButton>
+                }}>Baixar PDF</CTAButton>
                 <CTAButton onClick={() => {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
@@ -618,17 +618,8 @@ function FormWizard({ open, onClose }) {
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
   const [agreed, setAgreed] = useState(true); // "Li e concordo"
-  const [paid, setPaid] = useState(false); // pagamento confirmado
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState(initialErrors);
-  // Lê flag de pagamento gravada pelo success.html
-  useEffect(() => {
-    try { setPaid(localStorage.getItem("kash_paid") === "1"); } catch (e) {}
-    const onStorage = () => { try { setPaid(localStorage.getItem("kash_paid") === "1"); } catch (e) {} };
-    window.addEventListener("storage", onStorage);
-    return () => window.removeEventListener("storage", onStorage);
-  }, []);
-
 
   // Address logic
   useEffect(() => {
@@ -904,7 +895,7 @@ function FormWizard({ open, onClose }) {
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
-    <CTAButton onClick={() => { try { localStorage.setItem("kash_payment_started","1"); } catch(e){}; window.location.href = CONFIG.checkout.stripeUrl; }} disabled={!agreed || !CONFIG.checkout.stripeUrl}>
+    <CTAButton onClick={() => window.location.href = CONFIG.checkout.stripeUrl} disabled={!agreed || !CONFIG.checkout.stripeUrl}>
       Pagar US$ 1,360 (Stripe)
     </CTAButton>
     <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
@@ -912,7 +903,7 @@ function FormWizard({ open, onClose }) {
     </CTAButton>
   </div>
   <div className="flex justify-end">
-    <CTAButton onClick={onClose} disabled={!agreed || !paid}>Concluir</CTAButton>
+    <CTAButton onClick={onClose} disabled={!agreed}>Concluir</CTAButton>
   </div>
 </div>
                 </div>
