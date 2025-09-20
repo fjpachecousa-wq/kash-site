@@ -5,7 +5,7 @@ import React, { useReducer, useState, useEffect } from "react";
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
-  checkout: { stripeUrl: "" }, // futuro
+  checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
   formspreeEndpoint: "https://formspree.io/f/xblawgpk",
 };
@@ -894,8 +894,18 @@ function FormWizard({ open, onClose }) {
                     <span>Li e concordo com os termos acima.</span>
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
-                    <CTAButton onClick={onClose} disabled={!agreed}>Concluir</CTAButton>
-                  </div>
+  <div className="flex items-center gap-2">
+    <CTAButton onClick={() => window.location.href = CONFIG.checkout.stripeUrl} disabled={!agreed || !CONFIG.checkout.stripeUrl}>
+      Pagar US$ 1,360 (Stripe)
+    </CTAButton>
+    <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
+      Cancelar
+    </CTAButton>
+  </div>
+  <div className="flex justify-end">
+    <CTAButton onClick={onClose} disabled={!agreed}>Concluir</CTAButton>
+  </div>
+</div>
                 </div>
               </div>
             )}
