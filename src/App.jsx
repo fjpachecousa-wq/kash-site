@@ -480,10 +480,10 @@ function TrackingSearch() {
               </div>
             </div>
             <div className="mt-4">
-              <CTAButton onClick={() = disabled={!agreed}> {
+              <CTAButton onClick={() => {
                 const url = generateLetterPdf({ companyName: result.company?.companyName, company: result.company, members: (result.members || []), tracking: result.tracking, dateISO: result.dateISO });
                 if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${result.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
-              }}>Baixar contrato (PDF)</CTAButton>
+              }} disabled={!agreed}>Baixar contrato (PDF)</CTAButton>
             </div>
           </div>
         )}
@@ -619,7 +619,7 @@ function FormWizard({ open, onClose }) {
   const [tracking, setTracking] = useState("");
   const [agreed, setAgreed] = useState(true); // "Li e concordo"
 
-  // Pagamento confirmado (marcado pela success.html via localStorage)
+  // Pagamento confirmado (success.html define em localStorage)
   const paid = (typeof window !== "undefined" && localStorage.getItem("kash_paid") === "1");
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState(initialErrors);
