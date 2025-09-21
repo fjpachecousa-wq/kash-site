@@ -55,7 +55,7 @@ function CTAButton({ children, variant = "primary", onClick, type = "button", di
     : variant === "ghost"
     ? "bg-transparent border border-slate-700 text-slate-200 hover:bg-slate-800"
     : "bg-slate-700 text-slate-100 hover:bg-slate-600";
-  return <button type={type} onClick={onClick} disabled={disabled} className={classNames(base, styles)}>{children}</button>;
+  return <button type={type}  onClick={onClick} disabled={disabled} className={classNames(base, styles)}>{children}</button>;
 }
 function SectionTitle({ title, subtitle }) {
   return (
@@ -274,7 +274,7 @@ function _signatureBlockEN(names) {
 
 
 
-function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], company, members = [] }) {
+function generateLetterPdf({companyName, tracking, dateISO, memberNames = [], company, members = []}) {
   // Prefer provided objects; fallback to global state if available
   const _company = company || (typeof data!=="undefined" && data.company) || (typeof result!=="undefined" && result.company) || { companyName };
   const _members = (members && members.length)
@@ -480,8 +480,10 @@ function TrackingSearch() {
               </div>
             </div>
             <div className="mt-4">
-              <CTAButton disabled={!agreed || !paid} onClick={() =>> {
-                const url = generateLetterPdf({ companyName: result.company?.companyName, company: result.company, members: (result.members || []), tracking: result.tracking, dateISO: result.dateISO } ); if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${result.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); } }}>Baixar contrato (PDF)</CTAButton>
+              <CTAButton onClick={() => {
+                const url = generateLetterPdf({companyName: result.company?.companyName, tracking: result.tracking, dateISO: result.dateISO, company: result.company, members: (result.members || [])});
+                if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${result.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
+              }}}>Baixar contrato (PDF)</CTAButton>
             </div>
           </div>
         )}
@@ -513,7 +515,7 @@ function MyTrackings() {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
-                  const url = generateLetterPdf({ companyName: data.company?.companyName, company: data.company, members: (data.members || []), tracking: data.tracking, dateISO: data.dateISO });
+                  const url = generateLetterPdf({companyName: data.company?.companyName, tracking: data.tracking, dateISO: data.dateISO, company: data.company, members: (data.members || [])});
                   if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${data.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
                 }}>Baixar PDF</CTAButton>
                 <CTAButton onClick={() => {
@@ -862,7 +864,7 @@ function FormWizard({ open, onClose }) {
                   <div className="flex items-center justify-between">
                     <div className="text-slate-300 font-medium">Contrato (EN + PT juntos)</div>
                     <button className="text-xs text-emerald-400 hover:underline" onClick={() => {
-                      const url = generateLetterPdf({ companyName: company.companyName, tracking, dateISO, company, members: (members || form?.members || []) });
+                      const url = generateLetterPdf({companyName: company.companyName, tracking, dateISO, company, members: (members || form?.members || [])});
                       if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
                     }}>Baixar PDF</button>
                   </div>
