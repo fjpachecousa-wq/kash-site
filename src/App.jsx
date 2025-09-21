@@ -9,6 +9,33 @@ const CONFIG = {
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
   formspreeEndpoint: "https://formspree.io/f/xblawgpk",
 };
+// === KASH Process API (Google Apps Script) ===
+const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
+
+async function apiGetProcesso(kashId){
+  const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
+  if(!r.ok) throw new Error("not_found");
+  return r.json();
+}
+async function apiUpsert({kashId, companyName, atualizadoEm}){
+  const r = await fetch(PROCESSO_API,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ action:"upsert", kashId, companyName, faseAtual:1, subFase:null, atualizadoEm: atualizadoEm || new Date().toISOString() })
+  });
+  if(!r.ok) throw new Error("upsert_failed");
+  return r.json();
+}
+async function apiUpdate({kashId, faseAtual, subFase, status, note}){
+  const r = await fetch(PROCESSO_API,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ action:"update", kashId, faseAtual, subFase: subFase || null, status: status || "Atualização", note: note || "" })
+  });
+  if(!r.ok) throw new Error("update_failed");
+  return r.json();
+}
+
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
@@ -440,10 +467,13 @@ function TrackingSearch() {
   const [code, setCode] = useState("");
   const [result, setResult] = useState(null);
   const [notFound, setNotFound] = useState(false);
-  const handleLookup = () => {
+  const handleLookup = async () => {
     try {
       const raw = localStorage.getItem(code.trim());
-      if (!raw) { setResult(null); setNotFound(true); return; }
+      if (!raw) {
+      // tenta API remota
+      try { const obj = await apiGetProcesso(code.trim()); setResult({ tracking: obj.kashId, dateISO: obj.atualizadoEm, company: { companyName: obj.companyName || '—' }, updates: obj.updates || [] }); setNotFound(false); return; } catch {}
+      setResult(null); setNotFound(true); return; }
       const data = JSON.parse(raw);
       setResult(data);
       setNotFound(false);
@@ -558,6 +588,7 @@ function AdminPanel() {
       const upd = { ts, status, note };
       data.updates = Array.isArray(data.updates) ? [...data.updates, upd] : [upd];
       localStorage.setItem(selected, JSON.stringify(data));
+      try { await apiUpdate({ kashId: selected, faseAtual: 2, subFase: null, status, note }); } catch(e){ console.warn('API update falhou:', e); }
       setStatus(""); setNote("");
       alert("Atualização adicionada.");
     } catch { alert("Falha ao atualizar."); }
@@ -701,6 +732,9 @@ function FormWizard({ open, onClose }) {
         filtered.unshift(entry);
         localStorage.setItem("KASH_TRACKINGS", JSON.stringify(filtered.slice(0,50)));
       } catch {}
+
+      // KASH API: cria processo + histórico inicial
+      try { await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch (e) { console.warn('API falhou:', e); }
 
       // Envia ao Formspree (e-mail / painel)
       await fetch(CONFIG.formspreeEndpoint, {
