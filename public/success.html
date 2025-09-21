@@ -9,20 +9,32 @@
     .card{background:#111827;border:1px solid #1f2937;border-radius:16px;padding:24px;max-width:560px;box-shadow:0 10px 30px rgba(0,0,0,.35);text-align:center}
     h1{margin:0 0 12px;font-size:24px;color:#86efac}
     p{margin:6px 0;line-height:1.5}
-    a{display:inline-block;margin-top:14px;padding:10px 16px;border-radius:10px;border:1px solid #334155;color:#e2e8f0;text-decoration:none}
+    .actions{display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+    a{display:inline-block;padding:10px 16px;border-radius:10px;border:1px solid #334155;color:#e2e8f0;text-decoration:none}
     a:hover{background:#1f2937}
   </style>
   <script>
     // Marca pagamento como concluído para o App.jsx ler depois
     (function(){ try { localStorage.setItem('kash_paid','1'); } catch(e) {} })();
+    // Prepara link para a página "Meu Contrato" com tracking, se existir
+    document.addEventListener('DOMContentLoaded', function(){
+      try{
+        var last = localStorage.getItem('last_tracking') || '';
+        var href = '/meu-contrato.html' + (last ? ('?tracking=' + encodeURIComponent(last)) : '');
+        var go = document.getElementById('go-contrato');
+        if (go) go.href = href;
+      }catch(e){}
+    });
   </script>
 </head>
 <body>
   <div class="card">
-    <h1>🎉 Pagamento confirmado!</h1>
-    <p>Obrigado por confiar na KASH Corporate Solutions.</p>
-    <p>Em breve você receberá atualizações do seu processo por e-mail.</p>
-    <a href="/">Voltar ao início</a>
+    <h1>Pagamento confirmado</h1>
+    <p>Obrigado. Seus dados foram recebidos com sucesso.</p>
+    <div class="actions">
+      <a id="go-contrato" href="/meu-contrato.html">Abrir meu contrato</a>
+      <a href="/">Voltar ao início</a>
+    </div>
   </div>
 </body>
 </html>

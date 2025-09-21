@@ -3,27 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Operação cancelada</title>
+  <title>Pagamento cancelado</title>
   <style>
-    body{margin:0;background:#0f172a;color:#e2e8f0;
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;
-      display:flex;min-height:100vh;align-items:center;justify-content:center}
-    .card{background:#111827;border:1px solid #1f2937;
-      border-radius:16px;padding:24px;max-width:560px;
-      box-shadow:0 10px 30px rgba(0,0,0,.35);text-align:center}
+    body{margin:0;background:#0f172a;color:#e2e8f0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;display:flex;min-height:100vh;align-items:center;justify-content:center}
+    .card{background:#111827;border:1px solid #1f2937;border-radius:16px;padding:24px;max-width:560px;box-shadow:0 10px 30px rgba(0,0,0,.35);text-align:center}
     h1{margin:0 0 12px;font-size:24px;color:#fca5a5}
     p{margin:6px 0;line-height:1.5}
-    a{display:inline-block;margin-top:14px;padding:10px 16px;
-      border-radius:10px;border:1px solid #334155;color:#e2e8f0;text-decoration:none}
+    .actions{display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap}
+    a{display:inline-block;padding:10px 16px;border-radius:10px;border:1px solid #334155;color:#e2e8f0;text-decoration:none}
     a:hover{background:#1f2937}
   </style>
+  <script>
+    // Remove a confirmação de pagamento
+    (function(){ try { localStorage.removeItem('kash_paid'); } catch(e) {} })();
+  </script>
 </head>
 <body>
   <div class="card">
-    <h1>Operação cancelada</h1>
-    <p>Você desistiu do pagamento. Nenhuma cobrança foi realizada.</p>
-    <p>Se desejar, você pode voltar e tentar novamente quando estiver pronto.</p>
-    <a href="/">Voltar ao início</a>
+    <h1>Pagamento cancelado</h1>
+    <p>Você pode revisar as informações e tentar novamente.</p>
+    <div class="actions">
+      <a href="javascript:history.back()">Voltar</a>
+      <a href="/">Ir para o início</a>
+    </div>
   </div>
 </body>
 </html>
