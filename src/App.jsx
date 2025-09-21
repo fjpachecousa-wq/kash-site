@@ -480,10 +480,10 @@ function TrackingSearch() {
               </div>
             </div>
             <div className="mt-4">
-              <CTAButton onClick={() => {
+              { agreed && paid && (<CTAButton onClick={() => {
                 const url = generateLetterPdf({ companyName: result.company?.companyName, tracking: result.tracking, dateISO: result.dateISO, company: result.company, members: (result.members || []), tracking: result.tracking, dateISO: result.dateISO });
                 if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${result.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
-              }}>Baixar contrato (PDF)</CTAButton>
+              }}>Baixar contrato (PDF)</CTAButton>) }
             </div>
           </div>
         )}
@@ -511,13 +511,13 @@ function MyTrackings() {
                 <div className="text-slate-400 text-xs">Tracking: {e.code} · {e.dateISO}</div>
               </div>
               <div className="flex gap-2">
-                <CTAButton variant="ghost" onClick={() => {
+                { agreed && paid && (<CTAButton variant="ghost" onClick={() => {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
                   const url = generateLetterPdf({ companyName: data.company?.companyName, tracking: data.tracking, dateISO: data.dateISO, company: data.company, members: (data.members || []), tracking: data.tracking, dateISO: data.dateISO });
                   if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${data.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
-                }}>Baixar PDF</CTAButton>
+                }}>Baixar PDF</CTAButton>) }
                 <CTAButton onClick={() => {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
@@ -568,7 +568,7 @@ function AdminPanel() {
       <div className="max-w-4xl mx-auto px-4">
         <div className="flex items-center justify-between">
           <SectionTitle title="Painel interno (admin)" subtitle="Adicionar atualizações de status aos trackings salvos neste navegador." />
-          <button className="text-xs text-emerald-400 hover:underline" onClick={() => setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
+          <button className="text-xs text-emerald-400 hover:underline" onClick={() => > setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
         </div>
         {!open ? null : (
           <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900 p-4">
@@ -618,6 +618,7 @@ function FormWizard({ open, onClose }) {
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
   const [agreed, setAgreed] = useState(true); // "Li e concordo"
+  const paid = (typeof window !== "undefined" && localStorage.getItem("kash_paid") === "1");
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState(initialErrors);
 
@@ -845,7 +846,7 @@ function FormWizard({ open, onClose }) {
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
+                  <CTAButton variant="ghost" onClick={() => > setStep(1)}>Voltar</CTAButton>
                   <CTAButton onClick={handleSubmit}>{loading ? "Enviando..." : "Enviar"}</CTAButton>
                 </div>
               </div>
