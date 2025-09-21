@@ -8,6 +8,7 @@ const CONFIG = {
   checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
   formspreeEndpoint: "https://formspree.io/f/xblawgpk",
+  processApi: "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec",
 };
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -32,6 +33,32 @@ function calcAgeFullDate(dateStr) {
 function isPercentTotalValid(members) {
   const sum = members.reduce((acc, m) => acc + (Number(m.percent || 0) || 0), 0);
   return Math.abs(sum - 100) < 0.001;
+
+/* ===== Google Sheets API helpers (Apps Script) ===== */
+async function _apiGet(kashId){
+  const url = `${CONFIG.processApi}?kashId=${encodeURIComponent(kashId)}`;
+  const r = await fetch(url, { method: "GET" });
+  if (!r.ok) throw new Error("not_found");
+  return r.json();
+}
+async function _apiUpsert({ kashId, companyName, atualizadoEm }){
+  const r = await fetch(CONFIG.processApi, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action:"upsert", kashId, companyName, faseAtual:1, subFase:null, atualizadoEm: atualizadoEm || new Date().toISOString() })
+  });
+  if (!r.ok) throw new Error("upsert_failed");
+  return r.json();
+}
+async function _apiUpdate({ kashId, faseAtual, subFase, status, note }){
+  const r = await fetch(CONFIG.processApi, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action:"update", kashId, faseAtual, subFase: subFase || null, status: status || "Atualização", note: note || "" })
+  });
+  if (!r.ok) throw new Error("update_failed");
+  return r.json();
+}
 }
 
 /* ================== UI ================== */
@@ -440,10 +467,14 @@ function TrackingSearch() {
   const [code, setCode] = useState("");
   const [result, setResult] = useState(null);
   const [notFound, setNotFound] = useState(false);
-  const handleLookup = () => {
+  const handleLookup = async () => {
     try {
-      const raw = localStorage.getItem(code.trim());
-      if (!raw) { setResult(null); setNotFound(true); return; }
+      const k = code.trim();
+      const raw = localStorage.getItem(k);
+      if (!raw) {
+      // tenta API
+      try { const obj = await _apiGet(k.trim()); setResult(obj); setNotFound(false); return; } catch { setResult(null); setNotFound(true); return; }
+    }
       const data = JSON.parse(raw);
       setResult(data);
       setNotFound(false);
@@ -546,7 +577,7 @@ function AdminPanel() {
   };
   useEffect(() => { refreshList(); }, []);
   const tryAuth = () => { if (pin === "246810") setAuthed(true); else alert("PIN inválido"); };
-  const addUpdate = () => {
+  const addUpdate = async () => {
     if (!selected) return alert("Escolha um tracking.");
     if (!status) return alert("Informe um status.");
     try {
@@ -556,6 +587,20 @@ function AdminPanel() {
       const now = new Date();
       const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
       const upd = { ts, status, note };
+      try { await _apiUpdate({ kashId: selected, faseAtual: 2, status, note }); } catch(e) { console.warn("Planilha não atualizada:", e); }
+      data.updates = Array.isArray(data.updates) ? [...data.updates, upd] : [upd];
+      localStorage.setItem(selected, JSON.stringify(data));
+      setStatus(""); setNote("");
+      alert("Atualização adicionada.");
+    } catch { alert("Falha ao atualizar."); }
+  };
+
+  return (
+    <section className="py-12 border-t border-slate-800">
+      <div className="max-w-4xl mx-auto px-4">
+        <div className="flex items-center justify-between">
+          <SectionTitle title="Painel interno (admin)" subtitle="Adicionar atualizações de status aos trackings salvos neste navegador." />
+          <b
       data.updates = Array.isArray(data.updates) ? [...data.updates, upd] : [upd];
       localStorage.setItem(selected, JSON.stringify(data));
       setStatus(""); setNote("");
@@ -708,6 +753,12 @@ function FormWizard({ open, onClose }) {
         headers: { "Accept": "application/json", "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      // Envia ao Google Sheets (Apps Script)
+      try {
+        await _apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: new Date().toISOString() });
+        await _apiUpdate({ kashId: code, faseAtual: 1, status: "Formulário recebido", note: "Contrato criado" });
+      } catch(e) { console.warn("Falha ao enviar à planilha:", e); }
+
     } catch {}
 
     setLoading(false);
