@@ -529,7 +529,10 @@ function TrackingSearch() {
               </div>
             </div>
             <div className="mt-4">
-              {paid && agreed && (<CTAButton onClick={handleDownloadPDF}>Baixar contrato (PDF)</CTAButton>)}
+              <CTAButton onClick={() => {
+                const url = generateLetterPdf({ companyName: result.company?.companyName, company: result.company, members: (result.members || []), tracking: result.tracking, dateISO: result.dateISO });
+                if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${result.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
+              }}>Baixar contrato (PDF)</CTAButton>
             </div>
           </div>
         )}
@@ -557,14 +560,14 @@ function MyTrackings() {
                 <div className="text-slate-400 text-xs">Tracking: {e.code} · {e.dateISO}</div>
               </div>
               <div className="flex gap-2">
-                <CTAButton variant="ghost" onClick={() => { {
+                <CTAButton variant="ghost" onClick={() => {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
                   const url = generateLetterPdf({ companyName: data.company?.companyName, company: data.company, members: (data.members || []), tracking: data.tracking, dateISO: data.dateISO });
                   if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${data.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
                 }}>Baixar PDF</CTAButton>
-                <CTAButton onClick={() => { {
+                <CTAButton onClick={() => {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
@@ -664,7 +667,6 @@ function FormWizard({ open, onClose }) {
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
   const [agreed, setAgreed] = useState(true); // "Li e concordo"
-  const paid = (typeof window !== "undefined" && localStorage.getItem("kash_paid") === "1");
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState(initialErrors);
 
@@ -765,14 +767,7 @@ function FormWizard({ open, onClose }) {
   const { company, members, accept } = form;
   const dateISO = todayISO();
 
-  
-  function handleDownloadPDF() {
-    try {
-      const url = generateLetterPdf({ companyName: result.company?.companyName, company: result.company, members: (result.members || []), tracking: result.tracking, dateISO: result.dateISO });
-      if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${result.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
-    } catch (e) { console.error(e); }
-  }
-return (
+  return (
     <div className={classNames("fixed inset-0 z-50", !open && "hidden")}>
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div className="absolute inset-0 overflow-y-auto">
@@ -851,7 +846,7 @@ return (
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton onClick={() => { { if (validate()) setStep(2); }}>Continuar</CTAButton>
+                  <CTAButton onClick={() => { if (validate()) setStep(2); }}>Continuar</CTAButton>
                 </div>
               </div>
             )}
@@ -918,7 +913,7 @@ return (
                 <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="flex items-center justify-between">
                     <div className="text-slate-300 font-medium">Contrato (EN + PT juntos)</div>
-                    <button className="text-xs text-emerald-400 hover:underline" onClick={() => { {
+                    <button className="text-xs text-emerald-400 hover:underline" onClick={() => {
                       const url = generateLetterPdf({ companyName: company.companyName, tracking, dateISO, company, members: (members || form?.members || []) });
                       if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
                     }}>Baixar PDF</button>
@@ -953,7 +948,7 @@ return (
     <CTAButton onClick={() => { window.location.href = CONFIG.checkout.stripeUrl} disabled={!agreed || !CONFIG.checkout.stripeUrl}>
       Pagar US$ 1,360 (Stripe)
     </CTAButton>
-    <CTAButton variant="ghost" onClick={() => { { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
+    <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
       Cancelar
     </CTAButton>
   </div>
