@@ -36,6 +36,30 @@ async function apiUpdate({kashId, faseAtual, subFase, status, note}){
   return r.json();
 }
 
+// ===== PRIVACIDADE: armazenar apenas códigos de tracking (atalhos) =====
+function saveTrackingShortcut(kashId) {
+  try {
+    if (!kashId) return;
+    const key = "kash.tracking.shortcuts";
+    const list = JSON.parse(localStorage.getItem(key) || "[]");
+    if (!list.includes(kashId)) list.unshift(kashId);
+    localStorage.setItem(key, JSON.stringify(list.slice(0, 20)));
+  } catch {}
+}
+function getTrackingShortcuts() {
+  try { return JSON.parse(localStorage.getItem("kash.tracking.shortcuts") || "[]"); }
+  catch { return []; }
+}
+function clearAnySensitiveLocalData() {
+  try {
+    const keepKey = "kash.tracking.shortcuts";
+    const shortcuts = localStorage.getItem(keepKey);
+    localStorage.clear();
+    if (shortcuts) localStorage.setItem(keepKey, shortcuts);
+  } catch {}
+}
+clearAnySensitiveLocalData();
+
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
@@ -469,12 +493,7 @@ function TrackingSearch() {
   const [notFound, setNotFound] = useState(false);
   const handleLookup = async () => {
     try {
-      const raw = localStorage.getItem(code.trim());
-      if (!raw) {
-      // tenta API remota
-      try { const obj = await apiGetProcesso(code.trim()); setResult({ tracking: obj.kashId, dateISO: obj.atualizadoEm, company: { companyName: obj.companyName || '—' }, updates: obj.updates || [] }); setNotFound(false); return; } catch {}
-      setResult(null); setNotFound(true); return; }
-      const data = JSON.parse(raw);
+      try { const obj = await apiGetProcesso(code.trim()); setResult({ tracking: obj.kashId, dateISO: obj.atualizadoEm, company: { companyName: obj.companyName || '—' }, updates: obj.updates || [], faseAtual: obj.faseAtual || 1, subFase: obj.subFase || null }); saveTrackingShortcut(code.trim()); setNotFound(false); return; } catch(e) { setResult(null); setNotFound(true); return; }
       setResult(data);
       setNotFound(false);
     } catch { setResult(null); setNotFound(true); }
@@ -588,7 +607,6 @@ function AdminPanel() {
       const upd = { ts, status, note };
       data.updates = Array.isArray(data.updates) ? [...data.updates, upd] : [upd];
       localStorage.setItem(selected, JSON.stringify(data));
-      try { await apiUpdate({ kashId: selected, faseAtual: 2, subFase: null, status, note }); } catch(e){ console.warn('API update falhou:', e); }
       setStatus(""); setNote("");
       alert("Atualização adicionada.");
     } catch { alert("Falha ao atualizar."); }
@@ -730,13 +748,11 @@ function FormWizard({ open, onClose }) {
         const entry = { code, dateISO, company: form.company.companyName };
         const filtered = idx.filter(e => e.code !== code);
         filtered.unshift(entry);
-        localStorage.setItem("KASH_TRACKINGS", JSON.stringify(filtered.slice(0,50)));
+        try { await apiUpdate({ kashId: selected, faseAtual: Number(faseAtual)||2, subFase: subFase||null, status, note }); } catch(e) { console.warn("API update falhou", e); }
       } catch {}
 
-      // KASH API: cria processo + histórico inicial
-      try { await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch (e) { console.warn('API falhou:', e); }
-
-      // Envia ao Formspree (e-mail / painel)
+      try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
+// Envia ao Formspree (e-mail / painel)
       await fetch(CONFIG.formspreeEndpoint, {
         method: "POST",
         headers: { "Accept": "application/json", "Content-Type": "application/json" },
