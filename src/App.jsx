@@ -529,10 +529,7 @@ function TrackingSearch() {
               </div>
             </div>
             <div className="mt-4">
-              <CTAButton onClick={() => {
-                const url = generateLetterPdf({ companyName: result.company?.companyName, company: result.company, members: (result.members || []), tracking: result.tracking, dateISO: result.dateISO });
-                if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${result.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
-              }}>Baixar contrato (PDF)</CTAButton>
+              
             </div>
           </div>
         )}
@@ -560,13 +557,7 @@ function MyTrackings() {
                 <div className="text-slate-400 text-xs">Tracking: {e.code} · {e.dateISO}</div>
               </div>
               <div className="flex gap-2">
-                <CTAButton variant="ghost" onClick={() => {
-                  const raw = localStorage.getItem(e.code);
-                  if (!raw) return;
-                  const data = JSON.parse(raw);
-                  const url = generateLetterPdf({ companyName: data.company?.companyName, company: data.company, members: (data.members || []), tracking: data.tracking, dateISO: data.dateISO });
-                  if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${data.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
-                }}>Baixar PDF</CTAButton>
+                
                 <CTAButton onClick={() => {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
@@ -663,6 +654,8 @@ function AdminPanel() {
 /* ======= Form Wizard ======= */
 const initialErrors = { company: {}, members: [], accept: {} };
 function FormWizard({ open, onClose }) {
+  try { if (typeof window!=="undefined" && result && result.tracking) localStorage.setItem("last_tracking", result.tracking); } catch(e) {}
+
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
