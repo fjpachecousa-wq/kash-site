@@ -5,61 +5,10 @@ import React, { useReducer, useState, useEffect } from "react";
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
-  checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
+  checkout: { stripeUrl: "" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
   formspreeEndpoint: "https://formspree.io/f/xblawgpk",
 };
-// === KASH Process API (Google Apps Script) ===
-const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
-
-async function apiGetProcesso(kashId){
-  const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
-  if(!r.ok) throw new Error("not_found");
-  return r.json();
-}
-async function apiUpsert({kashId, companyName, atualizadoEm}){
-  const r = await fetch(PROCESSO_API,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ action:"upsert", kashId, companyName, faseAtual:1, subFase:null, atualizadoEm: atualizadoEm || new Date().toISOString() })
-  });
-  if(!r.ok) throw new Error("upsert_failed");
-  return r.json();
-}
-async function apiUpdate({kashId, faseAtual, subFase, status, note}){
-  const r = await fetch(PROCESSO_API,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ action:"update", kashId, faseAtual, subFase: subFase || null, status: status || "Atualização", note: note || "" })
-  });
-  if(!r.ok) throw new Error("update_failed");
-  return r.json();
-}
-
-// ===== PRIVACIDADE: armazenar apenas códigos de tracking (atalhos) =====
-function saveTrackingShortcut(kashId) {
-  try {
-    if (!kashId) return;
-    const key = "kash.tracking.shortcuts";
-    const list = JSON.parse(localStorage.getItem(key) || "[]");
-    if (!list.includes(kashId)) list.unshift(kashId);
-    localStorage.setItem(key, JSON.stringify(list.slice(0, 20)));
-  } catch {}
-}
-function getTrackingShortcuts() {
-  try { return JSON.parse(localStorage.getItem("kash.tracking.shortcuts") || "[]"); }
-  catch { return []; }
-}
-function clearAnySensitiveLocalData() {
-  try {
-    const keepKey = "kash.tracking.shortcuts";
-    const shortcuts = localStorage.getItem(keepKey);
-    localStorage.clear();
-    if (shortcuts) localStorage.setItem(keepKey, shortcuts);
-  } catch {}
-}
-clearAnySensitiveLocalData();
-
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
@@ -491,9 +440,11 @@ function TrackingSearch() {
   const [code, setCode] = useState("");
   const [result, setResult] = useState(null);
   const [notFound, setNotFound] = useState(false);
-  const handleLookup = async () => {
+  const handleLookup = () => {
     try {
-      try { const obj = await apiGetProcesso(code.trim()); setResult({ tracking: obj.kashId, dateISO: obj.atualizadoEm, company: { companyName: obj.companyName || '—' }, updates: obj.updates || [], faseAtual: obj.faseAtual || 1, subFase: obj.subFase || null }); saveTrackingShortcut(code.trim()); setNotFound(false); return; } catch(e) { setResult(null); setNotFound(true); return; }
+      const raw = localStorage.getItem(code.trim());
+      if (!raw) { setResult(null); setNotFound(true); return; }
+      const data = JSON.parse(raw);
       setResult(data);
       setNotFound(false);
     } catch { setResult(null); setNotFound(true); }
@@ -530,7 +481,7 @@ function TrackingSearch() {
             </div>
             <div className="mt-4">
               <CTAButton onClick={() => {
-                const url = generateLetterPdf({ companyName: result.company?.companyName, company: result.company, members: (result.members || []), tracking: result.tracking, dateISO: result.dateISO });
+                const url = generateLetterPdf({ companyName: result.company?.companyName, tracking: result.tracking, dateISO: result.dateISO, company: result.company, members: (result.members || []), tracking: result.tracking, dateISO: result.dateISO });
                 if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${result.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
               }}>Baixar contrato (PDF)</CTAButton>
             </div>
@@ -564,7 +515,7 @@ function MyTrackings() {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
-                  const url = generateLetterPdf({ companyName: data.company?.companyName, company: data.company, members: (data.members || []), tracking: data.tracking, dateISO: data.dateISO });
+                  const url = generateLetterPdf({ companyName: data.company?.companyName, tracking: data.tracking, dateISO: data.dateISO, company: data.company, members: (data.members || []), tracking: data.tracking, dateISO: data.dateISO });
                   if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${data.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
                 }}>Baixar PDF</CTAButton>
                 <CTAButton onClick={() => {
@@ -595,7 +546,7 @@ function AdminPanel() {
   };
   useEffect(() => { refreshList(); }, []);
   const tryAuth = () => { if (pin === "246810") setAuthed(true); else alert("PIN inválido"); };
-  const addUpdate = async () => {
+  const addUpdate = () => {
     if (!selected) return alert("Escolha um tracking.");
     if (!status) return alert("Informe um status.");
     try {
@@ -617,7 +568,7 @@ function AdminPanel() {
       <div className="max-w-4xl mx-auto px-4">
         <div className="flex items-center justify-between">
           <SectionTitle title="Painel interno (admin)" subtitle="Adicionar atualizações de status aos trackings salvos neste navegador." />
-          <button className="text-xs text-emerald-400 hover:underline" onClick={() => { setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
+          <button className="text-xs text-emerald-400 hover:underline" onClick={() => setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
         </div>
         {!open ? null : (
           <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900 p-4">
@@ -748,11 +699,10 @@ function FormWizard({ open, onClose }) {
         const entry = { code, dateISO, company: form.company.companyName };
         const filtered = idx.filter(e => e.code !== code);
         filtered.unshift(entry);
-        try { await apiUpdate({ kashId: selected, faseAtual: Number(faseAtual)||2, subFase: subFase||null, status, note }); } catch(e) { console.warn("API update falhou", e); }
+        localStorage.setItem("KASH_TRACKINGS", JSON.stringify(filtered.slice(0,50)));
       } catch {}
 
-      try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
-// Envia ao Formspree (e-mail / painel)
+      // Envia ao Formspree (e-mail / painel)
       await fetch(CONFIG.formspreeEndpoint, {
         method: "POST",
         headers: { "Accept": "application/json", "Content-Type": "application/json" },
@@ -895,7 +845,7 @@ function FormWizard({ open, onClose }) {
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton variant="ghost" onClick={() => { setStep(1)}>Voltar</CTAButton>
+                  <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
                   <CTAButton onClick={handleSubmit}>{loading ? "Enviando..." : "Enviar"}</CTAButton>
                 </div>
               </div>
@@ -944,17 +894,8 @@ function FormWizard({ open, onClose }) {
                     <span>Li e concordo com os termos acima.</span>
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
-  <div className="flex items-center gap-2">
-    <CTAButton onClick={() => { window.location.href = CONFIG.checkout.stripeUrl} disabled={!agreed || !CONFIG.checkout.stripeUrl}>
-      Pagar US$ 1,360 (Stripe)
-    </CTAButton>
-    <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
-      Cancelar
-    </CTAButton>
-  </div>
-  <div className="flex justify-end">
-</div>
-</div>
+                    <CTAButton onClick={onClose} disabled={!agreed}>Concluir</CTAButton>
+                  </div>
                 </div>
               </div>
             )}
