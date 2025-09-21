@@ -529,7 +529,7 @@ function TrackingSearch() {
               </div>
             </div>
             <div className="mt-4">
-              <CTAButton onClick={() => {
+              <CTAButton onClick={() = disabled={!agreed || !paid}> {
                 const url = generateLetterPdf({ companyName: result.company?.companyName, company: result.company, members: (result.members || []), tracking: result.tracking, dateISO: result.dateISO });
                 if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${result.tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
               }}>Baixar contrato (PDF)</CTAButton>
@@ -667,6 +667,14 @@ function FormWizard({ open, onClose }) {
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
   const [agreed, setAgreed] = useState(true); // "Li e concordo"
+  // Flag de pagamento: success.html grava "kash_paid=1" no navegador
+  const [paid, setPaid] = useState(false);
+  useEffect(() => {
+    try { setPaid(localStorage.getItem("kash_paid") === "1"); } catch {}
+    const onStorage = () => { try { setPaid(localStorage.getItem("kash_paid") === "1"); } catch {} };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState(initialErrors);
 
@@ -718,7 +726,8 @@ function FormWizard({ open, onClose }) {
   }
 
   async function handleSubmit() {
-    if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+    if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }if (!(localStorage.getItem("kash_paid")==="1")) { alert("Finalize o pagamento para concluir."); return; }
+    ); return; }
     setLoading(true);
     const code = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
     setTracking(code);
