@@ -654,8 +654,6 @@ function AdminPanel() {
 /* ======= Form Wizard ======= */
 const initialErrors = { company: {}, members: [], accept: {} };
 function FormWizard({ open, onClose }) {
-  try { if (typeof window!=="undefined" && result && result.tracking) localStorage.setItem("last_tracking", result.tracking); } catch(e) {}
-
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
@@ -906,10 +904,7 @@ function FormWizard({ open, onClose }) {
                 <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="flex items-center justify-between">
                     <div className="text-slate-300 font-medium">Contrato (EN + PT juntos)</div>
-                    <button className="text-xs text-emerald-400 hover:underline" onClick={() => {
-                      const url = generateLetterPdf({ companyName: company.companyName, tracking, dateISO, company, members: (members || form?.members || []) });
-                      if (url) { const a = document.createElement("a"); a.href = url; a.download = `KASH_Contract_${tracking}.pdf`; document.body.appendChild(a); a.click(); a.remove(); }
-                    }}>Baixar PDF</button>
+                    
                   </div>
 
                   {/* EN + PT in the same view */}
