@@ -576,7 +576,7 @@ function AdminPanel() {
   };
   useEffect(() => { refreshList(); }, []);
   const tryAuth = () => { if (pin === "246810") setAuthed(true); else alert("PIN inválido"); };
-  const addUpdate = () => {
+  const addUpdate = async () => {
     if (!selected) return alert("Escolha um tracking.");
     if (!status) return alert("Informe um status.");
     try {
