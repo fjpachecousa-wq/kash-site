@@ -1,8 +1,6 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
-
 /* ================== CONFIG ================== */
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
@@ -935,9 +933,11 @@ function FormWizard({ open, onClose }) {
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
-    <CTAButton onClick={() => window.location.href = CONFIG.checkout.stripeUrl} disabled={!agreed || !CONFIG.checkout.stripeUrl}>
+    <CTAButton style={{display:"none"}} onClick={() => window.location.href = CONFIG.checkout.stripeUrl} disabled={!agreed || !CONFIG.checkout.stripeUrl}>
       Pagar US$ 1,360 (Stripe)
     </CTAButton>
+    <CTAButton id="btnConcluirTeste" onClick={handleSubmit} disabled={!agreed}>Concluir (teste)</CTAButton>
+
     <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
       Cancelar
     </CTAButton>
