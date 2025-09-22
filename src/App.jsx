@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/COLE_SUA_URL_AQUI/exec";
 
 /* ================== CONFIG ================== */
 const CONFIG = {
@@ -208,7 +208,7 @@ function Pricing({ onStart }) {
                 {p.features.map((f) => <li key={f}>{f}</li>)}
               </ul>
               <div className="mt-5 flex flex-col items-center gap-1">
-                <CTAButton onClick={onStart} disabled={true} title="Temporariamente indisponível (teste)">{p.cta}</CTAButton>
+                <CTAButton onClick={onStart} disabled={p.disabled}>{p.cta}</CTAButton>
                 {p.disabled && <span className="text-xs text-slate-500">Em breve</span>}
               </div>
             </div>
@@ -935,7 +935,7 @@ function FormWizard({ open, onClose }) {
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
-    <CTAButton onClick={() => window.location.href = CONFIG.checkout.stripeUrl} disabled={!agreed || !CONFIG.checkout.stripeUrl}>
+    <CTAButton onClick={() => window.location.href = CONFIG.checkout.stripeUrl} disabled={!agreed || !CONFIG.checkout.stripeUrl} disabled={true} title="Temporariamente indisponível para testes">
       Pagar US$ 1,360 (Stripe)
     </CTAButton>
     <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
