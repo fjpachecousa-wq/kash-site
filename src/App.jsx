@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/COLE_SUA_URL_AQUI/exec";
 
 /* ================== CONFIG ================== */
 const CONFIG = {
