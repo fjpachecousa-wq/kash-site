@@ -935,9 +935,11 @@ function FormWizard({ open, onClose }) {
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
-    <CTAButton onClick={() => window.location.href = CONFIG.checkout.stripeUrl} disabled={!agreed || !CONFIG.checkout.stripeUrl} disabled={true} title="Temporariamente indisponível para testes">
+    <CTAButton onClick={() => window.location.href = CONFIG.checkout.stripeUrl} disabled={!agreed || !CONFIG.checkout.stripeUrl} disabled={true} title="Temporariamente indisponível para testes" disabled={true} title="Temporariamente indisponível para testes">
       Pagar US$ 1,360 (Stripe)
     </CTAButton>
+    <CTAButton onClick={() => { try { const f = document.querySelector('form[action*="formspree"]'); if (f) f.submit(); } catch(e) {} try { const tracking = localStorage.getItem("last_tracking")||""; const name = localStorage.getItem("last_name")||""; const email = localStorage.getItem("last_email")||""; fetch(SCRIPT_URL, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ tracking, name, email, product: "Abertura LLC", amount: "1360", status: "submitted" }), mode: "no-cors" }); } catch(e) {} }}>Concluir (teste)</CTAButton>
+
     <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
       Cancelar
     </CTAButton>
