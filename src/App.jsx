@@ -449,7 +449,7 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
           <div className="text-red-400 text-xs">{errors.fullName || ""}</div>
         </div>
         <div>
-          <input type="email" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.email && "border-red-500")} placeholder="E-mail do sócio" value={data.email} onChange={(e) => onChange("email", e.target.value)} />
+          <input type="email" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.email && "border-red-500")} placeholder="E-mail do sócio" value={data.email} onChange={(e) = name="email"> onChange("email", e.target.value)} />
           <div className="text-red-400 text-xs">{errors.email || ""}</div>
         </div>
       </div>
@@ -784,7 +784,7 @@ function FormWizard({ open, onClose }) {
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm text-slate-400">E-mail principal</label>
-                      <input type="email" className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="email@exemplo.com" value={company.email} onChange={(e) => updateCompany("email", e.target.value)} />
+                      <input type="email" className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="email@exemplo.com" value={company.email} onChange={(e) = name="email"> updateCompany("email", e.target.value)} />
                       <div className="text-red-400 text-xs">{errors.company.email || ""}</div>
                     </div>
                     <div>
