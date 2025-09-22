@@ -7,24 +7,19 @@
   <style>
     body{margin:0;background:#0f172a;color:#e2e8f0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu;display:flex;min-height:100vh;align-items:center;justify-content:center}
     .card{background:#111827;border:1px solid #1f2937;border-radius:16px;padding:24px;max-width:560px;box-shadow:0 10px 30px rgba(0,0,0,.35);text-align:center}
-    h1{margin:0 0 12px;font-size:24px;color:#fca5a5}
+    h1{margin:0 0 12px;font-size:24px;color:#f87171} /* vermelho suave para diferenciar */
     p{margin:6px 0;line-height:1.5}
     .actions{display:flex;gap:10px;justify-content:center;margin-top:14px;flex-wrap:wrap}
     a{display:inline-block;padding:10px 16px;border-radius:10px;border:1px solid #334155;color:#e2e8f0;text-decoration:none}
     a:hover{background:#1f2937}
   </style>
-  <script>
-    // Remove a confirmação de pagamento
-    (function(){ try { localStorage.removeItem('kash_paid'); } catch(e) {} })();
-  </script>
 </head>
 <body>
   <div class="card">
     <h1>Pagamento cancelado</h1>
-    <p>Você pode revisar as informações e tentar novamente.</p>
+    <p>O pagamento foi cancelado. Você pode retornar à página inicial e tentar novamente quando quiser.</p>
     <div class="actions">
-      <a href="javascript:history.back()">Voltar</a>
-      <a href="/">Ir para o início</a>
+      <a href="/">Voltar ao início</a>
     </div>
   </div>
 </body>
