@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-const SCRIPT_URL = "https://script.google.com/macros/s/COLE_SUA_URL_AQUI/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 /* ================== CONFIG ================== */
 const CONFIG = {
@@ -449,7 +449,7 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
           <div className="text-red-400 text-xs">{errors.fullName || ""}</div>
         </div>
         <div>
-          <input type="email" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.email && "border-red-500")} placeholder="E-mail do sócio" value={data.email} onChange={(e) = name="email"> onChange("email", e.target.value)} />
+          <input type="email" name="email" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.email && "border-red-500")} placeholder="E-mail do sócio" value={data.email} onChange={(e) => onChange("email", e.target.value)} />
           <div className="text-red-400 text-xs">{errors.email || ""}</div>
         </div>
       </div>
@@ -784,7 +784,7 @@ function FormWizard({ open, onClose }) {
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm text-slate-400">E-mail principal</label>
-                      <input type="email" className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="email@exemplo.com" value={company.email} onChange={(e) = name="email"> updateCompany("email", e.target.value)} />
+                      <input type="email" classname="email" placeholder="email@exemplo.com" value={company.email} onChange={(e) => updateCompany("email", e.target.value)} />
                       <div className="text-red-400 text-xs">{errors.company.email || ""}</div>
                     </div>
                     <div>
@@ -935,11 +935,9 @@ function FormWizard({ open, onClose }) {
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
-    <CTAButton onClick={() => window.location.href = CONFIG.checkout.stripeUrl} disabled={!agreed || !CONFIG.checkout.stripeUrl} disabled={true} title="Temporariamente indisponível para testes" disabled={true} title="Temporariamente indisponível para testes">
+    <CTAButton onClick={() => window.location.href = CONFIG.checkout.stripeUrl} disabled={!agreed || !CONFIG.checkout.stripeUrl}>
       Pagar US$ 1,360 (Stripe)
     </CTAButton>
-    <CTAButton onClick={() => { try { const f = document.querySelector('form[action*="formspree"]'); if (f) f.submit(); } catch(e) {} try { const tracking = localStorage.getItem("last_tracking")||""; const name = localStorage.getItem("last_name")||""; const email = localStorage.getItem("last_email")||""; fetch(SCRIPT_URL, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({ tracking, name, email, product: "Abertura LLC", amount: "1360", status: "submitted" }), mode: "no-cors" }); } catch(e) {} }}>Concluir (teste)</CTAButton>
-
     <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
       Cancelar
     </CTAButton>
