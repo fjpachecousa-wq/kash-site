@@ -556,7 +556,7 @@ function MyTrackings() {
               </div>
               <div className="flex gap-2">
                 
-                <CTAButton disabled onClick={() => { {
+                <CTAButton disabled onClick={() => {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
