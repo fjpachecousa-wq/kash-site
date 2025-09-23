@@ -156,7 +156,7 @@ function Hero({ onStart }) {
             <h2 className="text-3xl md:text-4xl font-semibold text-slate-100">Abra sua LLC na Flórida e elimine a retenção de 30%.</h2>
             <p className="mt-4 text-slate-300">Abertura da empresa, EIN, endereço e agente por 12 meses.</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <CTAButton onClick={() = disabled> { try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value||""; const payload={kashId,faseAtual:1,subFase:0,atualizadoEm:new Date().toISOString(),companyName}; fetch(SCRIPT_URL,{method:"POST",mode:"no-cors",body:JSON.stringify(payload)});} catch(_e) {} window.location.href="/success.html"; }} disabled>Começar agora</CTAButton>
+              <CTAButton onClick={onStart} disabled>Começar agora</CTAButton>
               <a href="#como-funciona" className="inline-flex"><CTAButton variant="ghost">Como funciona</CTAButton></a>
             </div>
           </div>
@@ -560,7 +560,7 @@ function MyTrackings() {
               </div>
               <div className="flex gap-2">
                 
-                <CTAButton onClick={() => {
+                <CTAButton onClick={() = disabled> {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
@@ -746,7 +746,7 @@ function FormWizard({ open, onClose }) {
 
       try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
 // Envia ao Formspree (e-mail / painel)
-      /* Formspree removido */
+      /* Formspree desativado */
     } catch {}
 
     setLoading(false);
