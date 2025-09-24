@@ -197,7 +197,7 @@ function Hero({ onStart }) {
             <h2 className="text-3xl md:text-4xl font-semibold text-slate-100">Abra sua LLC na Flórida e elimine a retenção de 30%.</h2>
             <p className="mt-4 text-slate-300">Abertura da empresa, EIN, endereço e agente por 12 meses.</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              /* Handler original (preservado): { onStart}>Começar agora</CTAButton>
+              <CTAButton onClick={onStart}>Começar agora</CTAButton>
               <a href="#como-funciona" className="inline-flex"><CTAButton variant="ghost">Como funciona</CTAButton></a>
             </div>
           </div>
@@ -981,11 +981,7 @@ await fetch(CONFIG.formspreeEndpoint, {
     <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={async () => { try { /* FORMspree bloco desativado INÍCIO
-const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);}
-FORMspree bloco desativado FIM */ rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {}  } */
-
-              <CTAButton onClick={async () => { const kashId = (localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName = document.querySelector('input[name="companyName"]')?.value || ""; await KASH_sendToSheets({ action:"upsert", kashId, companyName, faseAtual:1, subFase:null }); try { window.location.href="/success.html"; } catch(_) {} }}>
+    <CTAButton onClick={async () => { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
