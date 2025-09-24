@@ -114,7 +114,7 @@ function saveTrackingShortcut(kashId) {
     const key = "kash.tracking.shortcuts";
     const list = JSON.parse(localStorage.getItem(key) || "[]");
     if (!list.includes(kashId)) list.unshift(kashId);
-    localStorage.setItem(key, JSON.stringify(list.slice(0, 20);
+    localStorage.setItem(key, JSON.stringify(list.slice(0, 20)));
   } catch {}
 }
 function getTrackingShortcuts() {
@@ -628,7 +628,7 @@ function MyTrackings() {
               </div>
               <div className="flex gap-2">
                 
-                <CTAButton onClick={() => >   {
+                <CTAButton onClick={() =>  >   {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
@@ -678,7 +678,7 @@ function AdminPanel() {
       <div className="max-w-4xl mx-auto px-4">
         <div className="flex items-center justify-between">
           <SectionTitle title="Painel interno (admin)" subtitle="Adicionar atualizações de status aos trackings salvos neste navegador." />
-          <button className="text-xs text-emerald-400 hover:underline" onClick={() => >   setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
+          <button className="text-xs text-emerald-400 hover:underline" onClick={() =>  >   setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
         </div>
         {!open ? null : (
           <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900 p-4">
@@ -909,7 +909,7 @@ await fetch(CONFIG.formspreeEndpoint, {
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton onClick={() => >   { if (validate()) setStep(2); }}>Continuar</CTAButton>
+                  <CTAButton onClick={() =>  >   { if (validate()) setStep(2); }}>Continuar</CTAButton>
                 </div>
               </div>
             )}
@@ -958,7 +958,7 @@ await fetch(CONFIG.formspreeEndpoint, {
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton variant="ghost" onClick={() => >   setStep(1)}>Voltar</CTAButton>
+                  <CTAButton variant="ghost" onClick={() =>  >   setStep(1)}>Voltar</CTAButton>
                   <CTAButton onClick={handleSubmit}>{loading ? "Enviando..." : "Enviar"}</CTAButton>
                 </div>
               </div>
@@ -1008,11 +1008,11 @@ await fetch(CONFIG.formspreeEndpoint, {
     <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() => >   { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL, {"headers":{"Content-Type":"application/json"}, "headers":{"Content-Type":"application/json"}, mode:"no-cors",method:"POST",body: JSON.stringify(buildPayload({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"})); } catch(_err) {} }}>
+    <CTAButton onClick={() =>  >   { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL, {"headers":{"Content-Type":"application/json"}, "headers":{"Content-Type":"application/json"}, mode:"no-cors",method:"POST",body: JSON.stringify(buildPayload({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"})); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
-    <CTAButton variant="ghost" onClick={() => >   { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
+    <CTAButton variant="ghost" onClick={() =>  >   { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
       Cancelar
     </CTAButton>
   </div>
@@ -1398,4 +1398,4 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
   return lines;
 }
 
-*/
+*/]))]))}}})})}
