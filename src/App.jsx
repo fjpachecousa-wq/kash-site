@@ -397,6 +397,44 @@ function _signatureBlockEN(names) {
 
 
 function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], company, members = [] }) {
+  // Normaliza fonte de dados
+  const _company =
+    company ||
+    ((typeof data !== "undefined" && data.company) ? data.company :
+     (typeof result !== "undefined" && result.company) ? result.company :
+     { companyName });
+
+  const _members = (Array.isArray(members) && members.length)
+    ? members
+    : (Array.isArray(memberNames) && memberNames.length
+        ? memberNames.map(n => ({ fullName: n }))
+        : ((typeof result !== "undefined" && Array.isArray(result.members)) ? result.members : [])
+      );
+
+  const names = _members.map(p => p.fullName || p.name).filter(Boolean);
+
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const marginX = 40;
+  const marginY = 40;
+
+  // Cabeçalho
+  doc.setFont("Times", "Bold");
+  doc.setFontSize(12);
+  doc.text("KASH Corporate Solutions", marginX, marginY);
+  doc.setFont("Times", "Normal");
+  doc.setFontSize(10);
+  doc.text(`Tracking: ${tracking}`, marginX, marginY + 16);
+  doc.text(`Date: ${new Date(dateISO || Date.now()).toLocaleDateString("pt-BR")}`, marginX, marginY + 30);
+
+  // Título
+  doc.setFont("Times", "Bold");
+  doc.setFontSize(14);
+  doc.text("Contrato (EN + PT juntos)", marginX, marginY + 60);
+
+  // Corpo básico (mantém estrutura existente após esta função)
+  return { doc, names, company: _company };
+}
+) {
   // Prefer provided objects; fallback to global state if available
   const _company = company || (typeof data!=="undefined" && data.company) || (typeof result!=="undefined" && result.company) || { companyName };
   const _members = (members && members.length)
