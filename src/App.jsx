@@ -88,11 +88,10 @@ async function apiGetProcesso(kashId){
   if(!r.ok) throw new Error("not_found");
   return r.json();
 }
-async function apiUpsert({kashId, companyName, atualizadoEm}){
-  const r = await sendToSheets({action:"upsert", kashId, companyName, faseAtual:1, subFase:null, atualizadoEm: atualizadoEm || new Date().toISOString() })
-  });
-  if(!r.ok) throw new Error("upsert_failed");
-  return r.json();
+async function apiUpsert({kashId, companyName, atualizadoEm}) {
+  const r = await sendToSheets({ action: "upsert", kashId, companyName, faseAtual: 1, subFase: null, atualizadoEm: atualizadoEm || new Date().toISOString() });
+  if (r && r.ok === false) throw new Error("upsert_failed");
+  return r;
 }
 async function apiUpdate({kashId, faseAtual, subFase, status, note}){
   const r = await fetch(PROCESSO_API,{
