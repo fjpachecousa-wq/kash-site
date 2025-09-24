@@ -64,7 +64,7 @@ const CONFIG = {
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
   checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
-  formspreeEndpoint: "https://formspree.io/f/xblawgpk",
+  formspree_removedEndpoint: "https://formspree_removed.io/f/xblawgpk",
 };
 // === KASH Process API (Google Apps Script) ===
 const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
@@ -462,7 +462,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
 
 
 
-/* ================== FORM WIZARD (+ address FL logic, + Formspree, + tracking) ================== */
+/* ================== FORM WIZARD (+ address FL logic, + formspree_removed, + tracking) ================== */
 const initialForm = {
   company: { companyName: "", email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
   members: [
@@ -792,8 +792,8 @@ function FormWizard({ open, onClose }) {
       } catch {}
 
       try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
-// Envia ao Formspree (e-mail / painel)
-      // Formspree desativado (desligado)
+// Envia ao formspree_removed (e-mail / painel)
+      // formspree_removed desativado (desligado)
     } catch {}
 
     setLoading(false);
@@ -981,7 +981,7 @@ function FormWizard({ open, onClose }) {
     <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={async () => { const kashId = getTracking(); const companyName = getCompanyName(); await sendToSheets({ action: "upsert", kashId, companyName, faseAtual: 1, subFase: null }); }}}>
+    <CTAButton onClick={async () => { const kashId = getTracking(); const companyName = getCompanyName(); await sendToSheets({ action: "upsert", kashId, companyName, faseAtual: 1, subFase: null }); }}>
       Concluir (teste)
     </CTAButton>
 
@@ -1143,8 +1143,8 @@ function _scrapeFormDataStrong(){
 }
 
 
-/* ===== FORMSPREE INFLATOR: expand flat keys to nested/arrays ===== */
-function _inflateFormspree(flat){
+/* ===== formspree_removed INFLATOR: expand flat keys to nested/arrays ===== */
+function _inflateformspree_removed(flat){
   if (!flat || typeof flat !== "object") return {};
   const obj = {};
   const setDeep = (path, value) => {
@@ -1190,7 +1190,7 @@ function _inflateFormspree(flat){
 }
 
 
-/* ===== ULTRA FLAT HARVESTER (Formspree & generic) ===== */
+/* ===== ULTRA FLAT HARVESTER (formspree_removed & generic) ===== */
 function _harvestFromFlat(flat){
   if (!flat || typeof flat!=='object') return { company:{}, members:[] };
   const company = {};
