@@ -1,6 +1,59 @@
 import { jsPDF } from "jspdf";
 
 
+/* KASH: light guard — evita página ficar totalmente preta */
+(function(){
+  try {
+    const s = document.createElement('style');
+    s.innerHTML = `html,body,#root{min-height:100vh;background:#0b1220}`; /* mantém seu gradiente escuro padrão */
+    document.head.appendChild(s);
+  } catch {}
+})();
+
+
+
+// === KASH: Helpers Google Sheets (inserido automaticamente) ===
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
+
+function KASH_getTracking() {
+  try {
+    const t = (localStorage.getItem("last_tracking") || localStorage.getItem("kash_last_tracking") || "").toUpperCase();
+    return t && /^KASH-[A-Z0-9]{4,}$/.test(t) ? t : "";
+  } catch { return ""; }
+}
+
+function KASH_getCompanyName() {
+  try {
+    const byName = document.querySelector('input[name="companyName"]');
+    if (byName?.value) return byName.value.trim();
+    const dataAttr = document.querySelector('[data-company-name]');
+    if (dataAttr?.value || dataAttr?.textContent) return (dataAttr.value || dataAttr.textContent).trim();
+    return "";
+  } catch { return ""; }
+}
+
+async function KASH_sendToSheets(extra={}) {
+  const payload = {
+    action: "upsert",
+    kashId: (extra.kashId || KASH_getTracking() || "").toUpperCase(),
+    companyName: extra.companyName || KASH_getCompanyName() || "",
+    faseAtual: typeof extra.faseAtual === "number" ? extra.faseAtual : 1,
+    subFase: typeof extra.subFase === "number" ? extra.subFase : null,
+    atualizadoEm: extra.atualizadoEm || new Date().toISOString(),
+  };
+  try {
+    await fetch(SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch(_) {}
+  return true;
+}
+// === Fim dos helpers ===
+
+
 // ===== KASH: Helpers Google Sheets (unificados) =====
 const SCRIPT_URL = (typeof window !== "undefined" && (window.PROCESSO_API || window.PROCESSO_API_URL))
   || (typeof PROCESSO_API_URL !== "undefined" ? PROCESSO_API_URL
