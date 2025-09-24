@@ -55,10 +55,6 @@ async function KASH_sendToSheets(extra={}) {
 
 
 // ===== KASH: Helpers Google Sheets (unificados) =====
-const SCRIPT_URL = (typeof window !== "undefined" && (window.PROCESSO_API || window.PROCESSO_API_URL))
-  || (typeof PROCESSO_API_URL !== "undefined" ? PROCESSO_API_URL
-  : (typeof PROCESSO_API !== "undefined" ? PROCESSO_API : "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec"));
-
 function getTracking() {
   try {
     const ls = (typeof localStorage !== "undefined") ? (localStorage.getItem("last_tracking") || "") : "";
