@@ -746,7 +746,7 @@ function FormWizard({ open, onClose }) {
 
       try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
 // Envia ao Formspree (e-mail / painel)
-      /* FORMspree desativado
+      /* Formspree desativado */
 /* Formspree desativado */
 */
     } catch {}
