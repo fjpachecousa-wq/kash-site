@@ -2,7 +2,7 @@ import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
 
-// === KASH Helpers (Sheets) — layout-safe ===
+// === KASH Helpers (Sheets) — BLOCO CANÔNICO ===
 const SCRIPT_URL = (typeof window !== "undefined" && (window.PROCESSO_API || window.PROCESSO_API_URL))
   || (typeof PROCESSO_API_URL !== "undefined" ? PROCESSO_API_URL
   : (typeof PROCESSO_API !== "undefined" ? PROCESSO_API : "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec"));
@@ -13,13 +13,15 @@ function KASH_getTracking() {
     return v && v.startsWith("KASH-") ? v : "";
   } catch { return ""; }
 }
+
 function KASH_getCompanyName() {
   try {
     const el = document.querySelector('input[name="companyName"]');
     return (el?.value || "").trim();
   } catch { return ""; }
 }
-async function KASH_sendToSheets(extra={}) {
+
+async function KASH_sendToSheets(extra = {}) {
   const payload = {
     action: "upsert",
     kashId: (extra.kashId || KASH_getTracking() || "").toUpperCase(),
@@ -41,29 +43,6 @@ async function KASH_sendToSheets(extra={}) {
 // === fim helpers ===
 
 
-// === KASH Helpers (Sheets) — layout-safe ===
-
-
-async ) {
-  const payload = {
-    action: "upsert",
-    kashId: (extra.kashId || KASH_getTracking() || "").toUpperCase(),
-    companyName: extra.companyName || KASH_getCompanyName() || "",
-    faseAtual: typeof extra.faseAtual === "number" ? extra.faseAtual : 1,
-    subFase: typeof extra.subFase === "number" ? extra.subFase : null,
-    atualizadoEm: extra.atualizadoEm || new Date().toISOString(),
-  };
-  try {
-    await fetch(SCRIPT_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-  } catch {}
-  return true;
-}
-// === fim helpers ===
 
 /* ================== CONFIG ================== */
 const CONFIG = {
