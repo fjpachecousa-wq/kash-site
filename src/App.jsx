@@ -1,79 +1,7 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-
-// === KASH Helpers (Sheets) — layout-safe ===
-const SCRIPT_URL = (typeof window !== "undefined" && (window.PROCESSO_API || window.PROCESSO_API_URL))
-  || (typeof PROCESSO_API_URL !== "undefined" ? PROCESSO_API_URL
-  : (typeof PROCESSO_API !== "undefined" ? PROCESSO_API : "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec"));
-
-function KASH_getTracking() {
-  try {
-    const v = (localStorage.getItem("last_tracking") || localStorage.getItem("kash_last_tracking") || "").toUpperCase();
-    return v && v.startsWith("KASH-") ? v : "";
-  } catch { return ""; }
-}
-function KASH_getCompanyName() {
-  try {
-    const el = document.querySelector('input[name="companyName"]');
-    return (el?.value || "").trim();
-  } catch { return ""; }
-}
-async function KASH_sendToSheets(extra={}) {
-  const payload = {
-    action: "upsert",
-    kashId: (extra.kashId || KASH_getTracking() || "").toUpperCase(),
-    companyName: extra.companyName || KASH_getCompanyName() || "",
-    faseAtual: typeof extra.faseAtual === "number" ? extra.faseAtual : 1,
-    subFase: typeof extra.subFase === "number" ? extra.subFase : null,
-    atualizadoEm: extra.atualizadoEm || new Date().toISOString(),
-  };
-  try {
-    await fetch(SCRIPT_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-  } catch {}
-  return true;
-}
-// === fim helpers ===
-
-
-// === KASH Helpers (Sheets) — layout-safe ===
-function KASH_getTracking() {
-  try {
-    const v = (localStorage.getItem("last_tracking") || localStorage.getItem("kash_last_tracking") || "").toUpperCase();
-    return v && v.startsWith("KASH-") ? v : "";
-  } catch { return ""; }
-}
-function KASH_getCompanyName() {
-  try {
-    const el = document.querySelector('input[name="companyName"]');
-    return (el?.value || "").trim();
-  } catch { return ""; }
-}
-async function KASH_sendToSheets(extra={}) {
-  const payload = {
-    action: "upsert",
-    kashId: (extra.kashId || KASH_getTracking() || "").toUpperCase(),
-    companyName: extra.companyName || KASH_getCompanyName() || "",
-    faseAtual: typeof extra.faseAtual === "number" ? extra.faseAtual : 1,
-    subFase: typeof extra.subFase === "number" ? extra.subFase : null,
-    atualizadoEm: extra.atualizadoEm || new Date().toISOString(),
-  };
-  try {
-    await fetch(SCRIPT_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-  } catch {}
-  return true;
-}
-// === fim helpers ===
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 /* ================== CONFIG ================== */
 const CONFIG = {
@@ -81,7 +9,7 @@ const CONFIG = {
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
   checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
-  formspreeEndpoint: "",
+  formspreeEndpoint: "https://formspree.io/f/xblawgpk",
 };
 // === KASH Process API (Google Apps Script) ===
 const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
@@ -632,7 +560,7 @@ function MyTrackings() {
               </div>
               <div className="flex gap-2">
                 
-                <CTAButton onClick={async () => {
+                <CTAButton onClick={() =>  {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
@@ -682,7 +610,7 @@ function AdminPanel() {
       <div className="max-w-4xl mx-auto px-4">
         <div className="flex items-center justify-between">
           <SectionTitle title="Painel interno (admin)" subtitle="Adicionar atualizações de status aos trackings salvos neste navegador." />
-          <button className="text-xs text-emerald-400 hover:underline" onClick={async () => setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
+          <button className="text-xs text-emerald-400 hover:underline" onClick={() =>  setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
         </div>
         {!open ? null : (
           <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900 p-4">
@@ -818,13 +746,7 @@ function FormWizard({ open, onClose }) {
 
       try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
 // Envia ao Formspree (e-mail / painel)
-      /* FORMspree desativado
-await fetch(CONFIG.formspreeEndpoint, {
-        method: "POST",
-        headers: { "Accept": "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-*/
+      // Formspree desativado (desligado)
     } catch {}
 
     setLoading(false);
@@ -913,7 +835,7 @@ await fetch(CONFIG.formspreeEndpoint, {
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton onClick={async () => { if (validate()) setStep(2); }}>Continuar</CTAButton>
+                  <CTAButton onClick={() =>  { if (validate()) setStep(2); }}>Continuar</CTAButton>
                 </div>
               </div>
             )}
@@ -962,7 +884,7 @@ await fetch(CONFIG.formspreeEndpoint, {
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton variant="ghost" onClick={async () => setStep(1)}>Voltar</CTAButton>
+                  <CTAButton variant="ghost" onClick={() =>  setStep(1)}>Voltar</CTAButton>
                   <CTAButton onClick={handleSubmit}>{loading ? "Enviando..." : "Enviar"}</CTAButton>
                 </div>
               </div>
@@ -1012,11 +934,11 @@ await fetch(CONFIG.formspreeEndpoint, {
     <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={async () => { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
+    <CTAButton onClick={() =>  { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
-    <CTAButton variant="ghost" onClick={async () => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
+    <CTAButton variant="ghost" onClick={() =>  { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
       Cancelar
     </CTAButton>
   </div>
