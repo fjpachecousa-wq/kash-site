@@ -1,75 +1,6 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-// ===== KASH Sheets Wrapper (refactor) =====
-const PROCESSO_API_URL = (typeof window !== "undefined" && window.PROCESSO_API) ? window.PROCESSO_API
-  : (typeof SCRIPT_URL !== "undefined" ? SCRIPT_URL : undefined);
-
-function getTracking() {
-  try {
-    const a = (typeof localStorage !== "undefined") ? (localStorage.getItem("last_tracking") || "") : "";
-    const b = (typeof document !== "undefined") ? (document.querySelector('input[name="tracking"]')?.value || "") : "";
-    const c = (typeof document !== "undefined") ? (document.querySelector('input[name="kashId"]')?.value || "") : "";
-    return (a || b || c || "").toString().trim().toUpperCase();
-  } catch { return ""; }
-}
-function getCompanyName() {
-  try {
-    const a = (typeof document !== "undefined") ? (document.querySelector('input[name="companyName"]')?.value || "") : "";
-    const b = (typeof document !== "undefined") ? (document.querySelector('input[name="empresa"]')?.value || "") : "";
-    return (a || b || "").toString().trim();
-  } catch { return ""; }
-}
-function buildPayload(extra) {
-  const k = getTracking();
-  const c = getCompanyName();
-  return {
-    kashId: k, kashID: k, kashld: k,
-    companyName: c, company: c,
-    ...(extra && typeof extra === "object" ? extra : {}),
-  };
-}
-async function sendToSheets(extra) {
-  if (!PROCESSO_API_URL) throw new Error("PROCESSO_API_URL_missing");
-  const body = JSON.stringify(buildPayload(extra));
-  const r = await fetch(PROCESSO_API_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body,
-  });
-  // Quando published como web app com "Anyone", r.ok pode ser true/false. Não quebrar a UX.
-  try { return await r.json(); } catch { return { ok: r.ok }; }
-}
-// ===== end wrapper =====
-
-// ===== KASH helpers (auto-injected) =====
-function getTracking() {
-  const ls = (typeof localStorage !== 'undefined') ? (localStorage.getItem("last_tracking") || "") : "";
-  const inpA = (typeof document !== 'undefined') ? (document.querySelector('input[name="tracking"]')?.value || "") : "";
-  const inpB = (typeof document !== 'undefined') ? (document.querySelector('input[name="kashId"]')?.value || "") : "";
-  const raw = (ls || inpA || inpB || "").toString().trim();
-  return raw ? raw.toUpperCase() : "";
-}
-function getCompanyName() {
-  const a = (typeof document !== 'undefined') ? (document.querySelector('input[name="companyName"]')?.value || "") : "";
-  const b = (typeof document !== 'undefined') ? (document.querySelector('input[name="empresa"]')?.value || "") : "";
-  return (a || b || "").toString().trim();
-}
-function buildPayload(extra) {
-  const k = getTracking();
-  const c = getCompanyName();
-  const base = (extra && typeof extra === "object") ? extra : {};
-  return {
-    ...base,
-    kashId: k,
-    companyName: c,
-    kashID: k,
-    kashld: k,
-    company: c
-  };
-}
-// ===== end helpers =====
-
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 /* ================== CONFIG ================== */
@@ -86,26 +17,26 @@ const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJd
 async function apiGetProcesso(kashId){
   const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
   if(!r.ok) throw new Error("not_found");
-  return r;
+  return r.json();
 }
-async function apiUpsert({kashId, companyName, atualizadoEm}) {
-  const r = await sendToSheets({ action: "upsert", kashId, companyName, faseAtual: 1, subFase: null, atualizadoEm: atualizadoEm || new Date().toISOString() });
-  if (r && r.ok === false) throw new Error("upsert_failed");
-  return r;
-}
-async function apiUpdate({ kashId, faseAtual, subFase = null, status = "", atualizadoEm }) {
-  const r = await sendToSheets({
-    action: "update",
-    kashId,
-    faseAtual,
-    subFase,
-    status,
-    atualizadoEm: atualizadoEm || new Date().toISOString()
+async function apiUpsert({kashId, companyName, atualizadoEm}){
+  const r = await fetch(PROCESSO_API,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ action:"upsert", kashId, companyName, faseAtual:1, subFase:null, atualizadoEm: atualizadoEm || new Date().toISOString() })
   });
-  if (r && r.ok === false) throw new Error("update_failed");
-  return r;
+  if(!r.ok) throw new Error("upsert_failed");
+  return r.json();
 }
-
+async function apiUpdate({kashId, faseAtual, subFase, status, note}){
+  const r = await fetch(PROCESSO_API,{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ action:"update", kashId, faseAtual, subFase: subFase || null, status: status || "Atualização", note: note || "" })
+  });
+  if(!r.ok) throw new Error("update_failed");
+  return r.json();
+}
 
 // ===== PRIVACIDADE: armazenar apenas códigos de tracking (atalhos) =====
 function saveTrackingShortcut(kashId) {
@@ -397,68 +328,111 @@ function _signatureBlockEN(names) {
 
 
 function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], company, members = [] }) {
-  // Normaliza fonte de dados
-  const _company =
-    company ||
-    ((typeof data !== "undefined" && data.company) ? data.company :
-     (typeof result !== "undefined" && result.company) ? result.company :
-     { companyName });
-
-  const _members = (Array.isArray(members) && members.length)
+  // Prefer provided objects; fallback to global state if available
+  const _company = company || (typeof data!=="undefined" && data.company) || (typeof result!=="undefined" && result.company) || { companyName };
+  const _members = (members && members.length)
     ? members
-    : (Array.isArray(memberNames) && memberNames.length
-        ? memberNames.map(n => ({ fullName: n }))
-        : ((typeof result !== "undefined" && Array.isArray(result.members)) ? result.members : [])
-      );
-
+    : (Array.isArray(memberNames) && memberNames.length ? memberNames.map(n=>({fullName:n})) 
+       : (typeof data!=="undefined" && Array.isArray(data.members) ? data.members 
+          : (typeof result!=="undefined" && Array.isArray(result.members) ? result.members : [])));
   const names = _members.map(p => p.fullName || p.name).filter(Boolean);
 
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const marginX = 40;
-  const marginY = 40;
+  const maxW = doc.internal.pageSize.getWidth() - marginX * 2;
+  const pageH = doc.internal.pageSize.getHeight();
 
-  // Cabeçalho
-  doc.setFont("Times", "Bold");
-  doc.setFontSize(12);
-  doc.text("KASH Corporate Solutions", marginX, marginY);
+  // --- PAGE 1: Application Data ---
   doc.setFont("Times", "Normal");
-  doc.setFontSize(10);
-  doc.text(`Tracking: ${tracking}`, marginX, marginY + 16);
-  doc.text(`Date: ${new Date(dateISO || Date.now()).toLocaleDateString("pt-BR")}`, marginX, marginY + 30);
+  doc.setFontSize(12);
+  let y = 60;
+  const appLines = _applicationDataLines({ company: _company, members: _members, tracking, dateISO });
+  const appWrapped = doc.splitTextToSize(appLines.join("\n"), maxW);
+  for (const line of appWrapped) {
+    if (y > pageH - 60) { doc.addPage(); y = 60; }
+    doc.text(line, marginX, y);
+    y += 16;
+  }
 
-  // Título
-  doc.setFont("Times", "Bold");
-  doc.setFontSize(14);
-  doc.text("Contrato (EN + PT juntos)", marginX, marginY + 60);
+  // --- EN Contract ---
+  doc.addPage(); y = 60;
+  const enBody = buildContractEN(companyName);
+  const enText = (Array.isArray(enBody) ? enBody.join("\n") : String(enBody));
+  const en = [
+    `SERVICE AGREEMENT – ${companyName}`,
+    "",
+    enText,
+    "",
+    _acceptanceClauseEN(names, dateISO),
+    "",
+    "SIGNATURES",
+    _signatureBlockEN(names)
+  ].join("\n");
+  const enLines = doc.splitTextToSize(en, maxW);
+  for (const line of enLines) {
+    if (y > pageH - 60) { doc.addPage(); y = 60; }
+    doc.text(line, marginX, y);
+    y += 16;
+  }
 
-  // Corpo básico (mantém estrutura existente após esta função)
-  return { doc, names, company: _company };
+  // --- PT Contract ---
+  doc.addPage(); y = 60;
+  const ptBody = buildContractPT(companyName);
+  const ptText = (Array.isArray(ptBody) ? ptBody.join("\n") : String(ptBody));
+  const pt = [
+    `CONTRATO DE PRESTAÇÃO DE SERVIÇOS – ${companyName}`,
+    "",
+    ptText,
+    "",
+    _acceptanceClausePT(names, dateISO),
+    "",
+    "ASSINATURAS",
+    _signatureBlockPT(names)
+  ].join("\n");
+  const ptLines = doc.splitTextToSize(pt, maxW);
+  for (const line of ptLines) {
+    if (y > pageH - 60) { doc.addPage(); y = 60; }
+    doc.text(line, marginX, y);
+    y += 16;
+  }
+
+  // Footer (local date/time + tracking + page numbers)
+  const dt = _localDateFromISO(dateISO);
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+    doc.setFontSize(8);
+    doc.text(`${dt.toLocaleDateString()} ${dt.toLocaleTimeString()} · TN: ${tracking}`, 40, ph - 20);
+    doc.text(`Page ${i} of ${pageCount}`, pw - 40, ph - 20, { align: "right" });
+  }
+
+  const fileName = `KASH_Contract_${tracking}.pdf`;
+  doc.save(fileName);
+  return { doc, fileName };
 }
+
+
+
+/* ================== FORM WIZARD (+ address FL logic, + Formspree, + tracking) ================== */
+const initialForm = {
+  company: { companyName: "", email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
+  members: [
+    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
+    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
+  ],
+  accept: { responsibility: false, limitations: false },
+};
 function formReducer(state, action) {
   switch (action.type) {
-    case "UPDATE_COMPANY":
-      return { ...state, company: { ...state.company, [action.field]: action.value } };
-    case "UPDATE_US_ADDRESS":
-      return { ...state, company: { ...state.company, usAddress: { ...state.company.usAddress, [action.field]: action.value } } };
-    case "UPDATE_MEMBER":
-      return {
-        ...state,
-        members: state.members.map((m, i) => i === action.index ? { ...m, [action.field]: action.value } : m)
-      };
-    case "ADD_MEMBER":
-      return {
-        ...state,
-        members: [
-          ...state.members,
-          { fullName: "", nationality: "", document: "", issuer: "", docExpiry: "", birthdate: "", percent: "" }
-        ]
-      };
-    case "REMOVE_MEMBER":
-      return { ...state, members: state.members.filter((_, i) => i !== action.index) };
-    case "TOGGLE_ACCEPT":
-      return { ...state, accept: { ...state.accept, [action.key]: action.value } };
-    default:
-      return state;
+    case "UPDATE_COMPANY": return { ...state, company: { ...state.company, [action.field]: action.value } };
+    case "UPDATE_US_ADDRESS": return { ...state, company: { ...state.company, usAddress: { ...state.company.usAddress, [action.field]: action.value } } };
+    case "UPDATE_MEMBER": return { ...state, members: state.members.map((m,i)=> i===action.index ? { ...m, [action.field]: action.value } : m) };
+    case "ADD_MEMBER": return { ...state, members: [...state.members, { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" }] };
+    case "REMOVE_MEMBER": return { ...state, members: state.members.filter((_,i)=> i!==action.index) };
+    case "TOGGLE_ACCEPT": return { ...state, accept: { ...state.accept, [action.key]: action.value } };
+    default: return state;
   }
 }
 
@@ -586,7 +560,7 @@ function MyTrackings() {
               </div>
               <div className="flex gap-2">
                 
-                <CTAButton onClick={() =>  >   {
+                <CTAButton onClick={() =>  {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
@@ -636,7 +610,7 @@ function AdminPanel() {
       <div className="max-w-4xl mx-auto px-4">
         <div className="flex items-center justify-between">
           <SectionTitle title="Painel interno (admin)" subtitle="Adicionar atualizações de status aos trackings salvos neste navegador." />
-          <button className="text-xs text-emerald-400 hover:underline" onClick={() =>  >   setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
+          <button className="text-xs text-emerald-400 hover:underline" onClick={() =>  setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
         </div>
         {!open ? null : (
           <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900 p-4">
@@ -772,13 +746,7 @@ function FormWizard({ open, onClose }) {
 
       try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
 // Envia ao Formspree (e-mail / painel)
-      /* FORMspree desativado
-await fetch(CONFIG.formspreeEndpoint, {
-        method: "POST",
-        headers: { "Accept": "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
+      // Formspree desativado (desligado)
     } catch {}
 
     setLoading(false);
@@ -867,7 +835,7 @@ await fetch(CONFIG.formspreeEndpoint, {
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton onClick={() =>  >   { if (validate()) setStep(2); }}>Continuar</CTAButton>
+                  <CTAButton onClick={() =>  { if (validate()) setStep(2); }}>Continuar</CTAButton>
                 </div>
               </div>
             )}
@@ -916,7 +884,7 @@ await fetch(CONFIG.formspreeEndpoint, {
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton variant="ghost" onClick={() =>  >   setStep(1)}>Voltar</CTAButton>
+                  <CTAButton variant="ghost" onClick={() =>  setStep(1)}>Voltar</CTAButton>
                   <CTAButton onClick={handleSubmit}>{loading ? "Enviando..." : "Enviar"}</CTAButton>
                 </div>
               </div>
@@ -966,11 +934,11 @@ await fetch(CONFIG.formspreeEndpoint, {
     <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() =>  >   { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL, {"headers":{"Content-Type":"application/json"}, "headers":{"Content-Type":"application/json"}, mode:"no-cors",method:"POST",body: JSON.stringify(buildPayload({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"})); } catch(_err) {} }}>
+    <CTAButton onClick={() =>  { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
-    <CTAButton variant="ghost" onClick={() =>  >   { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
+    <CTAButton variant="ghost" onClick={() =>  { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
       Cancelar
     </CTAButton>
   </div>
@@ -1355,5 +1323,3 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
   lines.push("");
   return lines;
 }
-
-*/]))]))}}})})}
