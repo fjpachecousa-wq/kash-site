@@ -156,7 +156,7 @@ function Hero({ onStart }) {
             <h2 className="text-3xl md:text-4xl font-semibold text-slate-100">Abra sua LLC na Flórida e elimine a retenção de 30%.</h2>
             <p className="mt-4 text-slate-300">Abertura da empresa, EIN, endereço e agente por 12 meses.</p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <CTAButton onClick={onStart} disabled>Começar agora</CTAButton>
+              <CTAButton onClick={onStart}>Começar agora</CTAButton>
               <a href="#como-funciona" className="inline-flex"><CTAButton variant="ghost">Como funciona</CTAButton></a>
             </div>
           </div>
@@ -560,7 +560,7 @@ function MyTrackings() {
               </div>
               <div className="flex gap-2">
                 
-                <CTAButton onClick={() = disabled> > {
+                <CTAButton onClick={() => {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
