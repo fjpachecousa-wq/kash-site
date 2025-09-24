@@ -21,13 +21,19 @@ async function apiGetProcesso(kashId){
 }
 async function apiUpsert({kashId, companyName, atualizadoEm}){
   const r = await fetch(PROCESSO_API,{
-/* bloco Formspree removido */
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ action:"upsert", kashId, companyName, faseAtual:1, subFase:null, atualizadoEm: atualizadoEm || new Date().toISOString() })
+  });
   if(!r.ok) throw new Error("upsert_failed");
   return r.json();
 }
 async function apiUpdate({kashId, faseAtual, subFase, status, note}){
   const r = await fetch(PROCESSO_API,{
-/* bloco Formspree removido */
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ action:"update", kashId, faseAtual, subFase: subFase || null, status: status || "Atualização", note: note || "" })
+  });
   if(!r.ok) throw new Error("update_failed");
   return r.json();
 }
@@ -554,7 +560,7 @@ function MyTrackings() {
               </div>
               <div className="flex gap-2">
                 
-                <CTAButton onClick={() => {
+                <CTAButton onClick={() =>  {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
@@ -604,7 +610,7 @@ function AdminPanel() {
       <div className="max-w-4xl mx-auto px-4">
         <div className="flex items-center justify-between">
           <SectionTitle title="Painel interno (admin)" subtitle="Adicionar atualizações de status aos trackings salvos neste navegador." />
-          <button className="text-xs text-emerald-400 hover:underline" onClick={() => setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
+          <button className="text-xs text-emerald-400 hover:underline" onClick={() =>  setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
         </div>
         {!open ? null : (
           <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900 p-4">
@@ -740,13 +746,199 @@ function FormWizard({ open, onClose }) {
 
       try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
 // Envia ao Formspree (e-mail / painel)
-      // Formspree desativado
-/* Formspree desativado
-// /* Formspree removido */ } catch(_err) {} }}>
+      // Formspree desativado (desligado)
+    } catch {}
+
+    setLoading(false);
+    setStep(3);
+  }
+
+  const { company, members, accept } = form;
+  const dateISO = todayISO();
+
+  return (
+    <div className={classNames("fixed inset-0 z-50", !open && "hidden")}>
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="absolute inset-0 overflow-y-auto">
+        <div className="max-w-3xl mx-auto px-4 pt-16 pb-10">
+          <div className="rounded-2xl bg-slate-950/90 backdrop-blur border border-slate-800 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+              <div className="text-slate-300 font-medium">Formulário de Aplicação LLC</div>
+              <button className="text-slate-400 hover:text-slate-200" onClick={onClose}>Fechar</button>
+            </div>
+
+            {/* Step 1 */}
+            {step === 1 && (
+              <div className="p-6">
+                <h4 className="text-slate-100 font-medium">1/2 — Dados iniciais da LLC</h4>
+                <div className="mt-4 grid gap-4">
+                  <div>
+                    <label className="block text-sm text-slate-400">Nome da LLC</label>
+                    <input className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Ex.: SUNSHINE MEDIA LLC" value={company.companyName} onChange={(e) => updateCompany("companyName", e.target.value)} />
+                    <div className="text-red-400 text-xs">{errors.company.companyName || ""}</div>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm text-slate-400">E-mail principal</label>
+                      <input type="email" className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="email@exemplo.com" value={company.email} onChange={(e) => updateCompany("email", e.target.value)} />
+                      <div className="text-red-400 text-xs">{errors.company.email || ""}</div>
+                    </div>
+                    <div>
+                      <label className="block text-sm text-slate-400">Telefone principal</label>
+                      <input className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="+1 (305) 123-4567" value={company.phone} onChange={(e) => updateCompany("phone", e.target.value)} />
+                      <div className="text-red-400 text-xs">{errors.company.phone || ""}</div>
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <label className="inline-flex items-center gap-2 text-sm text-slate-300">
+                      <input type="checkbox" checked={company.hasFloridaAddress} onChange={(e) => updateCompany("hasFloridaAddress", e.target.checked)} />
+                      <span>Possui endereço físico na Flórida?</span>
+                    </label>
+                  </div>
+                  {company.hasFloridaAddress ? (
+                    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+                      <div className="text-slate-300 font-medium mb-2">Endereço da empresa (USA)</div>
+                      <input className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Address Line 1" value={company.usAddress.line1} onChange={(e) => updateUS("line1", e.target.value)} />
+                      <div className="grid md:grid-cols-3 gap-2 mt-2">
+                        <input className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="City" value={company.usAddress.city} onChange={(e) => updateUS("city", e.target.value)} />
+                        <select className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" value={company.usAddress.state} onChange={(e) => updateUS("state", e.target.value)}>
+                          {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+                        </select>
+                        <input className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="ZIP Code" value={company.usAddress.zip} onChange={(e) => updateUS("zip", e.target.value)} />
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
+                      Não possui endereço na Flórida — usaremos o <b>endereço e agente da KASH por 12 meses</b> incluídos no pacote.
+                    </div>
+                  )}
+                </div>
+
+                <h4 className="mt-6 text-slate-100 font-medium">Sócios (mínimo 2)</h4>
+                <div className="mt-2 space-y-4">
+                  {members.map((m, i) => (
+                    <MemberCard key={i} index={i} data={m} canRemove={members.length > 2} onChange={(field, value) => updateMember(i, field, value)} onRemove={() => removeMember(i)} errors={errors.members[i] || {}} />
+                  ))}
+                </div>
+                <button onClick={addMember} className="mt-4 text-emerald-400 hover:underline">+ Adicionar sócio</button>
+
+                <div className="mt-6 space-y-3 text-sm text-slate-300">
+                  <label className="flex items-start gap-2">
+                    <input type="checkbox" checked={accept.responsibility} onChange={(e) => toggleAccept("responsibility", e.target.checked)} />
+                    <span>Declaro que todas as informações prestadas são verdadeiras e completas e assumo total responsabilidade civil e legal por elas.</span>
+                  </label>
+                  <label className={classNames("flex items-start gap-2", company.hasFloridaAddress && "opacity-50")}>
+                    <input type="checkbox" checked={accept.limitations} disabled={company.hasFloridaAddress} onChange={(e) => toggleAccept("limitations", e.target.checked)} />
+                    <span>Estou ciente de que endereço e agente da KASH são válidos por 12 meses.</span>
+                  </label>
+                  {company.hasFloridaAddress && <div className="text-[12px] text-slate-400 -mt-2">* Indisponível porque você informou endereço próprio na Flórida.</div>}
+                </div>
+
+                <div className="mt-6 flex justify-end gap-3">
+                  <CTAButton onClick={() =>  { if (validate()) setStep(2); }}>Continuar</CTAButton>
+                </div>
+              </div>
+            )}
+
+            {/* Step 2 — Revisão */}
+            {step === 2 && (
+              <div className="p-6">
+                <h4 className="text-slate-100 font-medium">2/2 — Revisão</h4>
+                <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+                  <div className="text-slate-300 font-medium">Empresa</div>
+                  <div className="mt-2 text-sm text-slate-400">
+                    <div><span className="text-slate-500">Nome: </span>{company.companyName || "—"}</div>
+                    <div className="grid md:grid-cols-2 gap-x-6">
+                      <div><span className="text-slate-500">E-mail: </span>{company.email || "—"}</div>
+                      <div><span className="text-slate-500">Telefone: </span>{company.phone || "—"}</div>
+                    </div>
+                    {company.hasFloridaAddress ? (
+                      <div className="mt-1">
+                        <div className="text-slate-400">Endereço informado:</div>
+                        <div>{company.usAddress.line1}</div>
+                        <div>{company.usAddress.city}, {company.usAddress.state} {company.usAddress.zip}</div>
+                      </div>
+                    ) : (
+                      <div className="mt-1">Será utilizado o endereço e agente da KASH por 12 meses.</div>
+                    )}
+                  </div>
+                </div>
+                <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 mt-4">
+                  <div className="text-slate-300 font-medium">Sócios</div>
+                  <div className="mt-2 space-y-3 text-sm text-slate-400">
+                    {members.map((m, i) => (
+                      <div key={i}>
+                        <div className="font-medium text-slate-300">Sócio {i + 1}: {m.fullName || "—"}</div>
+                        <div className="grid md:grid-cols-2 gap-x-6 gap-y-1">
+                          <div><span className="text-slate-500">E-mail: </span>{m.email || "—"}</div>
+                          <div><span className="text-slate-500">Telefone: </span>{m.phone || "—"}</div>
+                          <div><span className="text-slate-500">Documento: </span>{m.passport || "—"}</div>
+                          <div><span className="text-slate-500">Órgão emissor: </span>{m.issuer || "—"}</div>
+                          <div><span className="text-slate-500">Validade doc.: </span>{m.docExpiry || "—"}</div>
+                          <div><span className="text-slate-500">Nascimento: </span>{m.birthdate || "—"}</div>
+                          <div><span className="text-slate-500">Participação: </span>{m.percent || "—"}%</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="mt-6 flex justify-end gap-3">
+                  <CTAButton variant="ghost" onClick={() =>  setStep(1)}>Voltar</CTAButton>
+                  <CTAButton onClick={handleSubmit}>{loading ? "Enviando..." : "Enviar"}</CTAButton>
+                </div>
+              </div>
+            )}
+
+            {/* Step 3 — Tracking + Contrato (EN + PT na mesma tela) */}
+            {step === 3 && (
+              <div className="p-6">
+                <div className="text-center">
+                  <h4 className="text-slate-100 font-medium">Dados enviados com sucesso</h4>
+                  <p className="text-slate-400 mt-2">Seu código de acompanhamento (tracking):</p>
+                  <div className="mt-2 text-emerald-400 text-xl font-bold">{tracking}</div>
+                </div>
+
+                <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="text-slate-300 font-medium">Contrato (EN + PT juntos)</div>
+                    
+                  </div>
+
+                  {/* EN + PT in the same view */}
+                  <div className="mt-4 text-[13px] leading-6 text-slate-200 space-y-6 max-h-[55vh] overflow-auto pr-2">
+                    <div>
+                      <div className="font-semibold text-slate-100">SERVICE AGREEMENT – KASH Corporate Solutions</div>
+                      <div className="mt-2 space-y-2 text-slate-300">
+                        {buildContractEN(company.companyName).slice(1).map((p, idx) => <p key={idx}>{p}</p>)}
+                      </div>
+                    </div>
+                    <div className="text-slate-400">— Portuguese Version Below —</div>
+                    <div>
+                      <div className="font-semibold text-slate-100">CONTRATO — KASH Corporate Solutions</div>
+                      <div className="mt-2 space-y-2 text-slate-300">
+                        {buildContractPT(company.companyName).map((p, idx) => <p key={idx}>{p}</p>)}
+                      </div>
+                    </div>
+                    <div className="text-xs text-slate-400 border-t border-slate-700 pt-2">
+                      Tracking: {tracking} · Date: {dateISO}
+                    </div>
+                  </div>
+
+                  <label className="mt-4 flex items-center gap-2 text-sm text-slate-300">
+                    <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
+                    <span>Li e concordo com os termos acima.</span>
+                  </label>
+                  <div className="mt-4 flex items-center justify-between gap-2">
+  <div className="flex items-center gap-2">
+    <CTAButton disabled title="Temporariamente indisponível (testes)">
+  Pagar US$ 1,360 (Stripe)
+</CTAButton>
+    <CTAButton onClick={() =>  { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
-    <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
+    <CTAButton variant="ghost" onClick={() =>  { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
       Cancelar
     </CTAButton>
   </div>
