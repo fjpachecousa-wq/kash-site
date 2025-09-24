@@ -1277,8 +1277,38 @@ function _scanDocumentForms(){
   return out;
 }
 
-function AppInner() {
-  const [open, setOpen] = useState(false);
+export default function App() {
+  
+// Força tema claro no documento para evitar tela escura por CSS global
+React.useEffect(() => {
+  try {
+    const html = document.documentElement;
+    html.classList.remove('dark');
+    const root = document.getElementById('root');
+    [html, document.body, root].forEach((el) => {
+      if (!el) return;
+      el.style.background = '#ffffff';
+      el.style.color = '#111111';
+    });
+    // injeta CSS de reforço
+    const style = document.createElement('style');
+    style.setAttribute('data-kash-light-force', 'true');
+    style.innerHTML = `
+      html, body, #root { background: #ffffff !important; color: #111111 !important; min-height: 100vh; }
+      .bg-slate-950, .bg-slate-900, .bg-black, .dark\:bg-slate-950 { background: #ffffff !important; }
+      .text-slate-100, .text-white { color: #111111 !important; }
+      .border-slate-800, .border-slate-700 { border-color: #e5e7eb !important; }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      try {
+        const s = document.querySelector('style[data-kash-light-force="true"]');
+        if (s) s.remove();
+      } catch {}
+    };
+  } catch {}
+}, []);
+const [open, setOpen] = useState(false);
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200">
       <Hero onStart={() => setOpen(true)} />
@@ -1369,44 +1399,4 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
   }
   lines.push("");
   return lines;
-}
-
-
-/* ===== ErrorBoundary para diagnosticar tela preta ===== */
-class ErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props);
-    this.state = { hasError: false, error: null };
-  }
-  static getDerivedStateFromError(error) {
-    return { hasError: true, error };
-  }
-  componentDidCatch(error, info) {
-    console.error("Erro de runtime capturado pelo ErrorBoundary:", error, info);
-  }
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div style={{ padding: 16, fontFamily: "ui-sans-serif, system-ui", background: "#fff", color: "#111", minHeight: "100vh" }}>
-          <h1 style={{ marginBottom: 8 }}>Ocorreu um erro na página</h1>
-          <p style={{ marginBottom: 12, color: "#444" }}>Copie a mensagem abaixo e me envie:</p>
-          <pre style={{ whiteSpace: "pre-wrap", background: "#f5f5f5", padding: 12, borderRadius: 8, border: "1px solid #ddd" }}>
-            {String(this.state.error || "")}
-          </pre>
-        </div>
-      );
-    }
-    return this.props.children;
-  }
-}
-
-/* ===== Export default com boundary e fundo claro para diagnóstico ===== */
-export default function App() {
-  return (
-    <div style={{ background:"#ffffff", color:"#111111" }}>
-      <ErrorBoundary>
-        <AppInner />
-      </ErrorBoundary>
-    </div>
-  );
 }
