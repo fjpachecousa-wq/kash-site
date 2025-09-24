@@ -434,14 +434,31 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   // Corpo básico (mantém estrutura existente após esta função)
   return { doc, names, company: _company };
 }
+function formReducer(state, action) {
   switch (action.type) {
-    case "UPDATE_COMPANY": return { ...state, company: { ...state.company, [action.field]: action.value } };
-    case "UPDATE_US_ADDRESS": return { ...state, company: { ...state.company, usAddress: { ...state.company.usAddress, [action.field]: action.value } } };
-    case "UPDATE_MEMBER": return { ...state, members: state.members.map((m,i)=> i===action.index ? { ...m, [action.field]: action.value } : m) };
-    case "ADD_MEMBER": return { ...state, members: [...state.members, { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" }] };
-    case "REMOVE_MEMBER": return { ...state, members: state.members.filter((_,i)=> i!==action.index) };
-    case "TOGGLE_ACCEPT": return { ...state, accept: { ...state.accept, [action.key]: action.value } };
-    default: return state;
+    case "UPDATE_COMPANY":
+      return { ...state, company: { ...state.company, [action.field]: action.value } };
+    case "UPDATE_US_ADDRESS":
+      return { ...state, company: { ...state.company, usAddress: { ...state.company.usAddress, [action.field]: action.value } } };
+    case "UPDATE_MEMBER":
+      return {
+        ...state,
+        members: state.members.map((m, i) => i === action.index ? { ...m, [action.field]: action.value } : m)
+      };
+    case "ADD_MEMBER":
+      return {
+        ...state,
+        members: [
+          ...state.members,
+          { fullName: "", nationality: "", document: "", issuer: "", docExpiry: "", birthdate: "", percent: "" }
+        ]
+      };
+    case "REMOVE_MEMBER":
+      return { ...state, members: state.members.filter((_, i) => i !== action.index) };
+    case "TOGGLE_ACCEPT":
+      return { ...state, accept: { ...state.accept, [action.key]: action.value } };
+    default:
+      return state;
   }
 }
 
