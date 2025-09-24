@@ -1,6 +1,47 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
+// ===== KASH Sheets Wrapper (refactor) =====
+const PROCESSO_API_URL = (typeof window !== "undefined" && window.PROCESSO_API) ? window.PROCESSO_API
+  : (typeof SCRIPT_URL !== "undefined" ? SCRIPT_URL : undefined);
+
+function getTracking() {
+  try {
+    const a = (typeof localStorage !== "undefined") ? (localStorage.getItem("last_tracking") || "") : "";
+    const b = (typeof document !== "undefined") ? (document.querySelector('input[name="tracking"]')?.value || "") : "";
+    const c = (typeof document !== "undefined") ? (document.querySelector('input[name="kashId"]')?.value || "") : "";
+    return (a || b || c || "").toString().trim().toUpperCase();
+  } catch { return ""; }
+}
+function getCompanyName() {
+  try {
+    const a = (typeof document !== "undefined") ? (document.querySelector('input[name="companyName"]')?.value || "") : "";
+    const b = (typeof document !== "undefined") ? (document.querySelector('input[name="empresa"]')?.value || "") : "";
+    return (a || b || "").toString().trim();
+  } catch { return ""; }
+}
+function buildPayload(extra) {
+  const k = getTracking();
+  const c = getCompanyName();
+  return {
+    kashId: k, kashID: k, kashld: k,
+    companyName: c, company: c,
+    ...(extra && typeof extra === "object" ? extra : {}),
+  };
+}
+async function sendToSheets(extra) {
+  if (!PROCESSO_API_URL) throw new Error("PROCESSO_API_URL_missing");
+  const body = JSON.stringify(buildPayload(extra);
+  const r = await fetch(PROCESSO_API_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body,
+  });
+  // Quando published como web app com "Anyone", r.ok pode ser true/false. Não quebrar a UX.
+  try { return await r.json(); } catch { return { ok: r.ok }; }
+}
+// ===== end wrapper =====
+
 // ===== KASH helpers (auto-injected) =====
 function getTracking() {
   const ls = (typeof localStorage !== 'undefined') ? (localStorage.getItem("last_tracking") || "") : "";
@@ -48,10 +89,7 @@ async function apiGetProcesso(kashId){
   return r.json();
 }
 async function apiUpsert({kashId, companyName, atualizadoEm}){
-  const r = await fetch(PROCESSO_API,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify(buildPayload({ action:"upsert", kashId, companyName, faseAtual:1, subFase:null, atualizadoEm: atualizadoEm || new Date().toISOString() })
+  const r = await sendToSheets({action:"upsert", kashId, companyName, faseAtual:1, subFase:null, atualizadoEm: atualizadoEm || new Date().toISOString() })
   });
   if(!r.ok) throw new Error("upsert_failed");
   return r.json();
@@ -73,7 +111,7 @@ function saveTrackingShortcut(kashId) {
     const key = "kash.tracking.shortcuts";
     const list = JSON.parse(localStorage.getItem(key) || "[]");
     if (!list.includes(kashId)) list.unshift(kashId);
-    localStorage.setItem(key, JSON.stringify(list.slice(0, 20)));
+    localStorage.setItem(key, JSON.stringify(list.slice(0, 20);
   } catch {}
 }
 function getTrackingShortcuts() {
@@ -360,8 +398,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   const _company = company || (typeof data!=="undefined" && data.company) || (typeof result!=="undefined" && result.company) || { companyName };
   const _members = (members && members.length)
     ? members
-    : (Array.isArray(memberNames) && memberNames.length ? memberNames.map(n=>({fullName:n})) 
-       : (typeof data!=="undefined" && Array.isArray(data.members) ? data.members 
+    : (Array.isArray(memberNames) && memberNames.length ? memberNames.map(n=>({fullName:n})? data.members 
           : (typeof result!=="undefined" && Array.isArray(result.members) ? result.members : [])));
   const names = _members.map(p => p.fullName || p.name).filter(Boolean);
 
@@ -780,7 +817,7 @@ await fetch(CONFIG.formspreeEndpoint, {
         headers: { "Accept": "application/json", "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-*/
+
     } catch {}
 
     setLoading(false);
