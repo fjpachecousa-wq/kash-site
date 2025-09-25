@@ -1,6 +1,58 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
+// ====== KASH DATA HELPERS (não altera layout) ======
+const getTrackingId = () => {
+  let t = (localStorage.getItem("last_tracking") || "").toString().trim();
+  if (!t) {
+    const inp = document.querySelector('input[name="tracking"], input[id="tracking"]');
+    if (inp && inp.value) t = String(inp.value).trim();
+  }
+  return t.toUpperCase();
+};
+
+const getCompanyName = () => {
+  const c1 = document.querySelector('input[name="companyName"]')?.value;
+  const c2 = document.querySelector('input[name="empresaNome"]')?.value;
+  const c3 = document.querySelector('#companyName')?.value;
+  return (c1 || c2 || c3 || "").toString().trim();
+};
+
+const formatBRDateTime = (d=new Date()) => {
+  const pad = n => String(n).padStart(2,"0");
+  const dd = pad(d.getDate());
+  const mm = pad(d.getMonth()+1);
+  const yyyy = d.getFullYear();
+  const HH = pad(d.getHours());
+  const MM = pad(d.getMinutes());
+  const SS = pad(d.getSeconds());
+  return `${dd}/${mm}/${yyyy} ${HH}:${MM}:${SS}`;
+};
+
+const sendToSheets = (extra = {}) => {
+  try {
+    const kashId = getTrackingId();
+    const companyName = getCompanyName();
+    const base = {
+      kashId,
+      hashId: kashId,
+      companyName,
+      empresaNome: companyName,
+      atualizadoEm: formatBRDateTime(new Date()),
+      timeTemp: formatBRDateTime(new Date()),
+      faseAtual: 1,
+      subFase: 0,
+    };
+    const body = { ...base, ...extra };
+    if ('payload' in body) { try { delete body.payload; } catch(_) {} }
+    if (!window.SCRIPT_URL) { console.warn("SCRIPT_URL ausente."); return; }
+    sendToSheets();
+  } catch (e) {
+    console.warn("Falha no sendToSheets:", e);
+  }
+};
+// ====== FIM KASH DATA HELPERS ======
+
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 /* ================== CONFIG ================== */
@@ -934,7 +986,7 @@ function FormWizard({ open, onClose }) {
     <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() =>  { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
+    <CTAButton onClick={() =>  { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; sendToSheets({kashId,faseAtual:1,atualizadoEm:new Date(),mode:"no-cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
