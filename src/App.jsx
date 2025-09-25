@@ -1,15 +1,119 @@
 import { jsPDF } from "jspdf";
-import React, { useReducer, useState, useEffect } from "react";
 
+
+/* KASH: light guard — evita página ficar totalmente preta */
+(function(){
+  try {
+    const s = document.createElement('style');
+    s.innerHTML = `html,body,#root{min-height:100vh;background:#0b1220}`; /* mantém seu gradiente escuro padrão */
+    document.head.appendChild(s);
+  } catch {}
+})();
+
+
+
+// === KASH: Helpers Google Sheets (inserido automaticamente) ===
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
+function KASH_getTracking() {
+  try {
+    const t = (localStorage.getItem("last_tracking") || localStorage.getItem("kash_last_tracking") || "").toUpperCase();
+    return t && /^KASH-[A-Z0-9]{4,}$/.test(t) ? t : "";
+  } catch { return ""; }
+}
+
+function KASH_getCompanyName() {
+  try {
+    const byName = document.querySelector('input[name="companyName"]');
+    if (byName?.value) return byName.value.trim();
+    const dataAttr = document.querySelector('[data-company-name]');
+    if (dataAttr?.value || dataAttr?.textContent) return (dataAttr.value || dataAttr.textContent).trim();
+    return "";
+  } catch { return ""; }
+}
+
+async function KASH_sendToSheets(extra={}) {
+  const payload = {
+    action: "upsert",
+    kashId: (extra.kashId || KASH_getTracking() || "").toUpperCase(),
+    companyName: extra.companyName || KASH_getCompanyName() || "",
+    faseAtual: typeof extra.faseAtual === "number" ? extra.faseAtual : 1,
+    subFase: typeof extra.subFase === "number" ? extra.subFase : null,
+    atualizadoEm: extra.atualizadoEm || new Date().toISOString(),
+  };
+  try {
+    await fetch(SCRIPT_URL, {
+      method: "POST",
+      mode: "no-cors",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  } catch(_) {}
+  return true;
+}
+// === Fim dos helpers ===
+
+
+// ===== KASH: Helpers Google Sheets (unificados) =====
+function getTracking() {
+  try {
+    const ls = (typeof localStorage !== "undefined") ? (localStorage.getItem("last_tracking") || "") : "";
+    if (ls && ls.trim()) return ls.trim().toUpperCase();
+  } catch {}
+  if (typeof document !== "undefined") {
+    const fromInput = (document.querySelector('input[name="tracking"], input[name="kashId"]')?.value || "").trim();
+    if (fromInput) return fromInput.toUpperCase();
+  }
+  return "";
+}
+
+function getCompanyName() {
+  if (typeof document === "undefined") return "";
+  const byName = document.querySelector('input[name="companyName"]')?.value?.trim();
+  if (byName) return byName;
+  const byData = document.querySelector("[data-company-name]")?.value?.trim();
+  if (byData) return byData;
+  return "";
+}
+
+function buildPayload(extra = {}) {
+  const kashId = (extra.kashId || getTracking() || "").toUpperCase();
+  const companyName = extra.companyName || getCompanyName() || "";
+  const base = {
+    action: "upsert",
+    kashId,
+    companyName,
+    faseAtual: (typeof extra.faseAtual === "number") ? extra.faseAtual : 1,
+    subFase: (typeof extra.subFase === "number") ? extra.subFase : null,
+    atualizadoEm: extra.atualizadoEm || new Date().toISOString(),
+  };
+  return { ...base, ...extra };
+}
+
+async function sendToSheets(extra = {}) {
+  if (!SCRIPT_URL) {
+    console.error("SCRIPT_URL/PROCESSO_API_URL ausente.");
+    return { ok: false, error: "no_script_url" };
+  }
+  try {
+    const r = await await sendToSheets({});
+    return { ok: true };
+  } catch (e) {
+    console.error("Erro ao enviar para Sheets:", e);
+    return { ok: false, error: String(e) };
+  }
+}
+// ===== Fim helpers Google Sheets =====
+
+import React, { useReducer, useState, useEffect } from "react";
+// SCRIPT_URL declarado nos helpers acima
 /* ================== CONFIG ================== */
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
   checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
-  formspreeEndpoint: "https://formspree.io/f/xblawgpk",
+  formspree_removedEndpoint: "https://formspree_removed.io/f/xblawgpk",
 };
 // === KASH Process API (Google Apps Script) ===
 const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
@@ -20,20 +124,12 @@ async function apiGetProcesso(kashId){
   return r.json();
 }
 async function apiUpsert({kashId, companyName, atualizadoEm}){
-  const r = await fetch(PROCESSO_API,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ action:"upsert", kashId, companyName, faseAtual:1, subFase:null, atualizadoEm: atualizadoEm || new Date().toISOString() })
-  });
+  const r = await await sendToSheets({});
   if(!r.ok) throw new Error("upsert_failed");
   return r.json();
 }
 async function apiUpdate({kashId, faseAtual, subFase, status, note}){
-  const r = await fetch(PROCESSO_API,{
-    method:"POST",
-    headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ action:"update", kashId, faseAtual, subFase: subFase || null, status: status || "Atualização", note: note || "" })
-  });
+  const r = await await sendToSheets({});
   if(!r.ok) throw new Error("update_failed");
   return r.json();
 }
@@ -415,7 +511,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
 
 
 
-/* ================== FORM WIZARD (+ address FL logic, + Formspree, + tracking) ================== */
+/* ================== FORM WIZARD (+ address FL logic, + formspree_removed, + tracking) ================== */
 const initialForm = {
   company: { companyName: "", email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
   members: [
@@ -560,7 +656,7 @@ function MyTrackings() {
               </div>
               <div className="flex gap-2">
                 
-                <CTAButton onClick={() =>  {
+                <CTAButton onClick={() =>   {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
@@ -610,7 +706,7 @@ function AdminPanel() {
       <div className="max-w-4xl mx-auto px-4">
         <div className="flex items-center justify-between">
           <SectionTitle title="Painel interno (admin)" subtitle="Adicionar atualizações de status aos trackings salvos neste navegador." />
-          <button className="text-xs text-emerald-400 hover:underline" onClick={() =>  setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
+          <button className="text-xs text-emerald-400 hover:underline" onClick={() =>   setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
         </div>
         {!open ? null : (
           <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900 p-4">
@@ -745,8 +841,8 @@ function FormWizard({ open, onClose }) {
       } catch {}
 
       try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
-// Envia ao Formspree (e-mail / painel)
-      // Formspree desativado (desligado)
+// Envia ao formspree_removed (e-mail / painel)
+      // formspree_removed desativado (desligado)
     } catch {}
 
     setLoading(false);
@@ -835,7 +931,7 @@ function FormWizard({ open, onClose }) {
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton onClick={() =>  { if (validate()) setStep(2); }}>Continuar</CTAButton>
+                  <CTAButton onClick={() =>   { if (validate()) setStep(2); }}>Continuar</CTAButton>
                 </div>
               </div>
             )}
@@ -884,7 +980,7 @@ function FormWizard({ open, onClose }) {
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton variant="ghost" onClick={() =>  setStep(1)}>Voltar</CTAButton>
+                  <CTAButton variant="ghost" onClick={() =>   setStep(1)}>Voltar</CTAButton>
                   <CTAButton onClick={handleSubmit}>{loading ? "Enviando..." : "Enviar"}</CTAButton>
                 </div>
               </div>
@@ -934,11 +1030,11 @@ function FormWizard({ open, onClose }) {
     <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() =>  { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
+    <CTAButton onClick={async () => { const kashId = getTracking(); const companyName = getCompanyName(); await sendToSheets({ action: "upsert", kashId, companyName, faseAtual: 1, subFase: null }); }}>
       Concluir (teste)
     </CTAButton>
 
-    <CTAButton variant="ghost" onClick={() =>  { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
+    <CTAButton variant="ghost" onClick={() =>   { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
       Cancelar
     </CTAButton>
   </div>
@@ -1096,8 +1192,8 @@ function _scrapeFormDataStrong(){
 }
 
 
-/* ===== FORMSPREE INFLATOR: expand flat keys to nested/arrays ===== */
-function _inflateFormspree(flat){
+/* ===== formspree_removed INFLATOR: expand flat keys to nested/arrays ===== */
+function _inflateformspree_removed(flat){
   if (!flat || typeof flat !== "object") return {};
   const obj = {};
   const setDeep = (path, value) => {
@@ -1143,7 +1239,7 @@ function _inflateFormspree(flat){
 }
 
 
-/* ===== ULTRA FLAT HARVESTER (Formspree & generic) ===== */
+/* ===== ULTRA FLAT HARVESTER (formspree_removed & generic) ===== */
 function _harvestFromFlat(flat){
   if (!flat || typeof flat!=='object') return { company:{}, members:[] };
   const company = {};
@@ -1231,7 +1327,37 @@ function _scanDocumentForms(){
 }
 
 export default function App() {
-  const [open, setOpen] = useState(false);
+  
+// Força tema claro no documento para evitar tela escura por CSS global
+React.useEffect(() => {
+  try {
+    const html = document.documentElement;
+    html.classList.remove('dark');
+    const root = document.getElementById('root');
+    [html, document.body, root].forEach((el) => {
+      if (!el) return;
+      el.style.background = '#ffffff';
+      el.style.color = '#111111';
+    });
+    // injeta CSS de reforço
+    const style = document.createElement('style');
+    style.setAttribute('data-kash-light-force', 'true');
+    style.innerHTML = `
+      html, body, #root { background: #ffffff !important; color: #111111 !important; min-height: 100vh; }
+      .bg-slate-950, .bg-slate-900, .bg-black, .dark\:bg-slate-950 { background: #ffffff !important; }
+      .text-slate-100, .text-white { color: #111111 !important; }
+      .border-slate-800, .border-slate-700 { border-color: #e5e7eb !important; }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      try {
+        const s = document.querySelector('style[data-kash-light-force="true"]');
+        if (s) s.remove();
+      } catch {}
+    };
+  } catch {}
+}, []);
+const [open, setOpen] = useState(false);
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200">
       <Hero onStart={() => setOpen(true)} />
@@ -1323,3 +1449,72 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
   lines.push("");
   return lines;
 }
+
+
+
+/* KASH patch — NÃO REMOVE NADA, só adiciona runtime para Sheets e bloqueio Formspree */
+(function(){
+  try{
+    const ENDPOINT = (window.PROCESSO_API_URL || window.PROCESSO_API || "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec");
+
+    function getTracking(){
+      try{
+        const v = (localStorage.getItem("last_tracking") || localStorage.getItem("kash_last_tracking") || "").toUpperCase();
+        return v && v.startsWith("KASH-") ? v : v;
+      }catch(_){ return ""; }
+    }
+    function getCompany(){
+      try{ return (document.querySelector('input[name="companyName"]')?.value || "").trim(); }catch(_){ return ""; }
+    }
+    async function send(extra){
+      const payload = Object.assign({
+        action: "upsert",
+        kashId: getTracking(),
+        companyName: getCompany(),
+        faseAtual: 1,
+        subFase: null,
+        atualizadoEm: new Date().toISOString()
+      }, extra||{});
+      try{
+        await fetch(ENDPOINT, {
+          method: "POST",
+          mode: "no-cors",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+      }catch(_){}
+    }
+
+    // Neutraliza qualquer fetch ao Formspree sem remover blocos da UI
+    const _fetch = window.fetch;
+    window.fetch = function(input, init){
+      try{
+        const url = (typeof input==="string") ? input : (input && input.url) || "";
+        if (/formspree/i.test(url)) { return Promise.resolve(new Response(null,{status:204})); }
+      }catch(_){}
+      return _fetch.apply(this, arguments);
+    };
+
+    // Anexa o handler ao botão "Concluir (teste)" SEM mexer no JSX
+    function attach(){
+      const btns = Array.from(document.querySelectorAll("button, a, [role='button']"));
+      for(const b of btns){
+        const txt = (b.textContent || "").trim().toLowerCase();
+        if (txt.includes("concluir") && txt.includes("teste")){
+          if (!b.__kashBound) {
+            b.__kashBound = true;
+            b.addEventListener("click", async (ev)=>{
+              try{ ev.preventDefault(); }catch(_){}
+              await send({});
+              try{ window.location.href="/success.html"; }catch(_){}
+            });
+          }
+        }
+      }
+    }
+    attach();
+    const mo = new MutationObserver(()=>attach());
+    mo.observe(document.documentElement, { childList:true, subtree:true });
+  }catch(_){}
+})();
+
