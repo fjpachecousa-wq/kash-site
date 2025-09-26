@@ -1,6 +1,46 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
+
+// === KASH META HELPERS (injeta companyName + kashId nos envios ao Apps Script) ===
+const __kash_getCompanyName = () => {
+  try {
+    const q = (s) => document.querySelector(s);
+    return (
+      q('input[name="companyName"]')?.value?.trim() ||
+      q('#companyName')?.value?.trim() ||
+      q('[data-company-name]')?.getAttribute('data-company-name')?.trim() ||
+      q('input[name="empresaNome"]')?.value?.trim() ||
+      ""
+    );
+  } catch { return ""; }
+};
+const __kash_getKashId = () => {
+  try {
+    return (
+      (localStorage.getItem("last_tracking") ||
+       localStorage.getItem("kashId") ||
+       localStorage.getItem("tracking") ||
+       "")
+    ).toUpperCase().trim();
+  } catch { return ""; }
+};
+const __kash_addMeta = (obj = {}) => {
+  try {
+    const k = __kash_getKashId();
+    const c = __kash_getCompanyName();
+    return {
+      ...obj,
+      kashId: obj.kashId || k,
+      hashId: obj.hashId || k,
+      companyName: obj.companyName || c,
+      empresaNome: obj.empresaNome || c,
+    };
+  } catch { return obj || {}; }
+};
+// === END KASH META HELPERS ===
+
+
 // ====== KASH COMPANY PATCH (somente companyName; sem alterar layout) ======
 (function(){
   function __kash_getCompanyName(){
@@ -980,7 +1020,7 @@ await fetch(CONFIG.formspreeEndpoint, {
     <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
+    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify(__kash_addMeta(__kash_addMeta({kashId,faseAtual:1,atualizadoEm:new Date())).toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
