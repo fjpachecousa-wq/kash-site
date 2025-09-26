@@ -1,86 +1,33 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-
-// ====== KASH DATA HELPERS ======
-const getTrackingId = () => {
-  const looksLikeTracking = (v) => {
-    if (!v) return false;
-    const s = String(v).trim().toUpperCase();
-    return /^KASH-[A-Z0-9]{4,}$/.test(s) || /^[A-Z0-9-]{8,}$/.test(s);
-  };
-  let t = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toString().trim();
-  if (!looksLikeTracking(t)) {
-    const inp = document.querySelector('input[name="tracking"], #tracking, [data-tracking]');
-    if (inp) {
-      const v = inp.getAttribute('data-tracking') || inp.value || inp.textContent;
-      if (looksLikeTracking(v)) t = v;
-    }
-  }
-  if (!looksLikeTracking(t)) {
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        const v = localStorage.getItem(k);
-        if (looksLikeTracking(v)) { t = v; break; }
-      }
-    } catch(_) {}
-  }
-  return (t || "").toUpperCase();
-};
-
-const getCompanyName = () => {
-  const c1 = document.querySelector('input[name="companyName"]')?.value;
-  const c2 = document.querySelector('input[name="empresaNome"]')?.value;
-  const c3 = document.querySelector('#companyName')?.value;
-  const c4 = document.querySelector('[data-company-name]')?.getAttribute('data-company-name');
-  const c5 = document.querySelector('[name*="company"]')?.value;
-  return (c1 || c2 || c3 || c4 || c5 || "").toString().trim();
-};
-
+// === KASH helpers: envio padronizado ao Google Sheets (sem alterar layout) ===
 const formatBRDateTime = (d=new Date()) => {
   const pad = n => String(n).padStart(2,"0");
-  const dd = pad(d.getDate());
-  const mm = pad(d.getMonth()+1);
-  const yyyy = d.getFullYear();
-  const HH = pad(d.getHours());
-  const MM = pad(d.getMinutes());
-  const SS = pad(d.getSeconds());
-  return `${dd}/${mm}/${yyyy} ${HH}:${MM}:${SS}`;
+  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 };
 
-const sendToSheets = (extra = {}) => {
+const sendToSheets = (dataExtra={}) => {
   try {
-    const kashId = getTrackingId();
-    const companyName = getCompanyName();
+    const kashId = (localStorage.getItem("last_tracking")||"").toUpperCase();
+    const companyName = (document.querySelector('input[name="companyName"]')?.value || dataExtra.companyName || "").trim();
     const now = new Date();
-    const base = {
+    const body = {
       kashId,
       hashId: kashId,
       companyName,
       empresaNome: companyName,
       atualizadoEm: formatBRDateTime(now),
       timeTemp: formatBRDateTime(now),
-      atualizadoEmISO: now.toISOString(),
       faseAtual: 1,
       subFase: 0,
+      ...dataExtra
     };
-    const body = { ...base, ...extra };
-    if ('payload' in body) { try { delete body.payload; } catch(_) {} }
-    if (!window.SCRIPT_URL && typeof SCRIPT_URL === "string") window.SCRIPT_URL = SCRIPT_URL;
-    if (!window.SCRIPT_URL) { console.warn("SCRIPT_URL ausente."); return; }
-    fetch(window.SCRIPT_URL, {
-      method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-  } catch (e) {
-    console.warn("Falha no sendToSheets:", e);
-  }
+    if (!window.SCRIPT_URL) return;
+    fetch(window.SCRIPT_URL, {method:"POST", mode:"no-cors", headers: {"Content-Type":"application/json"}, body: JSON.stringify(body)});
+  } catch (_e) {}
 };
-// ====== FIM KASH DATA HELPERS ======
-
+// === fim helpers ===
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
@@ -796,7 +743,8 @@ function FormWizard({ open, onClose }) {
     setLoading(true);
     const code = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
     setTracking(code);
-    const dateISO = todayISO();
+    localStorage.setItem("last_tracking", code);
+const dateISO = todayISO();
 
     const payload = {
       tracking: code,
@@ -815,7 +763,9 @@ function FormWizard({ open, onClose }) {
       // Salva localmente
       localStorage.setItem(code, JSON.stringify(payload));
 
-      // index de trackings (últimos 50)
+      
+try { sendToSheets({ kashId: code, companyName: (form.company?.companyName||"") }); } catch(_e) {}
+// index de trackings (últimos 50)
       try {
         const idxRaw = localStorage.getItem("KASH_TRACKINGS");
         const idx = idxRaw ? JSON.parse(idxRaw) : [];
@@ -1408,66 +1358,3 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
   lines.push("");
   return lines;
 }
-
-// Hook global de submit: garante envio à planilha em qualquer formulário
-document.addEventListener('submit', (ev) => {
-  try {
-    const form = ev.target;
-    if (!form || !form.matches('form')) return;
-    const extra = {};
-    const cname = form.querySelector('input[name="companyName"], input[name="empresaNome"], #companyName, [data-company-name]');
-    if (cname && (cname.value || cname.getAttribute('data-company-name'))) {
-      extra.companyName = String(cname.value || cname.getAttribute('data-company-name') || "").trim();
-    }
-    const trackingInput = form.querySelector('input[name="tracking"], #tracking, [data-tracking]');
-    if (trackingInput) {
-      const val = trackingInput.getAttribute('data-tracking') || trackingInput.value || trackingInput.textContent;
-      if (val) extra.kashId = String(val).trim().toUpperCase();
-    }
-    sendToSheets(extra);
-  } catch(_) {}
-}, true);
-
-
-
-// ====== KASH BOOTSTRAP (sem alterar layout) ======
-(function(){
-  try {
-    const params = new URLSearchParams(location.search);
-    const t = params.get("tracking") || params.get("kashId");
-    if (t && String(t).trim()) localStorage.setItem("last_tracking", String(t).trim().toUpperCase());
-  } catch(_){}
-
-  try {
-    document.addEventListener('click', (ev) => {
-      const btn = ev.target && ev.target.closest('button, a, [role="button"]');
-      if (!btn) return;
-      const txt = (btn.textContent || '').toLowerCase();
-      if (txt.includes('pagar') || txt.includes('começar agora') || btn.hasAttribute('data-kash-send')) {
-        setTimeout(() => { try { sendToSheets(); } catch(_) {} }, 0);
-      }
-    }, true);
-  } catch(_){}
-
-  try {
-    document.addEventListener('submit', (ev) => {
-      try {
-        const form = ev.target;
-        if (!form || !form.matches('form')) return;
-        const extra = {};
-        const cname = form.querySelector('input[name="companyName"], input[name="empresaNome"], #companyName, [data-company-name]');
-        if (cname && (cname.value || cname.getAttribute('data-company-name'))) {
-          extra.companyName = String(cname.value || cname.getAttribute('data-company-name') || "").trim();
-        }
-        const trackingInput = form.querySelector('input[name="tracking"], #tracking, [data-tracking]');
-        if (trackingInput) {
-          const val = trackingInput.getAttribute('data-tracking') || trackingInput.value || trackingInput.textContent;
-          if (val) extra.kashId = String(val).trim().toUpperCase();
-        }
-        sendToSheets(extra);
-      } catch(_){}
-    }, true);
-  } catch(_){}
-})();
-// ====== FIM KASH BOOTSTRAP ======
-
