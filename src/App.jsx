@@ -1,45 +1,70 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-
-// === KASH META HELPERS (injeta companyName + kashId nos envios ao Apps Script) ===
-const __kash_getCompanyName = () => {
-  try {
-    const q = (s) => document.querySelector(s);
-    return (
-      q('input[name="companyName"]')?.value?.trim() ||
-      q('#companyName')?.value?.trim() ||
-      q('[data-company-name]')?.getAttribute('data-company-name')?.trim() ||
-      q('input[name="empresaNome"]')?.value?.trim() ||
-      ""
-    );
-  } catch { return ""; }
-};
-const __kash_getKashId = () => {
-  try {
-    return (
-      (localStorage.getItem("last_tracking") ||
-       localStorage.getItem("kashId") ||
-       localStorage.getItem("tracking") ||
-       "")
-    ).toUpperCase().trim();
-  } catch { return ""; }
-};
-const __kash_addMeta = (obj = {}) => {
-  try {
-    const k = __kash_getKashId();
-    const c = __kash_getCompanyName();
-    return {
-      ...obj,
-      kashId: obj.kashId || k,
-      hashId: obj.hashId || k,
-      companyName: obj.companyName || c,
-      empresaNome: obj.empresaNome || c,
-    };
-  } catch { return obj || {}; }
-};
-// === END KASH META HELPERS ===
-
+// ====== KASH SHIM (NÃO muda layout / JSX) ======
+(function(){
+  // Lê companyName do DOM (vários seletores válidos)
+  function getCompanyName(){
+    try{
+      var q = function(s){ return document.querySelector(s); };
+      return (
+        (q('input[name="companyName"]') && q('input[name="companyName"]').value.trim()) ||
+        (q('#companyName') && q('#companyName').value.trim()) ||
+        (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
+        (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
+        ""
+      );
+    }catch(_){ return ""; }
+  }
+  // Lê kashId do localStorage
+  function getKashId(){
+    try{
+      var v = localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "";
+      return String(v).toUpperCase().trim();
+    }catch(_){ return ""; }
+  }
+  // Adiciona metadados ao JSON
+  function addMeta(obj){
+    obj = obj || {};
+    var k = getKashId();
+    var c = getCompanyName();
+    if (k && !obj.kashId) obj.kashId = k;
+    if (k && !obj.hashId) obj.hashId = k;
+    if (c && !obj.companyName) obj.companyName = c;
+    if (c && !obj.empresaNome) obj.empresaNome = c;
+    return obj;
+  }
+  // Detecta a URL do Apps Script
+  function isAppsScriptUrl(u){
+    try{
+      var su = (typeof window!=='undefined' && (window.SCRIPT_URL || (window.CONFIG && window.CONFIG.appsScriptUrl))) || (typeof SCRIPT_URL!=='undefined' && SCRIPT_URL) || "";
+      return su && String(u||"").indexOf(String(su))===0;
+    }catch(_){ return false; }
+  }
+  // Patch do fetch (uma vez só)
+  try{
+    if (typeof window!=='undefined' && !window.__kash_fetch_patched){
+      var _fetch = window.fetch;
+      window.fetch = function(input, init){
+        try{
+          var url = (typeof input==="string") ? input : (input && input.url) || "";
+          if (isAppsScriptUrl(url) && init && typeof init.body==="string" && init.body){
+            try{
+              var obj = JSON.parse(init.body);
+              init.body = JSON.stringify(addMeta(obj));
+            }catch(_){
+              // se não for JSON, empacota minimamente
+              try{ init.body = JSON.stringify(addMeta({raw:init.body})); }catch(__){}
+            }
+          }
+        }catch(_){}
+        return _fetch.apply(this, arguments);
+      };
+      window.__kash_fetch_patched = true;
+    }
+  }catch(_){}
+})();
+// ====== FIM KASH SHIM ======
 
 // ====== KASH COMPANY PATCH (somente companyName; sem alterar layout) ======
 (function(){
@@ -1020,7 +1045,7 @@ await fetch(CONFIG.formspreeEndpoint, {
     <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify(__kash_addMeta(__kash_addMeta({kashId,faseAtual:1,atualizadoEm:new Date())).toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
+    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
