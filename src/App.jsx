@@ -1,59 +1,45 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-
-// ====== KASH HELPERS (fluxo limpo, sem gambiarras) ======
-const looksLikeTracking = (v) => {
-  if (!v) return false;
-  const s = String(v).trim().toUpperCase();
-  return /^KASH-[A-Z0-9]{4,}$/.test(s) || /^[A-Z0-9-]{8,}$/.test(s);
-};
-const brDateTime = (d = new Date()) => {
-  const pad = n => String(n).padStart(2,"0");
-  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-};
-const getCompanyName = () => {
-  const c1 = document.querySelector('input[name="companyName"]')?.value;
-  const c2 = document.querySelector('input[name="empresaNome"]')?.value;
-  const c3 = document.querySelector('#companyName')?.value;
-  return (c1 || c2 || c3 || "").toString().trim();
-};
-const getTracking = () => {
-  let t = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toString().trim();
-  if (!looksLikeTracking(t)) {
-    const inp = document.querySelector('input[name="tracking"], #tracking, [data-tracking]');
-    const v = inp ? (inp.getAttribute('data-tracking') || inp.value || inp.textContent) : "";
-    if (looksLikeTracking(v)) t = v;
+// ====== KASH COMPANY PATCH (somente companyName; sem alterar layout) ======
+(function(){
+  function __kash_getCompanyName(){
+    try{
+      const c1 = document.querySelector('input[name="companyName"]')?.value;
+      const c2 = document.querySelector('input[name="empresaNome"]')?.value;
+      const c3 = document.querySelector('#companyName')?.value;
+      const c4 = document.querySelector('[data-company-name]')?.getAttribute('data-company-name');
+      const c5 = document.querySelector('[name*="company"]')?.value;
+      return (c1 || c2 || c3 || c4 || c5 || "").toString().trim();
+    } catch(_){ return ""; }
   }
-  return (t || "").toUpperCase();
-};
 
-const sendToSheets = (extra = {}) => {
-  const now = new Date();
-  const body = {
-    kashId: (extra.kashId || getTracking()).toUpperCase(),
-    hashId: (extra.kashId || getTracking()).toUpperCase(),
-    companyName: extra.companyName ?? getCompanyName(),
-    empresaNome: extra.companyName ?? getCompanyName(),
-    atualizadoEm: brDateTime(now),
-    timeTemp: brDateTime(now),
-    atualizadoEmISO: now.toISOString(),
-    faseAtual: 1,
-    subFase: 0,
-    ...extra
-  };
-  if ('payload' in body) { try { delete body.payload; } catch(_) {} }
-  const url = (window.SCRIPT_URL || (typeof SCRIPT_URL === "string" ? SCRIPT_URL : ""));
-  if (!url) { console.warn("SCRIPT_URL ausente"); return; }
-  fetch(url, {
-    method: "POST",
-    mode: "no-cors",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-};
-// ====== FIM HELPERS ======
-
+  try{
+    const __orig_fetch = window.fetch;
+    window.fetch = function(input, init){
+      try{
+        const url = (typeof input === "string") ? input : (input && input.url) ? input.url : "";
+        const target = (url || "").toString();
+        const scriptUrl = (window.SCRIPT_URL || (typeof SCRIPT_URL === "string" ? SCRIPT_URL : "")) || "";
+        if (scriptUrl && target.startsWith(scriptUrl)) {
+          if (init && init.body && typeof init.body === "string" && init.body.trim().startsWith("{")) {
+            try{
+              const obj = JSON.parse(init.body);
+              const name = __kash_getCompanyName();
+              if (name) {
+                if (!Object.prototype.hasOwnProperty.call(obj, "companyName")) obj.companyName = name;
+                if (!Object.prototype.hasOwnProperty.call(obj, "empresaNome")) obj.empresaNome = name;
+                init.body = JSON.stringify(obj);
+              }
+            }catch(_){ /* corpo não-json, ignora */ }
+          }
+        }
+      }catch(_){}
+      return __orig_fetch.apply(this, arguments);
+    };
+  }catch(_){}
+})();
+// ====== FIM KASH COMPANY PATCH ======
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
@@ -614,7 +600,7 @@ function MyTrackings() {
               </div>
               <div className="flex gap-2">
                 
-                <CTAButton onClick={() =>  {
+                <CTAButton onClick={() => {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
@@ -664,7 +650,7 @@ function AdminPanel() {
       <div className="max-w-4xl mx-auto px-4">
         <div className="flex items-center justify-between">
           <SectionTitle title="Painel interno (admin)" subtitle="Adicionar atualizações de status aos trackings salvos neste navegador." />
-          <button className="text-xs text-emerald-400 hover:underline" onClick={() =>  setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
+          <button className="text-xs text-emerald-400 hover:underline" onClick={() => setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
         </div>
         {!open ? null : (
           <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900 p-4">
@@ -800,7 +786,13 @@ function FormWizard({ open, onClose }) {
 
       try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
 // Envia ao Formspree (e-mail / painel)
-      // Formspree desativado (desligado)
+      /* FORMspree desativado
+await fetch(CONFIG.formspreeEndpoint, {
+        method: "POST",
+        headers: { "Accept": "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+*/
     } catch {}
 
     setLoading(false);
@@ -889,7 +881,7 @@ function FormWizard({ open, onClose }) {
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton onClick={() =>  { if (validate()) setStep(2); }}>Continuar</CTAButton>
+                  <CTAButton onClick={() => { if (validate()) setStep(2); }}>Continuar</CTAButton>
                 </div>
               </div>
             )}
@@ -938,7 +930,7 @@ function FormWizard({ open, onClose }) {
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton variant="ghost" onClick={() =>  setStep(1)}>Voltar</CTAButton>
+                  <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
                   <CTAButton onClick={handleSubmit}>{loading ? "Enviando..." : "Enviar"}</CTAButton>
                 </div>
               </div>
@@ -988,11 +980,11 @@ function FormWizard({ open, onClose }) {
     <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() =>  { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; sendToSheets({kashId,faseAtual:1,atualizadoEm:new Date(),mode:"no-cors"}); } catch(_err) {} }}>
+    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
-    <CTAButton variant="ghost" onClick={() =>  { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
+    <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
       Cancelar
     </CTAButton>
   </div>
