@@ -1,16 +1,19 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-// === KASH FORMS META FILLER (sem alterar layout) ===
+/* ===== KASH CLICK HOOK: envia kashId + companyName no "Concluir teste" ===== */
 (function(){
+  function getAPI(){
+    try { return (window.SCRIPT_URL || (window.CONFIG && window.CONFIG.appsScriptUrl)) || ""; } catch(_) { return ""; }
+  }
   function getCompanyName(){
     try{
-      var q = function(s){ return document.querySelector(s); };
+      var q = s => document.querySelector(s);
       var v = (q('input[name="companyName"]') && q('input[name="companyName"]').value.trim()) ||
               (q('#companyName') && q('#companyName').value.trim()) ||
               (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
               (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) || "";
-      if (!v) {
+      if (!v){
         var inputs = document.querySelectorAll('input[type="text"],input:not([type])');
         for (var i=0;i<inputs.length;i++){
           var ph = (inputs[i].placeholder||"").toLowerCase();
@@ -28,59 +31,62 @@ import React, { useReducer, useState, useEffect } from "react";
       var v = localStorage.getItem("last_tracking") ||
               localStorage.getItem("kashId") ||
               localStorage.getItem("tracking") || "";
+      if (!v){
+        var m = (document.body.innerText||"").match(/KASH-[A-Z0-9-]{4,}/i);
+        if (m && m[0]) v = m[0];
+      }
       return String(v).toUpperCase().trim();
     }catch(_){ return ""; }
   }
-  function ensureHidden(form, name){
-    var el = form.querySelector('input[name="'+name+'"]');
-    if (!el){
-      el = document.createElement("input");
-      el.type = "hidden";
-      el.name = name;
-      form.appendChild(el);
+  function textOf(el){
+    return (el.innerText||el.textContent||"").toLowerCase().replace(/\s+/g," ").trim();
+  }
+  function matchConcluir(el){
+    var t = textOf(el);
+    return t.includes("concluir test"); // casa "teste" e "test"
+  }
+  function nearestClickable(el){
+    var cur = el;
+    for (var i=0;i<6 && cur; i++, cur=cur.parentElement){
+      if (!cur) break;
+      var tag = (cur.tagName||"").toLowerCase();
+      if (tag==="button" || tag==="a" || cur.getAttribute("role")==="button") return cur;
     }
     return el;
   }
-  function fill(form){
+  function onClick(e){
     try{
-      var k = getKashId();
-      var c = getCompanyName();
-      if (k){
-        ensureHidden(form, "kashId").value = k;
-        ensureHidden(form, "hashId").value = k;
-      }
-      if (c){
-        ensureHidden(form, "companyName").value = c;
-        ensureHidden(form, "empresaNome").value = c;
+      var btn = nearestClickable(e.target);
+      if (!btn) return;
+      if (!matchConcluir(btn)) return;
+      var api = getAPI();
+      if (!api) return; // sem API, deixa fluxo normal
+      
+      // Evita submissão duplicada: fazemos o POST direto
+      e.preventDefault(); e.stopPropagation();
+      
+      var payload = {
+        kashId: getKashId(),
+        companyName: getCompanyName(),
+        faseAtual: 1,
+        subFase: 0,
+        acao: "create"
+      };
+      try {
+        fetch(api, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) })
+          .catch(function(_){ /* ignora erro de no-cors */ })
+          .finally(function(){ window.location.href="/success.html"; });
+      } catch(_){
+        window.location.href="/success.html";
       }
     }catch(_){}
   }
-  function isAppsScriptForm(form){
-    try{
-      var a = String(form.getAttribute("action")||"");
-      var su = (window && (window.SCRIPT_URL || (window.CONFIG && window.CONFIG.appsScriptUrl))) || "";
-      return a.indexOf("script.google.com/macros")>=0 || (su && a.indexOf(su)===0);
-    }catch(_){ return false; }
+  if (typeof document!=="undefined" && !window.__KASH_CLICK_HOOKED){
+    document.addEventListener("click", onClick, true);
+    window.__KASH_CLICK_HOOKED = true;
   }
-  function wire(form){
-    if (form.__kash_wired) return;
-    form.addEventListener("submit", function(){ fill(form); }, true);
-    form.addEventListener("focusout", function(){ fill(form); }, true);
-    fill(form);
-    form.__kash_wired = true;
-  }
-  function scan(){
-    var forms = document.querySelectorAll("form");
-    for (var i=0;i<forms.length;i++){
-      var f = forms[i];
-      if (isAppsScriptForm(f)) wire(f);
-    }
-  }
-  document.addEventListener("DOMContentLoaded", scan);
-  var mo = new MutationObserver(scan);
-  mo.observe(document.documentElement, {childList:true, subtree:true});
 })();
-// === FIM KASH FORMS META FILLER ===
+/* ===== FIM KASH CLICK HOOK ===== */
 
 // ====== KASH SHIM (NÃO muda layout / JSX) ======
 (function(){
