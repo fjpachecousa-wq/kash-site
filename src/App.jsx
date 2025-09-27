@@ -1,73 +1,121 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-/* ====== KASH RESOLVE FINAL (injeção mínima, sem mudar layout) ====== */
+/* ====== KASH RESOLVE SLIM (robusto, leve, sem mudar layout) ====== */
 (function(){
-  function getAPI(){
-    try { return (window.SCRIPT_URL || (window.CONFIG && window.CONFIG.appsScriptUrl)) || ""; } catch(_) { return ""; }
+  function API(){ try { return (window.SCRIPT_URL || (window.CONFIG && window.CONFIG.appsScriptUrl)) || ""; } catch(_){ return ""; } }
+  function pick(obj, keys){
+    for (var i=0;i<keys.length;i++){ var k=keys[i]; if (!k) continue;
+      var v; try{ v = k.split('.').reduce((a,c)=> (a && a[c]!==undefined) ? a[c] : undefined, obj);}catch(_){ v = undefined; }
+      if (v!=null && String(v).trim()) return String(v).trim();
+    } return "";
   }
-  function getCompanyName(){
+  function pullFromLocalStorage(keys){
     try{
-      var q = s => document.querySelector(s);
-      var v = (q('input[name="companyName"]') && q('input[name="companyName"]').value.trim()) ||
-              (q('#companyName') && q('#companyName').value.trim()) ||
-              (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
-              (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) || "";
-      if (!v){
-        var inputs = document.querySelectorAll('input[type="text"],input:not([type])');
-        for (var i=0;i<inputs.length;i++){
-          var ph = (inputs[i].placeholder||"").toLowerCase();
-          if (ph.includes("empresa") || ph.includes("company")){
-            var val = (inputs[i].value||"").trim();
-            if (val){ v = val; break; }
-          }
+      for (var i=0;i<keys.length;i++){
+        var k = keys[i]; if (!k) continue;
+        var raw = localStorage.getItem(k);
+        if (!raw) continue;
+        if (String(raw).trim()) return String(raw).trim();
+        try{
+          var o = JSON.parse(raw);
+          var cand = pick(o, ["companyName","empresaNome","company.companyName","company.name","name","legalName","businessName"]);
+          if (cand) return cand;
+        }catch(_){}
+      }
+    }catch(_){}
+    return "";
+  }
+  function pullFromDOM(selectors){
+    try{
+      for (var i=0;i<selectors.length;i++){
+        var s = selectors[i]; if (!s) continue;
+        var el = document.querySelector(s);
+        if (!el) continue;
+        var val = (el.value!=null ? el.value : (el.getAttribute("value")||el.textContent||""));
+        val = String(val||"").trim();
+        if (val) return val;
+      }
+    }catch(_){}
+    return "";
+  }
+  function scanByAttr(attrs){
+    try{
+      var nodes = document.querySelectorAll("*");
+      for (var i=0;i<nodes.length;i++){
+        var n = nodes[i];
+        for (var j=0;j<attrs.length;j++){
+          var a = attrs[j];
+          var v = n.getAttribute && n.getAttribute(a);
+          if (v && String(v).trim()) return String(v).trim();
         }
       }
-      return v;
-    }catch(_){ return ""; }
+    }catch(_){}
+    return "";
+  }
+  function getCompanyName(){
+    var name = pullFromDOM([
+      'input[name="companyName"]','#companyName','[data-company-name]',
+      'input[name="empresaNome"]','input[name="businessName"]','input[name="legalName"]',
+      'input[name*="company"]','input[id*="company"]','input[name*="empresa"]','input[id*="empresa"]',
+      'select[name*="company"]','select[name*="empresa"]'
+    ]);
+    if (name) return name;
+    try{
+      var inputs = document.querySelectorAll('input[type="text"],input:not([type])');
+      for (var i=0;i<inputs.length;i++){
+        var ph = (inputs[i].placeholder||"").toLowerCase();
+        if (ph.includes("empresa") || ph.includes("company")){
+          var v = (inputs[i].value||"").trim(); if (v) return v;
+        }
+      }
+    }catch(_){}
+    name = scanByAttr(['data-company','data-business','data-company-name']);
+    if (name) return name;
+    name = pullFromLocalStorage([
+      "companyName","empresaNome","businessName","legalName",
+      "company","company.name","company.companyName","form.companyName","kash_company"
+    ]);
+    if (name) return name;
+    try{
+      var cand = pick(window, [
+        "companyName","empresaNome","company.companyName","company.name",
+        "__APP_STATE__.company.name","__STATE__.company.name","appState.company.name"
+      ]);
+      if (cand) return cand;
+    }catch(_){}
+    return "";
   }
   function getKashId(){
+    var v = "";
     try{
-      var v = localStorage.getItem("last_tracking") ||
-              localStorage.getItem("kashId") ||
-              localStorage.getItem("tracking") || "";
-      if (!v){
-        var m = (document.body.innerText||"").match(/KASH-[A-Z0-9-]{4,}/i);
-        if (m && m[0]) v = m[0];
-      }
-      return String(v).toUpperCase().trim();
-    }catch(_){ return ""; }
+      v = localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "";
+      if (v) return String(v).toUpperCase().trim();
+    }catch(_){}
+    v = pullFromDOM(['input[name="kashId"]','input[name="hashId"]','[data-kash-id]','[data-tracking]','[data-code]']);
+    if (v) return String(v).toUpperCase().trim();
+    v = scanByAttr(['data-kash-id','data-tracking','data-code']);
+    if (v) return String(v).toUpperCase().trim();
+    try{
+      var m = (document.body.innerText||"").match(/KASH-[A-Z0-9-]{4,}/i);
+      if (m && m[0]) return String(m[0]).toUpperCase().trim();
+    }catch(_){}
+    return "";
   }
   function ensureHidden(form, name, val){
     var el = form.querySelector('input[name="'+name+'"]');
-    if (!el){
-      el = document.createElement("input");
-      el.type = "hidden";
-      el.name = name;
-      form.appendChild(el);
-    }
+    if (!el){ el = document.createElement("input"); el.type="hidden"; el.name=name; form.appendChild(el); }
     el.value = val;
   }
   function isAppsScriptForm(form){
-    try{
-      var a = String(form.getAttribute("action")||"");
-      var su = getAPI();
-      return a.indexOf("script.google.com/macros")>=0 || (su && a.indexOf(su)===0);
-    }catch(_){ return false; }
+    var a = String(form.getAttribute("action")||"");
+    var su = API();
+    return a.indexOf("script.google.com/macros")>=0 || (su && a.indexOf(su)===0);
   }
   function prepareForm(form){
-    try{
-      var kid = getKashId();
-      var cname = getCompanyName();
-      if (kid){
-        ensureHidden(form,"kashId",kid);
-        ensureHidden(form,"hashId",kid);
-      }
-      if (cname){
-        ensureHidden(form,"companyName",cname);
-        ensureHidden(form,"empresaNome",cname);
-      }
-    }catch(_){}
+    var kid = getKashId(); var cname = getCompanyName();
+    if (kid){ ensureHidden(form,"kashId",kid); ensureHidden(form,"hashId",kid); }
+    if (cname){ ensureHidden(form,"companyName",cname); ensureHidden(form,"empresaNome",cname); }
   }
   function patchFetch(){
     if (window.__KASH_FETCH_PATCHED) return;
@@ -75,33 +123,28 @@ import React, { useReducer, useState, useEffect } from "react";
     window.fetch = function(input, init){
       try{
         var url = (typeof input==="string") ? input : (input && input.url) || "";
-        var api = getAPI();
-        var toScript = (url.indexOf("script.google.com/macros")>=0) || (api && url.indexOf(api)===0);
+        var su = API();
+        var toScript = (url.indexOf("script.google.com/macros")>=0) || (su && url.indexOf(su)===0);
         if (toScript && init){
-          var body = init.body;
-          var kid = getKashId();
-          var cname = getCompanyName();
-          if (typeof body === "string" && body){
-            try{
-              var obj = JSON.parse(body);
-              if (kid && !obj.kashId) obj.kashId = kid;
-              if (kid && !obj.hashId) obj.hashId = kid;
-              if (cname && !obj.companyName) obj.companyName = cname;
-              if (cname && !obj.empresaNome) obj.empresaNome = c
-              init.body = JSON.stringify(obj);
-            }catch(_){
-              init.body = JSON.stringify({ raw: String(body), kashId: kid, companyName: cname, empresaNome: cname, hashId: kid });
-            }
-          } else if (typeof FormData!=="undefined" && body instanceof FormData){
-            if (kid && !body.has("kashId")) body.set("kashId", kid);
-            if (kid && !body.has("hashId")) body.set("hashId", kid);
-            if (cname && !body.has("companyName")) body.set("companyName", cname);
-            if (cname && !body.has("empresaNome")) body.set("empresaNome", cname);
-          } else if (typeof URLSearchParams!=="undefined" && body instanceof URLSearchParams){
-            if (kid && !body.has("kashId")) body.set("kashId", kid);
-            if (kid && !body.has("hashId")) body.set("hashId", kid);
-            if (cname && !body.has("companyName")) body.set("companyName", cname);
-            if (cname && !body.has("empresaNome")) body.set("empresaNome", cname);
+          var kid = getKashId(); var cname = getCompanyName();
+          var b = init.body;
+          if (typeof b === "string" && b){
+            try{ var o = JSON.parse(b); } catch(_){ o = { raw: String(b) }; }
+            if (kid && !o.kashId) o.kashId = kid;
+            if (kid && !o.hashId) o.hashId = kid;
+            if (cname && !o.companyName) o.companyName = cname;
+            if (cname && !o.empresaNome) o.empresaNome = cname;
+            init.body = JSON.stringify(o);
+          } else if (typeof FormData!=="undefined" && b instanceof FormData){
+            if (kid && !b.has("kashId")) b.set("kashId", kid);
+            if (kid && !b.has("hashId")) b.set("hashId", kid);
+            if (cname && !b.has("companyName")) b.set("companyName", cname);
+            if (cname && !b.has("empresaNome")) b.set("empresaNome", cname);
+          } else if (typeof URLSearchParams!=="undefined" && b instanceof URLSearchParams){
+            if (kid && !b.has("kashId")) b.set("kashId", kid);
+            if (kid && !b.has("hashId")) b.set("hashId", kid);
+            if (cname && !b.has("companyName")) b.set("companyName", cname);
+            if (cname && !b.has("empresaNome")) b.set("empresaNome", cname);
           }
         }
       }catch(_){}
@@ -109,7 +152,6 @@ import React, { useReducer, useState, useEffect } from "react";
     };
     window.__KASH_FETCH_PATCHED = true;
   }
-
   function wireForms(){
     var forms = document.querySelectorAll("form");
     for (var i=0;i<forms.length;i++){
@@ -122,15 +164,11 @@ import React, { useReducer, useState, useEffect } from "react";
       }
     }
   }
-
-  document.addEventListener("DOMContentLoaded", function(){
-    try{ patchFetch(); }catch(_) {}
-    try{ wireForms(); }catch(_) {}
-  });
-  var mo = new MutationObserver(function(){ try{ wireForms(); }catch(_) {} });
-  mo.observe(document.documentElement, {childList:true, subtree:true});
+  document.addEventListener("DOMContentLoaded", function(){ try{ patchFetch(); wireForms(); }catch(_){}});
+  new MutationObserver(function(){ try{ wireForms(); }catch(_){} })
+    .observe(document.documentElement, {childList:true, subtree:true});
 })();
-/* ====== FIM KASH RESOLVE FINAL ====== */
+/* ====== FIM KASH RESOLVE SLIM ====== */
 
 // ====== KASH SHIM (NÃO muda layout / JSX) ======
 (function(){
