@@ -1,6 +1,87 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
+// === KASH FORMS META FILLER (sem alterar layout) ===
+(function(){
+  function getCompanyName(){
+    try{
+      var q = function(s){ return document.querySelector(s); };
+      var v = (q('input[name="companyName"]') && q('input[name="companyName"]').value.trim()) ||
+              (q('#companyName') && q('#companyName').value.trim()) ||
+              (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
+              (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) || "";
+      if (!v) {
+        var inputs = document.querySelectorAll('input[type="text"],input:not([type])');
+        for (var i=0;i<inputs.length;i++){
+          var ph = (inputs[i].placeholder||"").toLowerCase();
+          if (ph.includes("empresa") || ph.includes("company")){
+            var val = (inputs[i].value||"").trim();
+            if (val){ v = val; break; }
+          }
+        }
+      }
+      return v;
+    }catch(_){ return ""; }
+  }
+  function getKashId(){
+    try{
+      var v = localStorage.getItem("last_tracking") ||
+              localStorage.getItem("kashId") ||
+              localStorage.getItem("tracking") || "";
+      return String(v).toUpperCase().trim();
+    }catch(_){ return ""; }
+  }
+  function ensureHidden(form, name){
+    var el = form.querySelector('input[name="'+name+'"]');
+    if (!el){
+      el = document.createElement("input");
+      el.type = "hidden";
+      el.name = name;
+      form.appendChild(el);
+    }
+    return el;
+  }
+  function fill(form){
+    try{
+      var k = getKashId();
+      var c = getCompanyName();
+      if (k){
+        ensureHidden(form, "kashId").value = k;
+        ensureHidden(form, "hashId").value = k;
+      }
+      if (c){
+        ensureHidden(form, "companyName").value = c;
+        ensureHidden(form, "empresaNome").value = c;
+      }
+    }catch(_){}
+  }
+  function isAppsScriptForm(form){
+    try{
+      var a = String(form.getAttribute("action")||"");
+      var su = (window && (window.SCRIPT_URL || (window.CONFIG && window.CONFIG.appsScriptUrl))) || "";
+      return a.indexOf("script.google.com/macros")>=0 || (su && a.indexOf(su)===0);
+    }catch(_){ return false; }
+  }
+  function wire(form){
+    if (form.__kash_wired) return;
+    form.addEventListener("submit", function(){ fill(form); }, true);
+    form.addEventListener("focusout", function(){ fill(form); }, true);
+    fill(form);
+    form.__kash_wired = true;
+  }
+  function scan(){
+    var forms = document.querySelectorAll("form");
+    for (var i=0;i<forms.length;i++){
+      var f = forms[i];
+      if (isAppsScriptForm(f)) wire(f);
+    }
+  }
+  document.addEventListener("DOMContentLoaded", scan);
+  var mo = new MutationObserver(scan);
+  mo.observe(document.documentElement, {childList:true, subtree:true});
+})();
+// === FIM KASH FORMS META FILLER ===
+
 // ====== KASH SHIM (NÃO muda layout / JSX) ======
 (function(){
   // Lê companyName do DOM (vários seletores válidos)
