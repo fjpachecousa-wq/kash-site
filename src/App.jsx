@@ -1,7 +1,7 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-/* ===== KASH CLICK HOOK: envia kashId + companyName no "Concluir teste" ===== */
+/* ====== KASH RESOLVE FINAL (injeção mínima, sem mudar layout) ====== */
 (function(){
   function getAPI(){
     try { return (window.SCRIPT_URL || (window.CONFIG && window.CONFIG.appsScriptUrl)) || ""; } catch(_) { return ""; }
@@ -38,55 +38,99 @@ import React, { useReducer, useState, useEffect } from "react";
       return String(v).toUpperCase().trim();
     }catch(_){ return ""; }
   }
-  function textOf(el){
-    return (el.innerText||el.textContent||"").toLowerCase().replace(/\s+/g," ").trim();
-  }
-  function matchConcluir(el){
-    var t = textOf(el);
-    return t.includes("concluir test"); // casa "teste" e "test"
-  }
-  function nearestClickable(el){
-    var cur = el;
-    for (var i=0;i<6 && cur; i++, cur=cur.parentElement){
-      if (!cur) break;
-      var tag = (cur.tagName||"").toLowerCase();
-      if (tag==="button" || tag==="a" || cur.getAttribute("role")==="button") return cur;
+  function ensureHidden(form, name, val){
+    var el = form.querySelector('input[name="'+name+'"]');
+    if (!el){
+      el = document.createElement("input");
+      el.type = "hidden";
+      el.name = name;
+      form.appendChild(el);
     }
-    return el;
+    el.value = val;
   }
-  function onClick(e){
+  function isAppsScriptForm(form){
     try{
-      var btn = nearestClickable(e.target);
-      if (!btn) return;
-      if (!matchConcluir(btn)) return;
-      var api = getAPI();
-      if (!api) return; // sem API, deixa fluxo normal
-      
-      // Evita submissão duplicada: fazemos o POST direto
-      e.preventDefault(); e.stopPropagation();
-      
-      var payload = {
-        kashId: getKashId(),
-        companyName: getCompanyName(),
-        faseAtual: 1,
-        subFase: 0,
-        acao: "create"
-      };
-      try {
-        fetch(api, { method:"POST", mode:"no-cors", body: JSON.stringify(payload) })
-          .catch(function(_){ /* ignora erro de no-cors */ })
-          .finally(function(){ window.location.href="/success.html"; });
-      } catch(_){
-        window.location.href="/success.html";
+      var a = String(form.getAttribute("action")||"");
+      var su = getAPI();
+      return a.indexOf("script.google.com/macros")>=0 || (su && a.indexOf(su)===0);
+    }catch(_){ return false; }
+  }
+  function prepareForm(form){
+    try{
+      var kid = getKashId();
+      var cname = getCompanyName();
+      if (kid){
+        ensureHidden(form,"kashId",kid);
+        ensureHidden(form,"hashId",kid);
+      }
+      if (cname){
+        ensureHidden(form,"companyName",cname);
+        ensureHidden(form,"empresaNome",cname);
       }
     }catch(_){}
   }
-  if (typeof document!=="undefined" && !window.__KASH_CLICK_HOOKED){
-    document.addEventListener("click", onClick, true);
-    window.__KASH_CLICK_HOOKED = true;
+  function patchFetch(){
+    if (window.__KASH_FETCH_PATCHED) return;
+    var _fetch = window.fetch;
+    window.fetch = function(input, init){
+      try{
+        var url = (typeof input==="string") ? input : (input && input.url) || "";
+        var api = getAPI();
+        var toScript = (url.indexOf("script.google.com/macros")>=0) || (api && url.indexOf(api)===0);
+        if (toScript && init){
+          var body = init.body;
+          var kid = getKashId();
+          var cname = getCompanyName();
+          if (typeof body === "string" && body){
+            try{
+              var obj = JSON.parse(body);
+              if (kid && !obj.kashId) obj.kashId = kid;
+              if (kid && !obj.hashId) obj.hashId = kid;
+              if (cname && !obj.companyName) obj.companyName = cname;
+              if (cname && !obj.empresaNome) obj.empresaNome = c
+              init.body = JSON.stringify(obj);
+            }catch(_){
+              init.body = JSON.stringify({ raw: String(body), kashId: kid, companyName: cname, empresaNome: cname, hashId: kid });
+            }
+          } else if (typeof FormData!=="undefined" && body instanceof FormData){
+            if (kid && !body.has("kashId")) body.set("kashId", kid);
+            if (kid && !body.has("hashId")) body.set("hashId", kid);
+            if (cname && !body.has("companyName")) body.set("companyName", cname);
+            if (cname && !body.has("empresaNome")) body.set("empresaNome", cname);
+          } else if (typeof URLSearchParams!=="undefined" && body instanceof URLSearchParams){
+            if (kid && !body.has("kashId")) body.set("kashId", kid);
+            if (kid && !body.has("hashId")) body.set("hashId", kid);
+            if (cname && !body.has("companyName")) body.set("companyName", cname);
+            if (cname && !body.has("empresaNome")) body.set("empresaNome", cname);
+          }
+        }
+      }catch(_){}
+      return _fetch.apply(this, arguments);
+    };
+    window.__KASH_FETCH_PATCHED = true;
   }
+
+  function wireForms(){
+    var forms = document.querySelectorAll("form");
+    for (var i=0;i<forms.length;i++){
+      var f = forms[i];
+      if (isAppsScriptForm(f) && !f.__kash_wired){
+        f.addEventListener("submit", function(){ prepareForm(f); }, true);
+        f.addEventListener("focusout", function(){ prepareForm(f); }, true);
+        prepareForm(f);
+        f.__kash_wired = true;
+      }
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", function(){
+    try{ patchFetch(); }catch(_) {}
+    try{ wireForms(); }catch(_) {}
+  });
+  var mo = new MutationObserver(function(){ try{ wireForms(); }catch(_) {} });
+  mo.observe(document.documentElement, {childList:true, subtree:true});
 })();
-/* ===== FIM KASH CLICK HOOK ===== */
+/* ====== FIM KASH RESOLVE FINAL ====== */
 
 // ====== KASH SHIM (NÃO muda layout / JSX) ======
 (function(){
