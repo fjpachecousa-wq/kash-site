@@ -1,6 +1,119 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
+// === KASH CONFIG: URL do Apps Script (Google Sheets) ===
+if (typeof window !== "undefined") {
+  window.CONFIG = window.CONFIG || {};
+  window.CONFIG.appsScriptUrl = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
+}
+// === FIM KASH CONFIG ===
+
+
+/* === KASH HOTFIX — garante gravação no Google Sheets === */
+if (typeof window !== "undefined" && !window.__KASH_HOTFIX__) {
+  window.__KASH_HOTFIX__ = true;
+
+  const getAPI = () => {
+    try {
+      return (
+        window.SCRIPT_URL ||
+        (window.CONFIG && window.CONFIG.appsScriptUrl) ||
+        ""
+      );
+    } catch { return ""; }
+  };
+
+  // 1) Salva o nome da empresa no localStorage enquanto o usuário digita
+  const mirrorCompany = () => {
+    try {
+      const $ = (s) => document.querySelector(s);
+      const el =
+        $('input[name="companyName"]') ||
+        $('#companyName') ||
+        $('[data-company-name]') ||
+        $('input[name="empresaNome"]') ||
+        [...document.querySelectorAll('input[type="text"],input:not([type])')]
+          .find(i => ((i.placeholder||"").toLowerCase().includes("empresa") || (i.placeholder||"").toLowerCase().includes("company")));
+      if (!el) return;
+      const save = () => { try { localStorage.setItem("companyName", (el.value||"").trim()); } catch {} };
+      el.addEventListener("input", save, { passive: true });
+      save();
+    } catch {}
+  };
+
+  // 2) Detecta o tracking KASH-... na tela e guarda
+  const mirrorKash = () => {
+    try {
+      const text = (document.body.innerText || "");
+      const m = text.match(/KASH-[A-Z0-9-]{4,}/i);
+      if (m && m[0]) { try { localStorage.setItem("last_tracking", String(m[0]).toUpperCase()); } catch {} }
+    } catch {}
+  };
+
+  // 3) Antes de enviar form para o Apps Script, injeta os campos ocultos
+  const ensureHidden = (form, name, val) => {
+    let el = form.querySelector('input[name="'+name+'"]');
+    if (!el) { el = document.createElement("input"); el.type="hidden"; el.name=name; form.appendChild(el); }
+    el.value = val;
+  };
+  const isAppsScriptForm = (form) => {
+    const a = String(form.getAttribute("action")||"");
+    const su = getAPI();
+    return a.includes("script.google.com/macros") || (su && a.indexOf(su)===0);
+  };
+  const prepareForm = (form) => {
+    try {
+      const kid = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toUpperCase().trim();
+      const cname = (localStorage.getItem("companyName") || "").trim();
+      if (kid)   { ensureHidden(form, "kashId", kid); ensureHidden(form, "hashId", kid); }
+      if (cname) { ensureHidden(form, "companyName", cname); ensureHidden(form, "empresaNome", cname); }
+    } catch {}
+  };
+  const wireForms = () => {
+    try{
+      const forms = document.querySelectorAll("form");
+      for (let i=0;i<forms.length;i++) {
+        const f = forms[i];
+        if (isAppsScriptForm(f) && !f.__kash_fix_wired) {
+          f.addEventListener("submit", () => prepareForm(f), true);
+          f.addEventListener("focusout", () => prepareForm(f), true);
+          prepareForm(f);
+          f.__kash_fix_wired = true;
+        }
+      }
+    }catch{}
+  };
+
+  // 4) Reforço: ao clicar em “Concluir teste”, também posta no Apps Script (sem quebrar seu fluxo)
+  const reinforceConcluir = () => {
+    try {
+      const su = getAPI();
+      if (!su) return;
+      const btns = Array.from(document.querySelectorAll("button, a, [role='button']"))
+        .filter(b => /concluir\s*teste/i.test(b.textContent||""));
+      btns.forEach(b => {
+        if (b.__kash_click_wired) return;
+        b.addEventListener("click", () => {
+          try {
+            const kashId = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toUpperCase().trim();
+            const companyName = (localStorage.getItem("companyName") || "").trim();
+            if (!kashId && !companyName) return; // nada para enviar
+            const payload = { kashId, companyName, faseAtual: 1, subFase: 0, atualizadoEm: new Date().toISOString() };
+            fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode: "no-cors" }).catch(()=>{});
+          } catch {}
+        }, { passive: true });
+        b.__kash_click_wired = true;
+      });
+    } catch {}
+  };
+
+  document.addEventListener("DOMContentLoaded", () => { mirrorCompany(); mirrorKash(); wireForms(); reinforceConcluir(); });
+  new MutationObserver(() => { mirrorCompany(); mirrorKash(); wireForms(); reinforceConcluir(); })
+    .observe(document.documentElement, { childList: true, subtree: true });
+}
+/* === FIM KASH HOTFIX === */
+
+
 // ====== KASH SHIM (NÃO muda layout / JSX) ======
 (function(){
   // Lê companyName do DOM (vários seletores válidos)
