@@ -1,3 +1,4 @@
+import "./kash-datafix.js";
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
