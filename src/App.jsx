@@ -1,51 +1,109 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-/* === KASH WIREFIX (Google Sheets) === */
-if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
-  window.__KASH_WIRE__ = true;
+/* === KASH WIREFIX (Google Sheets) — v2 forte === */
+if (typeof window !== "undefined" && !window.__KASH_WIRE_V2__) {
+  window.__KASH_WIRE_V2__ = true;
 
   // URL publicada do Apps Script
   window.CONFIG = window.CONFIG || {};
-  window.CONFIG.appsScriptUrl = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
-
+  window.CONFIG.appsScriptUrl = window.CONFIG.appsScriptUrl || "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
   const getAPI = () => (window.CONFIG && window.CONFIG.appsScriptUrl) || "";
 
-  // Salvar companyName enquanto digita
-  const mirrorCompany = () => {
+  // ========= Helpers =========
+  const text = () => (document.body && document.body.innerText) ? document.body.innerText : "";
+  const qs = (s,root=document) => root.querySelector(s);
+  const qsa = (s,root=document) => Array.from(root.querySelectorAll(s));
+
+  // 1) Capturar KASH real (ignora placeholder KASH-XXXXXX)
+  const findKash = () => {
+    const m = text().match(/KASH-(?!X{6})[A-Z0-9-]{4,}/i);
+    return m && m[0] ? String(m[0]).toUpperCase() : "";
+  };
+
+  // 2) Capturar nome da empresa de forma agressiva
+  function findCompanyName(){
+    // (a) inputs por nomes/ids conhecidos
+    let el = qs('input[name="companyName"]')
+          || qs('#companyName')
+          || qs('[data-company-name]')
+          || qs('input[name="empresaNome"]')
+          || qs('input[name="nomeEmpresa"]')
+          || qs('input[name="businessName"]')
+          || qs('input[name="legalName"]');
+    if (el && el.value && el.value.trim()) return el.value.trim();
+
+    // (b) qualquer input com placeholder alusivo
+    el = qsa('input[type="text"],input:not([type])').find(i => {
+      const ph = (i.placeholder||"").toLowerCase();
+      return ph.includes("empresa") || ph.includes("company") || ph.includes("business");
+    });
+    if (el && el.value && el.value.trim()) return el.value.trim();
+
+    // (c) input próximo de label "Nome da empresa"
+    const labels = qsa('label').filter(l => /nome.*empresa|company.*name|business.*name/i.test(l.innerText||""));
+    for (const lab of labels){
+      const forId = lab.getAttribute('for');
+      if (forId) {
+        const byFor = qs('#'+CSS.escape(forId));
+        if (byFor && byFor.value && byFor.value.trim()) return byFor.value.trim();
+      }
+      const near = lab.parentElement;
+      if (near){
+        const cand = qsa('input[type="text"],input:not([type])', near).find(i => (i.value||"").trim());
+        if (cand) return cand.value.trim();
+      }
+    }
+
+    // (d) contrato/preview na tela: "Empresa: ACME LLC"
+    const m = text().match(/(?:Empresa|Company)\s*:\s*([^\n\r]+)/i);
+    if (m && m[1]) return m[1].trim();
+
+    // (e) JSON embutido na página
     try {
-      const $ = (s) => document.querySelector(s);
-      const el =
-        $('input[name="companyName"]') ||
-        $('#companyName') ||
-        $('[data-company-name]') ||
-        $('input[name="empresaNome"]') ||
-        Array.from(document.querySelectorAll('input[type="text"],input:not([type])'))
-          .find(i => (i.placeholder||"").toLowerCase().includes("empresa") || (i.placeholder||"").toLowerCase().includes("company"));
+      const j = JSON.stringify(window.__KASH_STATE__||{});
+      const mm = j.match(/"(?:companyName|empresaNome|businessName|legalName|corporateName|nomeEmpresa|empresa|name)"\s*:\s*"([^"]+)"/i);
+      if (mm && mm[1]) return mm[1].trim();
+    } catch {}
+
+    // (f) localStorage pré-existente
+    try {
+      const ls = localStorage.getItem("companyName");
+      if (ls && ls.trim()) return ls.trim();
+    } catch {}
+
+    return "";
+  }
+
+  // 3) Persistência leve
+  const persistCompanyLive = () => {
+    // conecta nos campos visíveis e salva no localStorage
+    const fields = [
+      'input[name="companyName"]','#companyName','[data-company-name]',
+      'input[name="empresaNome"]','input[name="nomeEmpresa"]',
+      'input[name="businessName"]','input[name="legalName"]'
+    ];
+    fields.forEach(sel => {
+      const el = qs(sel);
       if (!el) return;
       const save = () => { try { localStorage.setItem("companyName", (el.value||"").trim()); } catch {} };
-      el.addEventListener("input", save, { passive: true });
+      el.addEventListener('input', save, {passive:true});
       save();
-    } catch {}
+    });
   };
 
-  // Capturar KASH real no DOM (ignora KASH-XXXXXX)
-  const captureKash = () => {
-    try {
-      const m = (document.body.innerText||"").match(/KASH-(?!X{6})[A-Z0-9-]{4,}/i);
-      if (m && m[0]) localStorage.setItem("last_tracking", String(m[0]).toUpperCase());
-    } catch {}
-  };
-
-  // Expor função para setar tracking no momento da geração
+  // 4) Expor setter explícito
   window.__setKashTracking = function(code){
     try {
       const real = String(code||"").toUpperCase();
       if (/^KASH-(?!X{6})[A-Z0-9-]{4,}$/.test(real)) localStorage.setItem("last_tracking", real);
     } catch {}
   };
+  window.__setCompanyName = function(name){
+    try { if (name && String(name).trim()) localStorage.setItem("companyName", String(name).trim()); } catch {}
+  };
 
-  // Injetar ocultos antes de enviar forms ao Apps Script
+  // 5) Preparar forms do Apps Script (injeta ocultos)
   const ensureHidden = (form, name, val) => {
     let el = form.querySelector('input[name="'+name+'"]');
     if (!el) { el = document.createElement("input"); el.type="hidden"; el.name=name; form.appendChild(el); }
@@ -57,13 +115,15 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
     return a.includes("script.google.com/macros") || (su && a.startsWith(su));
   };
   const prepareForm = (form) => {
-    const kid = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toUpperCase().trim();
-    const cname = (localStorage.getItem("companyName") || "").trim();
+    let kid = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toUpperCase().trim();
+    if (!kid) { kid = findKash(); if (kid) try{ localStorage.setItem("last_tracking", kid); }catch{} }
+    let cname = (localStorage.getItem("companyName") || "").trim();
+    if (!cname) { cname = findCompanyName(); if (cname) try{ localStorage.setItem("companyName", cname); }catch{} }
     if (kid)   { ensureHidden(form, "kashId", kid); ensureHidden(form, "hashId", kid); }
     if (cname) { ensureHidden(form, "companyName", cname); ensureHidden(form, "empresaNome", cname); }
   };
   const wireForms = () => {
-    document.querySelectorAll("form").forEach(f => {
+    qsa("form").forEach(f => {
       if (isAppsScriptForm(f) && !f.__kash_wired) {
         f.addEventListener("submit", () => prepareForm(f), true);
         f.addEventListener("focusout", () => prepareForm(f), true);
@@ -73,19 +133,20 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
     });
   };
 
-  // Reforço no clique do "Concluir teste"
+  // 6) Reforçar no clique do "Concluir teste"
   const reinforceConcluir = () => {
     const su = getAPI(); if (!su) return;
-    Array.from(document.querySelectorAll("button,a,[role='button']"))
-      .filter(b => /concluir\s*teste/i.test(b.textContent||""))
+    qsa("button,a,[role='button']").filter(b => /concluir\s*teste/i.test(b.textContent||""))
       .forEach(b => {
         if (b.__kash_click_wired) return;
         b.addEventListener("click", () => {
           try {
-            const kashId = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toUpperCase().trim();
-            const companyName = (localStorage.getItem("companyName") || "").trim();
-            if (!kashId && !companyName) return;
-            const payload = { kashId, companyName, faseAtual: 1, subFase: 0, atualizadoEm: new Date().toISOString() };
+            let kid = (localStorage.getItem("last_tracking") || "").toUpperCase().trim();
+            if (!kid) { kid = findKash(); if (kid) try{ localStorage.setItem("last_tracking", kid); }catch{} }
+            let cname = (localStorage.getItem("companyName") || "").trim();
+            if (!cname) { cname = findCompanyName(); if (cname) try{ localStorage.setItem("companyName", cname); }catch{} }
+            if (!kid && !cname) return;
+            const payload = { kashId: kid, companyName: cname, faseAtual: 1, subFase: 0, atualizadoEm: new Date().toISOString() };
             fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode: "no-cors" }).catch(()=>{});
           } catch {}
         }, { passive: true });
@@ -93,10 +154,14 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       });
   };
 
-  document.addEventListener("DOMContentLoaded", () => { mirrorCompany(); captureKash(); wireForms(); reinforceConcluir(); });
-  new MutationObserver(() => { captureKash(); wireForms(); }).observe(document.documentElement, { childList: true, subtree: true });
+  // Boot
+  document.addEventListener("DOMContentLoaded", () => { persistCompanyLive(); wireForms(); reinforceConcluir(); });
+  new MutationObserver(() => { persistCompanyLive(); wireForms(); }).observe(document.documentElement, { childList: true, subtree: true });
 }
 /* === /KASH WIREFIX === */
+
+
+
 
 
 // ===== KASH INLINE SHIM (injeta companyName + kashId nos envios ao Apps Script) =====
