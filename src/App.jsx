@@ -1,29 +1,17 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-// === KASH CONFIG: URL do Apps Script (Google Sheets) ===
-if (typeof window !== "undefined") {
+/* === KASH WIREFIX (Google Sheets) === */
+if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
+  window.__KASH_WIRE__ = true;
+
+  // URL publicada do Apps Script
   window.CONFIG = window.CONFIG || {};
   window.CONFIG.appsScriptUrl = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
-}
-// === FIM KASH CONFIG ===
 
+  const getAPI = () => (window.CONFIG && window.CONFIG.appsScriptUrl) || "";
 
-/* === KASH HOTFIX — garante gravação no Google Sheets === */
-if (typeof window !== "undefined" && !window.__KASH_HOTFIX__) {
-  window.__KASH_HOTFIX__ = true;
-
-  const getAPI = () => {
-    try {
-      return (
-        window.SCRIPT_URL ||
-        (window.CONFIG && window.CONFIG.appsScriptUrl) ||
-        ""
-      );
-    } catch { return ""; }
-  };
-
-  // 1) Salva o nome da empresa no localStorage enquanto o usuário digita
+  // Salvar companyName enquanto digita
   const mirrorCompany = () => {
     try {
       const $ = (s) => document.querySelector(s);
@@ -32,8 +20,8 @@ if (typeof window !== "undefined" && !window.__KASH_HOTFIX__) {
         $('#companyName') ||
         $('[data-company-name]') ||
         $('input[name="empresaNome"]') ||
-        [...document.querySelectorAll('input[type="text"],input:not([type])')]
-          .find(i => ((i.placeholder||"").toLowerCase().includes("empresa") || (i.placeholder||"").toLowerCase().includes("company")));
+        Array.from(document.querySelectorAll('input[type="text"],input:not([type])'))
+          .find(i => (i.placeholder||"").toLowerCase().includes("empresa") || (i.placeholder||"").toLowerCase().includes("company"));
       if (!el) return;
       const save = () => { try { localStorage.setItem("companyName", (el.value||"").trim()); } catch {} };
       el.addEventListener("input", save, { passive: true });
@@ -41,78 +29,165 @@ if (typeof window !== "undefined" && !window.__KASH_HOTFIX__) {
     } catch {}
   };
 
-  // 2) Detecta o tracking KASH-... na tela e guarda
-  const mirrorKash = () => {
+  // Capturar KASH real no DOM (ignora KASH-XXXXXX)
+  const captureKash = () => {
     try {
-      const text = (document.body.innerText || "");
-      const m = text.match(/KASH-[A-Z0-9-]{4,}/i);
-      if (m && m[0]) { try { localStorage.setItem("last_tracking", String(m[0]).toUpperCase()); } catch {} }
+      const m = (document.body.innerText||"").match(/KASH-(?!X{6})[A-Z0-9-]{4,}/i);
+      if (m && m[0]) localStorage.setItem("last_tracking", String(m[0]).toUpperCase());
     } catch {}
   };
 
-  // 3) Antes de enviar form para o Apps Script, injeta os campos ocultos
+  // Expor função para setar tracking no momento da geração
+  window.__setKashTracking = function(code){
+    try {
+      const real = String(code||"").toUpperCase();
+      if (/^KASH-(?!X{6})[A-Z0-9-]{4,}$/.test(real)) localStorage.setItem("last_tracking", real);
+    } catch {}
+  };
+
+  // Injetar ocultos antes de enviar forms ao Apps Script
   const ensureHidden = (form, name, val) => {
     let el = form.querySelector('input[name="'+name+'"]');
     if (!el) { el = document.createElement("input"); el.type="hidden"; el.name=name; form.appendChild(el); }
     el.value = val;
   };
-  const isAppsScriptForm = (form) => {
-    const a = String(form.getAttribute("action")||"");
+  const isAppsScriptForm = (f) => {
+    const a = String(f.getAttribute("action")||"");
     const su = getAPI();
-    return a.includes("script.google.com/macros") || (su && a.indexOf(su)===0);
+    return a.includes("script.google.com/macros") || (su && a.startsWith(su));
   };
   const prepareForm = (form) => {
-    try {
-      const kid = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toUpperCase().trim();
-      const cname = (localStorage.getItem("companyName") || "").trim();
-      if (kid)   { ensureHidden(form, "kashId", kid); ensureHidden(form, "hashId", kid); }
-      if (cname) { ensureHidden(form, "companyName", cname); ensureHidden(form, "empresaNome", cname); }
-    } catch {}
+    const kid = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toUpperCase().trim();
+    const cname = (localStorage.getItem("companyName") || "").trim();
+    if (kid)   { ensureHidden(form, "kashId", kid); ensureHidden(form, "hashId", kid); }
+    if (cname) { ensureHidden(form, "companyName", cname); ensureHidden(form, "empresaNome", cname); }
   };
   const wireForms = () => {
-    try{
-      const forms = document.querySelectorAll("form");
-      for (let i=0;i<forms.length;i++) {
-        const f = forms[i];
-        if (isAppsScriptForm(f) && !f.__kash_fix_wired) {
-          f.addEventListener("submit", () => prepareForm(f), true);
-          f.addEventListener("focusout", () => prepareForm(f), true);
-          prepareForm(f);
-          f.__kash_fix_wired = true;
-        }
+    document.querySelectorAll("form").forEach(f => {
+      if (isAppsScriptForm(f) && !f.__kash_wired) {
+        f.addEventListener("submit", () => prepareForm(f), true);
+        f.addEventListener("focusout", () => prepareForm(f), true);
+        prepareForm(f);
+        f.__kash_wired = true;
       }
-    }catch{}
+    });
   };
 
-  // 4) Reforço: ao clicar em “Concluir teste”, também posta no Apps Script (sem quebrar seu fluxo)
+  // Reforço no clique do "Concluir teste"
   const reinforceConcluir = () => {
-    try {
-      const su = getAPI();
-      if (!su) return;
-      const btns = Array.from(document.querySelectorAll("button, a, [role='button']"))
-        .filter(b => /concluir\s*teste/i.test(b.textContent||""));
-      btns.forEach(b => {
+    const su = getAPI(); if (!su) return;
+    Array.from(document.querySelectorAll("button,a,[role='button']"))
+      .filter(b => /concluir\s*teste/i.test(b.textContent||""))
+      .forEach(b => {
         if (b.__kash_click_wired) return;
         b.addEventListener("click", () => {
           try {
             const kashId = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toUpperCase().trim();
             const companyName = (localStorage.getItem("companyName") || "").trim();
-            if (!kashId && !companyName) return; // nada para enviar
+            if (!kashId && !companyName) return;
             const payload = { kashId, companyName, faseAtual: 1, subFase: 0, atualizadoEm: new Date().toISOString() };
             fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode: "no-cors" }).catch(()=>{});
           } catch {}
         }, { passive: true });
         b.__kash_click_wired = true;
       });
-    } catch {}
   };
 
-  document.addEventListener("DOMContentLoaded", () => { mirrorCompany(); mirrorKash(); wireForms(); reinforceConcluir(); });
-  new MutationObserver(() => { mirrorCompany(); mirrorKash(); wireForms(); reinforceConcluir(); })
-    .observe(document.documentElement, { childList: true, subtree: true });
+  document.addEventListener("DOMContentLoaded", () => { mirrorCompany(); captureKash(); wireForms(); reinforceConcluir(); });
+  new MutationObserver(() => { captureKash(); wireForms(); }).observe(document.documentElement, { childList: true, subtree: true });
 }
-/* === FIM KASH HOTFIX === */
+/* === /KASH WIREFIX === */
 
+
+// ===== KASH INLINE SHIM (injeta companyName + kashId nos envios ao Apps Script) =====
+(function(){
+  function getCompanyName(){
+    try{
+      var q = function(s){ return document.querySelector(s); };
+      return (
+        (q('input[name="companyName"]') && q('input[name="companyName"]').value.trim()) ||
+        (q('#companyName') && q('#companyName').value.trim()) ||
+        (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
+        (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
+        ""
+      );
+    }catch(_){ return ""; }
+  }
+  function getKashId(){
+    try{
+      var v = localStorage.getItem("last_tracking") ||
+              localStorage.getItem("kashId") ||
+              localStorage.getItem("tracking") || "";
+      return String(v).toUpperCase().trim();
+    }catch(_){ return ""; }
+  }
+  function addMetaObject(obj){
+    obj = obj || {};
+    var k = getKashId();
+    var c = getCompanyName();
+    if (k && !obj.kashId) obj.kashId = k;
+    if (k && !obj.hashId) obj.hashId = k;
+    if (c && !obj.companyName) obj.companyName = c;
+    if (c && !obj.empresaNome) obj.empresaNome = c;
+    return obj;
+  }
+  function addMetaFormData(fd){
+    try{
+      var k = getKashId();
+      var c = getCompanyName();
+      if (k && !fd.has('kashId')) fd.set('kashId', k);
+      if (k && !fd.has('hashId')) fd.set('hashId', k);
+      if (c && !fd.has('companyName')) fd.set('companyName', c);
+      if (c && !fd.has('empresaNome')) fd.set('empresaNome', c);
+    }catch(_){}
+  }
+  function addMetaSearchParams(sp){
+    try{
+      var k = getKashId();
+      var c = getCompanyName();
+      if (k && !sp.has('kashId')) sp.set('kashId', k);
+      if (k && !sp.has('hashId')) sp.set('hashId', k);
+      if (c && !sp.has('companyName')) sp.set('companyName', c);
+      if (c && !sp.has('empresaNome')) sp.set('empresaNome', c);
+    }catch(_){}
+  }
+  function isAppsScriptUrl(u){
+    try{
+      var su = (typeof window!=='undefined' && (window.SCRIPT_URL || (window.CONFIG && window.CONFIG.appsScriptUrl))) ||
+               (typeof SCRIPT_URL!=='undefined' && SCRIPT_URL) || "";
+      return (su && String(u||"").indexOf(String(su))===0) ||
+             String(u||"").indexOf("script.google.com/macros")>=0;
+    }catch(_){ return false; }
+  }
+  try{
+    if (typeof window!=='undefined' && !window.__kash_inline_fetch_patched){
+      var _fetch = window.fetch;
+      window.fetch = function(input, init){
+        try{
+          var url = (typeof input==="string") ? input : (input && input.url) || "";
+          if (isAppsScriptUrl(url) && init){
+            var body = init.body;
+            if (typeof body === "string" && body){
+              try{
+                var obj = JSON.parse(body);
+                init.body = JSON.stringify(addMetaObject(obj));
+              }catch(_){
+                init.body = JSON.stringify(addMetaObject({ raw: body }));
+              }
+            } else if (typeof FormData !== "undefined" && body instanceof FormData){
+              addMetaFormData(body);
+            } else if (typeof URLSearchParams !== "undefined" && body instanceof URLSearchParams){
+              addMetaSearchParams(body);
+            }
+          }
+        }catch(_){}
+        return _fetch.apply(this, arguments);
+      };
+      window.__kash_inline_fetch_patched = true;
+    }
+  }catch(_){}
+})();
+// ===== FIM KASH INLINE SHIM =====
 
 // ====== KASH SHIM (NÃO muda layout / JSX) ======
 (function(){
