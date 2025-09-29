@@ -1,32 +1,102 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-/* mini helper: conclui e envia {kashId, companyName} sem mexer no layout */
-function concludeTest() {
-  try {
-    const last = (localStorage.getItem("last_tracking") || "").trim();
-    const kashId = last ? last.toUpperCase() : "";
-    let companyName = "";
+/* === KASH WIREFIX (Google Sheets) === */
+if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
+  window.__KASH_WIRE__ = true;
+
+  // URL publicada do Apps Script
+  window.CONFIG = window.CONFIG || {};
+  window.CONFIG.appsScriptUrl = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
+
+  const getAPI = () => (window.CONFIG && window.CONFIG.appsScriptUrl) || "";
+
+  // Salvar companyName enquanto digita
+  const mirrorCompany = () => {
     try {
-      const raw = localStorage.getItem(last);
-      if (raw) {
-        const j = JSON.parse(raw);
-        companyName = (j?.company?.companyName || j?.companyName || j?.businessName || j?.legalName || "").trim();
-      }
+      const $ = (s) => document.querySelector(s);
+      const el =
+        $('input[name="companyName"]') ||
+        $('#companyName') ||
+        $('[data-company-name]') ||
+        $('input[name="empresaNome"]') ||
+        Array.from(document.querySelectorAll('input[type="text"],input:not([type])'))
+          .find(i => (i.placeholder||"").toLowerCase().includes("empresa") || (i.placeholder||"").toLowerCase().includes("company"));
+      if (!el) return;
+      const save = () => { try { localStorage.setItem("companyName", (el.value||"").trim()); } catch {} };
+      el.addEventListener("input", save, { passive: true });
+      save();
     } catch {}
-    if (!companyName) {
-      const el = document.querySelector('input[name="companyName"],#companyName,[data-company-name],input[name="empresaNome"],input[name="nomeEmpresa"],input[name="businessName"],input[name="legalName"]');
-      companyName = (el && el.value) ? el.value.trim() : "";
-    }
-    const payload = { kashId, companyName, faseAtual:1, subFase:0, atualizadoEm:new Date().toISOString(), acao:"create" };
-    const url = (window.CONFIG && window.CONFIG.appsScriptUrl) || "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
-    if (url) fetch(url, { method:"POST", mode:"no-cors", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(payload) }).catch(()=>{});
-  } catch {}
-  try { window.location.href = "/success.html"; } catch {}
+  };
+
+  // Capturar KASH real no DOM (ignora KASH-XXXXXX)
+  const captureKash = () => {
+    try {
+      const m = (document.body.innerText||"").match(/KASH-(?!X{6})[A-Z0-9-]{4,}/i);
+      if (m && m[0]) localStorage.setItem("last_tracking", String(m[0]).toUpperCase());
+    } catch {}
+  };
+
+  // Expor função para setar tracking no momento da geração
+  window.__setKashTracking = function(code){
+    try {
+      const real = String(code||"").toUpperCase();
+      if (/^KASH-(?!X{6})[A-Z0-9-]{4,}$/.test(real)) localStorage.setItem("last_tracking", real);
+    } catch {}
+  };
+
+  // Injetar ocultos antes de enviar forms ao Apps Script
+  const ensureHidden = (form, name, val) => {
+    let el = form.querySelector('input[name="'+name+'"]');
+    if (!el) { el = document.createElement("input"); el.type="hidden"; el.name=name; form.appendChild(el); }
+    el.value = val;
+  };
+  const isAppsScriptForm = (f) => {
+    const a = String(f.getAttribute("action")||"");
+    const su = getAPI();
+    return a.includes("script.google.com/macros") || (su && a.startsWith(su));
+  };
+  const prepareForm = (form) => {
+    const kid = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toUpperCase().trim();
+    const cname = (localStorage.getItem("companyName") || "").trim();
+    if (kid)   { ensureHidden(form, "kashId", kid); ensureHidden(form, "hashId", kid); }
+    if (cname) { ensureHidden(form, "companyName", cname); ensureHidden(form, "empresaNome", cname); }
+  };
+  const wireForms = () => {
+    document.querySelectorAll("form").forEach(f => {
+      if (isAppsScriptForm(f) && !f.__kash_wired) {
+        f.addEventListener("submit", () => prepareForm(f), true);
+        f.addEventListener("focusout", () => prepareForm(f), true);
+        prepareForm(f);
+        f.__kash_wired = true;
+      }
+    });
+  };
+
+  // Reforço no clique do "Concluir teste"
+  const reinforceConcluir = () => {
+    const su = getAPI(); if (!su) return;
+    Array.from(document.querySelectorAll("button,a,[role='button']"))
+      .filter(b => /concluir\s*teste/i.test(b.textContent||""))
+      .forEach(b => {
+        if (b.__kash_click_wired) return;
+        b.addEventListener("click", () => {
+          try {
+            const kashId = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toUpperCase().trim();
+            const companyName = (localStorage.getItem("companyName") || "").trim();
+            if (!kashId && !companyName) return;
+            const payload = { kashId, companyName, faseAtual: 1, subFase: 0, atualizadoEm: new Date().toISOString() };
+            fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode: "no-cors" }).catch(()=>{});
+          } catch {}
+        }, { passive: true });
+        b.__kash_click_wired = true;
+      });
+  };
+
+  document.addEventListener("DOMContentLoaded", () => { mirrorCompany(); captureKash(); wireForms(); reinforceConcluir(); });
+  new MutationObserver(() => { captureKash(); wireForms(); }).observe(document.documentElement, { childList: true, subtree: true });
 }
-
-
-
+/* === /KASH WIREFIX === */
 
 
 // ===== KASH INLINE SHIM (injeta companyName + kashId nos envios ao Apps Script) =====
