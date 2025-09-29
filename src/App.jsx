@@ -1,75 +1,90 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-/* === KASH CLEAN HELPERS (no hack, no layout change) === */
-const CONFIG = (typeof window!=="undefined" && window.CONFIG) ? window.CONFIG : {
-  appsScriptUrl: "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec"
-};
+/* === KASH CLEAN HELPERS (inline, sem tocar no JSX existente) === */
+if (typeof window !== "undefined" && !window.__KASH_INLINE__) {
+  window.__KASH_INLINE__ = true;
+  (function(){
+    window.CONFIG = window.CONFIG || {};
+    window.CONFIG.appsScriptUrl = window.CONFIG.appsScriptUrl || "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
-function getTracking() {
-  try {
-    const fromLS = (localStorage.getItem("last_tracking")||"").trim();
-    if (fromLS) return fromLS.toUpperCase();
-  } catch {}
-  try {
-    const txt = document.body?.innerText || "";
-    const m = txt.match(/KASH-[A-Z0-9-]+/i);
-    if (m) return m[0].toUpperCase();
-  } catch {}
-  return "";
-}
+    const qs=(s,r=document)=>r.querySelector(s);
+    const qsa=(s,r=document)=>Array.from(r.querySelectorAll(s));
 
-function getCompanyName() {
-  const qs=(s,r=document)=>r.querySelector(s);
-  const qsa=(s,r=document)=>Array.from(r.querySelectorAll(s));
-  try {
-    let el = qs('input[name="companyName"]')
-          || qs('#companyName')
-          || qs('[data-company-name]')
-          || qs('input[name="empresaNome"]')
-          || qs('input[name="nomeEmpresa"]')
-          || qs('input[name="businessName"]')
-          || qs('input[name="legalName"]');
-    let v = el && el.value ? el.value.trim() : "";
-    if (!v) {
-      const byPh = qsa('input[type="text"],input:not([type])')
-        .find(i => (i.placeholder||"").toLowerCase().match(/empresa|company|business/));
-      if (byPh && byPh.value) v = byPh.value.trim();
+    function getTracking(){
+      try{ const ls=(localStorage.getItem("last_tracking")||"").trim(); if(ls) return ls.toUpperCase(); }catch{}
+      try{ const t=document.body?.innerText||""; const m=t.match(/KASH-[A-Z0-9-]+/i); if(m) return m[0].toUpperCase(); }catch{}
+      return "";
     }
-    if (!v) {
-      const t = document.body?.innerText || "";
-      const m = t.match(/(?:Empresa|Company)\s*:\s*([^\n\r]+)/i);
-      if (m && m[1]) v = m[1].trim();
+    function getCompanyName(){
+      try{
+        let el = qs('input[name="companyName"]') || qs('#companyName') || qs('[data-company-name]')
+              || qs('input[name="empresaNome"]') || qs('input[name="nomeEmpresa"]')
+              || qs('input[name="businessName"]') || qs('input[name="legalName"]');
+        let v = el && el.value ? el.value.trim() : "";
+        if(!v){
+          const byPh=qsa('input[type="text"],input:not([type])').find(i=>{
+            const ph=(i.placeholder||"").toLowerCase(); return ph.includes("empresa")||ph.includes("company")||ph.includes("business");
+          });
+          if(byPh && byPh.value) v=byPh.value.trim();
+        }
+        if(!v){
+          const t=document.body?.innerText||""; const m=t.match(/(?:Empresa|Company)\s*:\s*([^\n\r]+)/i);
+          if(m&&m[1]) v=m[1].trim();
+        }
+        return v||"";
+      }catch{return ""}
     }
-    return v || "";
-  } catch { return ""; }
-}
+    function ensureHidden(form, name, val){
+      let el=form.querySelector('input[name="'+name+'"]');
+      if(!el){ el=document.createElement("input"); el.type="hidden"; el.name=name; form.appendChild(el); }
+      el.value=val;
+    }
+    function postToAppsScript(payload){
+      const url=(window.CONFIG&&window.CONFIG.appsScriptUrl)||"";
+      if(!url) return;
+      try{ fetch(url,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}); }catch{}
+    }
+    function prepareAndSend(){
+      const payload={
+        kashId: getTracking(),
+        companyName: getCompanyName(),
+        faseAtual: 1,
+        subFase: 0,
+        atualizadoEm: new Date().toISOString(),
+        acao:"create"
+      };
+      postToAppsScript(payload);
+    }
 
-async function postToAppsScript(payload) {
-  const url = CONFIG.appsScriptUrl;
-  if (!url) return;
-  try {
-    await fetch(url, {
-      method: "POST",
-      mode: "no-cors",
-      headers: {"Content-Type":"application/json"},
-      body: JSON.stringify(payload)
-    });
-  } catch {}
-}
+    function isAppsForm(f){
+      const a=String(f.getAttribute("action")||"");
+      const su=(window.CONFIG&&window.CONFIG.appsScriptUrl)||"";
+      return a.includes("script.google.com/macros") || (su && a.startsWith(su));
+    }
+    function wire(root=document){
+      qsa("form",root).forEach(f=>{
+        if(!isAppsForm(f) || f.__kash_inline) return;
+        f.addEventListener("submit", ()=>{
+          ensureHidden(f,"companyName", getCompanyName());
+          ensureHidden(f,"empresaNome", getCompanyName());
+          prepareAndSend();
+        }, true);
+        f.__kash_inline=true;
+      });
+      qsa("button,a,[role='button']",root).forEach(b=>{
+        if(b.__kash_inline_btn) return;
+        if(!/concluir\s*teste/i.test(b.textContent||"")) return;
+        b.addEventListener("click", prepareAndSend, {passive:true});
+        b.__kash_inline_btn=true;
+      });
+    }
 
-async function handleConcludeTest() {
-  // faseAtual/subFase conforme combinado
-  const kashId = getTracking();
-  const companyName = getCompanyName();
-  const atualizadoEm = new Date().toISOString();
-  const faseAtual = 1;
-  const subFase = 0;
-  const payload = { kashId, companyName, faseAtual, subFase, atualizadoEm, acao: "create" };
-  await postToAppsScript(payload);
-  try {
-    window.location.href = "/success.html";
-  } catch {}
+    document.addEventListener("DOMContentLoaded", ()=>{ wire(); });
+    new MutationObserver(m=>{
+      m.forEach(x=>x.addedNodes&&x.addedNodes.forEach(n=>{ if(n.nodeType===1) wire(n); }));
+    }).observe(document.documentElement,{childList:true,subtree:true});
+  })();
 }
 /* === /KASH CLEAN HELPERS === */
 
