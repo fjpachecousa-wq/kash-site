@@ -1,19 +1,42 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-/* === KASH_MIN_HELPERS (apenas o necessário) === */
+/* === KASH_MIN_HELPERS (v2: usa localStorage por tracking) === */
 function handleConcludeTest() {
   try {
-    const kashId = (localStorage.getItem("last_tracking") || "").toUpperCase();
-    const companyName =
-      (document.querySelector('input[name="companyName"]')?.value ||
-       document.querySelector("#companyName")?.value ||
-       document.querySelector('[data-company-name]')?.value ||
-       document.querySelector('input[name="empresaNome"]')?.value ||
-       document.querySelector('input[name="nomeEmpresa"]')?.value ||
-       document.querySelector('input[name="businessName"]')?.value ||
-       document.querySelector('input[name="legalName"]')?.value ||
-       "").trim();
+    const last = (localStorage.getItem("last_tracking") || "").trim();
+    const kashId = last ? last.toUpperCase() : "";
+
+    function getSavedByAnyKey(key){
+      if(!key) return null;
+      try { const v = localStorage.getItem(key); if (v) return JSON.parse(v); } catch {}
+      try { const v = localStorage.getItem(key.toUpperCase()); if (v) return JSON.parse(v); } catch {}
+      try { const v = localStorage.getItem(key.toLowerCase()); if (v) return JSON.parse(v); } catch {}
+      return null;
+    }
+    const saved = getSavedByAnyKey(last);
+
+    let companyName = "";
+    if (saved && typeof saved === "object") {
+      companyName =
+        (saved.company && (saved.company.companyName || saved.company.name || saved.company.legalName)) ||
+        saved.companyName ||
+        saved.businessName ||
+        saved.legalName ||
+        "";
+    }
+    if (!companyName) {
+      const q = (s)=>document.querySelector(s);
+      companyName =
+        (q('input[name="companyName"]')?.value ||
+         q('#companyName')?.value ||
+         q('[data-company-name]')?.value ||
+         q('input[name="empresaNome"]')?.value ||
+         q('input[name="nomeEmpresa"]')?.value ||
+         q('input[name="businessName"]')?.value ||
+         q('input[name="legalName"]')?.value ||
+         "").trim();
+    }
 
     const payload = {
       kashId,
@@ -26,8 +49,12 @@ function handleConcludeTest() {
 
     const APPS_URL = (window.CONFIG && window.CONFIG.appsScriptUrl) || "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
     if (APPS_URL) {
-      fetch(APPS_URL, { method: "POST", mode: "no-cors", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) })
-        .catch(()=>{});
+      fetch(APPS_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).catch(()=>{});
     }
   } catch {}
   try { window.location.href = "/success.html"; } catch {}
@@ -1267,7 +1294,7 @@ await fetch(CONFIG.formspreeEndpoint, {
     <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={handleConcludeTest}>
+    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
