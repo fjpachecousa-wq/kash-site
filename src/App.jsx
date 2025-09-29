@@ -1,42 +1,121 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-/* === KASH_MIN_HELPERS (v2: usa localStorage por tracking) === */
-function handleConcludeTest() {
-  try {
-    const last = (localStorage.getItem("last_tracking") || "").trim();
+/* === KASH_HELPERS_V3 (mínimo e robusto p/ companyName) === */
+function __kash_tryJSON(s){ try{ return JSON.parse(String(s||"")); }catch(_){ return null; } }
+function __kash_isLikelyName(v){
+  if (!v || typeof v!=="string") return false;
+  const s = v.trim();
+  if (s.length < 2) return false;
+  if (/\n|\r|\t/.test(s)) return false;
+  if (/^[\d\s\-]+$/.test(s)) return false;
+  if (/@/.test(s)) return false;
+  return true;
+}
+function __kash_deepFind(obj){
+  try{
+    const stack=[obj];
+    const keyRegex=/company|empresa|business|legal/i;
+    while(stack.length){
+      const cur=stack.pop();
+      if (cur && typeof cur==="object"){
+        for (const k in cur){
+          if (!Object.prototype.hasOwnProperty.call(cur,k)) continue;
+          const v=cur[k];
+          if (keyRegex.test(String(k))){
+            if (typeof v==="string" && __kash_isLikelyName(v)) return v.trim();
+            if (v && typeof v==="object"){
+              const cand = __kash_deepFind(v);
+              if (cand) return cand;
+            }
+          }else if (v && typeof v==="object"){
+            stack.push(v);
+          }
+        }
+      }
+    }
+  }catch{}
+  return "";
+}
+function __kash_getCompanyFromLocalStorage(){
+  let last = "";
+  try{ last = (localStorage.getItem("last_tracking")||"").trim(); }catch{}
+  const keysToTry = [];
+  if (last){ keysToTry.push(last, last.toUpperCase(), last.toLowerCase()); }
+  keysToTry.push("companyName","empresaNome","businessName","legalName","company");
+  for (const k of keysToTry){
+    try{
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      const j = __kash_tryJSON(raw);
+      if (j && typeof j==="object"){
+        const found = __kash_deepFind(j);
+        if (found) return found;
+      }
+      if (__kash_isLikelyName(raw)) return raw.trim();
+    }catch{}
+  }
+  try{
+    for (let i=0;i<localStorage.length;i++){
+      const k = localStorage.key(i);
+      const raw = localStorage.getItem(k);
+      const j = __kash_tryJSON(raw);
+      if (j && typeof j==="object"){
+        const found = __kash_deepFind(j);
+        if (found) return found;
+      }
+      if (/company|empresa|business|legal/i.test(k) && __kash_isLikelyName(raw)) return raw.trim();
+    }
+  }catch{}
+  return "";
+}
+function __kash_getCompanyFromDOM(){
+  const qs=(s,r=document)=>r.querySelector(s);
+  const qsa=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  try{
+    let v = (qs('input[name="companyName"]')?.value
+      || qs('#companyName')?.value
+      || qs('[data-company-name]')?.value
+      || qs('input[name="empresaNome"]')?.value
+      || qs('input[name="nomeEmpresa"]')?.value
+      || qs('input[name="businessName"]')?.value
+      || qs('input[name="legalName"]')?.value
+      || "");
+    v = (v||"").trim();
+    if (v) return v;
+
+    const byPh = qsa('input[type="text"],input:not([type]),textarea').find(i=>{
+      const ph=(i.placeholder||"").toLowerCase();
+      return ph.includes("empresa")||ph.includes("company")||ph.includes("business");
+    });
+    if (byPh && __kash_isLikelyName(byPh.value)) return byPh.value.trim();
+
+    const text = document.body?.innerText || "";
+    let m = text.match(/(?:Empresa|Company)\s*:\s*([^\n\r]+)/i);
+    if (m && __kash_isLikelyName(m[1])) return m[1].trim();
+
+    const nodes = qsa('label,dt,th,strong,b');
+    for (const n of nodes){
+      const t=(n.textContent||"").trim().toLowerCase();
+      if (/empresa|company|business/.test(t)){
+        let sib = n.nextElementSibling;
+        for (let hop=0; hop<3 && sib; hop++, sib=sib.nextElementSibling){
+          const sv=(sib.textContent||"").trim();
+          if (__kash_isLikelyName(sv)) return sv;
+          const inp = sib.querySelector?.('input,textarea');
+          if (inp && __kash_isLikelyName(inp.value)) return inp.value.trim();
+        }
+      }
+    }
+  }catch{}
+  return "";
+}
+function handleConcludeTest(){
+  try{
+    const last = (localStorage.getItem("last_tracking")||"").trim();
     const kashId = last ? last.toUpperCase() : "";
-
-    function getSavedByAnyKey(key){
-      if(!key) return null;
-      try { const v = localStorage.getItem(key); if (v) return JSON.parse(v); } catch {}
-      try { const v = localStorage.getItem(key.toUpperCase()); if (v) return JSON.parse(v); } catch {}
-      try { const v = localStorage.getItem(key.toLowerCase()); if (v) return JSON.parse(v); } catch {}
-      return null;
-    }
-    const saved = getSavedByAnyKey(last);
-
-    let companyName = "";
-    if (saved && typeof saved === "object") {
-      companyName =
-        (saved.company && (saved.company.companyName || saved.company.name || saved.company.legalName)) ||
-        saved.companyName ||
-        saved.businessName ||
-        saved.legalName ||
-        "";
-    }
-    if (!companyName) {
-      const q = (s)=>document.querySelector(s);
-      companyName =
-        (q('input[name="companyName"]')?.value ||
-         q('#companyName')?.value ||
-         q('[data-company-name]')?.value ||
-         q('input[name="empresaNome"]')?.value ||
-         q('input[name="nomeEmpresa"]')?.value ||
-         q('input[name="businessName"]')?.value ||
-         q('input[name="legalName"]')?.value ||
-         "").trim();
-    }
+    let companyName = __kash_getCompanyFromLocalStorage();
+    if (!companyName) companyName = __kash_getCompanyFromDOM();
 
     const payload = {
       kashId,
@@ -46,20 +125,12 @@ function handleConcludeTest() {
       atualizadoEm: new Date().toISOString(),
       acao: "create"
     };
-
-    const APPS_URL = (window.CONFIG && window.CONFIG.appsScriptUrl) || "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
-    if (APPS_URL) {
-      fetch(APPS_URL, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      }).catch(()=>{});
-    }
-  } catch {}
-  try { window.location.href = "/success.html"; } catch {}
+    const url = (window.CONFIG && window.CONFIG.appsScriptUrl) || "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
+    if (url){ fetch(url,{method:"POST",mode:"no-cors",headers:{"Content-Type":"application/json"},body:JSON.stringify(payload)}).catch(()=>{}); }
+  }catch{}
+  try{ window.location.href="/success.html"; }catch{}
 }
-/* === /KASH_MIN_HELPERS === */
+/* === /KASH_HELPERS_V3 === */
 
 
 
