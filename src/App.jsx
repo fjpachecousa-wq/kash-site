@@ -1,6 +1,79 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
+/* === KASH CLEAN HELPERS (no hack, no layout change) === */
+const CONFIG = (typeof window!=="undefined" && window.CONFIG) ? window.CONFIG : {
+  appsScriptUrl: "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec"
+};
+
+function getTracking() {
+  try {
+    const fromLS = (localStorage.getItem("last_tracking")||"").trim();
+    if (fromLS) return fromLS.toUpperCase();
+  } catch {}
+  try {
+    const txt = document.body?.innerText || "";
+    const m = txt.match(/KASH-[A-Z0-9-]+/i);
+    if (m) return m[0].toUpperCase();
+  } catch {}
+  return "";
+}
+
+function getCompanyName() {
+  const qs=(s,r=document)=>r.querySelector(s);
+  const qsa=(s,r=document)=>Array.from(r.querySelectorAll(s));
+  try {
+    let el = qs('input[name="companyName"]')
+          || qs('#companyName')
+          || qs('[data-company-name]')
+          || qs('input[name="empresaNome"]')
+          || qs('input[name="nomeEmpresa"]')
+          || qs('input[name="businessName"]')
+          || qs('input[name="legalName"]');
+    let v = el && el.value ? el.value.trim() : "";
+    if (!v) {
+      const byPh = qsa('input[type="text"],input:not([type])')
+        .find(i => (i.placeholder||"").toLowerCase().match(/empresa|company|business/));
+      if (byPh && byPh.value) v = byPh.value.trim();
+    }
+    if (!v) {
+      const t = document.body?.innerText || "";
+      const m = t.match(/(?:Empresa|Company)\s*:\s*([^\n\r]+)/i);
+      if (m && m[1]) v = m[1].trim();
+    }
+    return v || "";
+  } catch { return ""; }
+}
+
+async function postToAppsScript(payload) {
+  const url = CONFIG.appsScriptUrl;
+  if (!url) return;
+  try {
+    await fetch(url, {
+      method: "POST",
+      mode: "no-cors",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+  } catch {}
+}
+
+async function handleConcludeTest() {
+  // faseAtual/subFase conforme combinado
+  const kashId = getTracking();
+  const companyName = getCompanyName();
+  const atualizadoEm = new Date().toISOString();
+  const faseAtual = 1;
+  const subFase = 0;
+  const payload = { kashId, companyName, faseAtual, subFase, atualizadoEm, acao: "create" };
+  await postToAppsScript(payload);
+  try {
+    window.location.href = "/success.html";
+  } catch {}
+}
+/* === /KASH CLEAN HELPERS === */
+
+
 /* === KASH WIREFIX (Google Sheets) === */
 if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   window.__KASH_WIRE__ = true;
