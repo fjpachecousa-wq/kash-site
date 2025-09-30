@@ -1,3 +1,21 @@
 node_modules/
 dist/
+.env# 
+Ignorar dependências
+node_modules/
+
+# Ignorar build
+dist/
+.vercel/
+
+# Ignorar configs locais do Mac
+.DS_Store
+
+# Ignorar logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Ignorar arquivos temporários
+*.local
 .env
