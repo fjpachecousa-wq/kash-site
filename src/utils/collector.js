@@ -1,31 +1,17 @@
 // src/utils/collector.js
-// ===================================================
-// Coleta de dados locais da aplicação (kashId e companyName)
-// - kashId: vem de localStorage "last_tracking" (gerado no site)
-// - companyName: tenta ler do formulário e de caches conhecidos
-// ===================================================
+// Coleta de dados locais (tracking + nome da empresa)
 
-/**
- * Retorna o tracking salvo no navegador em UPPERCASE.
- * Ex.: "KASH-ABC123"
- */
 export function readKashId() {
   try {
-    const stored = localStorage.getItem("last_tracking");
-    return stored ? String(stored).toUpperCase().trim() : "";
+    const last = localStorage.getItem("last_tracking") || "";
+    return last ? String(last).toUpperCase().trim() : "";
   } catch {
     return "";
   }
 }
 
-/**
- * Busca o nome da empresa em:
- * 1) Campos do formulário (diferentes nomes)
- * 2) Objetos salvos no localStorage (se existirem)
- * 3) Elementos impressos na página
- */
 export function readCompanyName() {
-  // 1) Tentar direto nos inputs do formulário (vários nomes comuns)
+  // 1) Tenta pegar do formulário
   const selectors = [
     'input[name="companyName"]',
     'input[name="company_name"]',
@@ -42,33 +28,34 @@ export function readCompanyName() {
     }
   }
 
-  // 2) Tentar no localStorage (se sua app guarda a aplicação)
-  const storageKeys = [
-    "last_application",
-    "application",
-    "kash_application",
-    "kash_contract",
-  ];
-  for (const key of storageKeys) {
+  // 2) Tenta localStorage
+  const keys = ["last_companyName","last_application","application","kash_application","kash_contract"];
+  for (const k of keys) {
     try {
-      const raw = localStorage.getItem(key);
+      const raw = localStorage.getItem(k);
       if (!raw) continue;
+      if (k === "last_companyName") {
+        const v = String(raw).trim();
+        if (v) return v;
+        continue;
+      }
       const data = JSON.parse(raw);
-
-      // caminhos típicos
       if (data?.companyName) return String(data.companyName).trim();
-      if (data?.company?.companyName)
-        return String(data.company.companyName).trim();
+      if (data?.company?.companyName) return String(data.company.companyName).trim();
       if (data?.legalName) return String(data.legalName).trim();
       if (data?.businessName) return String(data.businessName).trim();
       if (data?.empresaNome) return String(data.empresaNome).trim();
-    } catch {
-      /* ignora JSON inválido */
-    }
+    } catch {}
   }
 
-  // 3) Tentar algo já impresso na página
-  const printed =
-    document.querySelector("[data-company-label]")?.textContent?.trim() || "";
+  // 3) Tenta algo impresso na página
+  const printed = document.querySelector("[data-company-label]")?.textContent?.trim() || "";
   return printed;
+}
+
+export function saveApplicationData(kashId, companyName) {
+  try {
+    if (kashId) localStorage.setItem("last_tracking", kashId);
+    if (companyName) localStorage.setItem("last_companyName", companyName);
+  } catch {}
 }
