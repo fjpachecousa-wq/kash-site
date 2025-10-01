@@ -1,16 +1,22 @@
-import React from "react";
-import Hero from "./sections/Hero.jsx";
-import Pricing from "./sections/Pricing.jsx";
-import HowItWorks from "./sections/HowItWorks.jsx";
-import Footer from "./sections/Footer.jsx";
+import Header from './components/Header'
+import Hero from './components/Hero'
+import Simulator from './components/Simulator'
+import Services from './components/Services'
+import Plans from './components/Plans'
 
 export default function App(){
   return (
-    <>
-      <Hero />
-      <HowItWorks />
-      <Pricing />
-      <Footer />
-    </>
-  );
+    <div className="container">
+      <Header />
+      <div className="row" style={{marginTop:24}}>
+        <div style={{flex:'1 1 360px', minWidth:300}}>
+          <Hero />
+        </div>
+        <Simulator />
+      </div>
+      <Services />
+      <Plans />
+      <footer>© KASH Solutions</footer>
+    </div>
+  )
 }

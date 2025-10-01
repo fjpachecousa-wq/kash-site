@@ -1,17 +1,19 @@
 {
-  "name": "kash-site",
-  "version": "1.0.0",
+  "name": "kash-landing",
   "private": true,
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview --host --port 4173"
+    "preview": "vite preview --port 5173"
   },
   "dependencies": {
-    "jspdf": "^2.5.1"
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "vite": "^4.5.0"
+    "@vitejs/plugin-react": "^4.3.1",
+    "vite": "^4.5.3"
   }
 }
