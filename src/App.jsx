@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
+import kashLogo from "/kash-logo.jpg";
 
 /* === KASH WIREFIX (Google Sheets) === */
 if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
@@ -401,9 +402,7 @@ function CTAButton({ children, variant = "primary", onClick, type = "button", di
     : variant === "ghost"
     ? "bg-transparent border border-slate-700 text-slate-200 hover:bg-slate-800"
     : "bg-slate-700 text-slate-100 hover:bg-slate-600";
-  return <div className="promo">KASH FLOW 30 — fale conosco para mais detalhes.</div>}
-      </div>
-      <div className="grid md:grid-cols-2 gap-2">
+  return (<div className="promo">KASH FLOW 30 — fale conosco para mais detalhes.</div>);<div className="grid md:grid-cols-2 gap-2">
         <div>
           <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.fullName && "border-red-500")} placeholder="Nome completo" value={data.fullName} onChange={(e) => onChange("fullName", e.target.value)} />
           <div className="text-red-400 text-xs">{errors.fullName || ""}</div>
