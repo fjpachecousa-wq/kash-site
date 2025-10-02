@@ -2,13 +2,20 @@ import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 import kashLogo from "/kash-logo.jpg";
 
+// === Endpoint do Apps Script via Environment (Vercel) ===
+const APPS_SCRIPT_URL =
+  (typeof import.meta.meta !== "undefined" && import.meta.env?.VITE_APPS_SCRIPT_URL) ||
+  (typeof window !== "undefined" && window.APPS_SCRIPT_URL) ||
+  "";
+
+
 /* === KASH WIREFIX (Google Sheets) === */
 if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   window.__KASH_WIRE__ = true;
 
   // URL publicada do Apps Script
   window.CONFIG = window.CONFIG || {};
-  window.CONFIG.appsScriptUrl = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
+  window.CONFIG.appsScriptUrl = APPS_SCRIPT_URL;
 
   const getAPI = () => (window.CONFIG && window.CONFIG.appsScriptUrl) || "";
 
@@ -295,7 +302,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
 })();
 // ====== FIM KASH COMPANY PATCH ======
 
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
+const SCRIPT_URL = APPS_SCRIPT_URL;
 
 /* ================== CONFIG ================== */
 const CONFIG = {
@@ -303,10 +310,10 @@ const CONFIG = {
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
   checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
-  formspreeEndpoint: "",
+
 };
 // === KASH Process API (Google Apps Script) ===
-const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
+const PROCESSO_API = APPS_SCRIPT_URL;
 
 async function apiGetProcesso(kashId){
   const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
@@ -402,46 +409,10 @@ function CTAButton({ children, variant = "primary", onClick, type = "button", di
     : variant === "ghost"
     ? "bg-transparent border border-slate-700 text-slate-200 hover:bg-slate-800"
     : "bg-slate-700 text-slate-100 hover:bg-slate-600";
-  return (<div className="promo">KASH FLOW 30 — fale conosco para mais detalhes.</div>);<div className="grid md:grid-cols-2 gap-2">
-        <div>
-          <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.fullName && "border-red-500")} placeholder="Nome completo" value={data.fullName} onChange={(e) => onChange("fullName", e.target.value)} />
-          <div className="text-red-400 text-xs">{errors.fullName || ""}</div>
-        </div>
-        <div>
-          <input type="email" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.email && "border-red-500")} placeholder="E-mail do sócio" value={data.email} onChange={(e) => onChange("email", e.target.value)} />
-          <div className="text-red-400 text-xs">{errors.email || ""}</div>
-        </div>
-      </div>
-      <div className="grid md:grid-cols-2 gap-2">
-        <div>
-          <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.phone && "border-red-500")} placeholder="Telefone do sócio" value={data.phone} onChange={(e) => onChange("phone", e.target.value)} />
-          <div className="text-red-400 text-xs">{errors.phone || ""}</div>
-        </div>
-        <div>
-          <input className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.passport && "border-red-500")} placeholder="Passaporte (ou RG)" value={data.passport} onChange={(e) => onChange("passport", e.target.value)} />
-          <div className="text-red-400 text-xs">{errors.passport || ""}</div>
-        </div>
-      </div>
-      <div className="grid md:grid-cols-3 gap-2">
-        <div>
-          <input className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Órgão emissor" value={data.issuer} onChange={(e) => onChange("issuer", e.target.value)} />
-        </div>
-        <div>
-          <input type="date" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.docExpiry && "border-red-500")} value={data.docExpiry} onChange={(e) => onChange("docExpiry", e.target.value)} />
-          <div className="text-[11px] text-slate-400 mt-1">Validade do documento</div>
-          <div className="text-red-400 text-xs">{errors.docExpiry || ""}</div>
-        </div>
-        <div>
-          <input type="date" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.birthdate && "border-red-500")} value={data.birthdate} onChange={(e) => onChange("birthdate", e.target.value)} />
-          <div className="text-[11px] text-slate-400 mt-1">Data de nascimento</div>
-          <div className="text-red-400 text-xs">{errors.birthdate || ""}</div>
-        </div>
-      </div>
-      <div>
-        <input type="number" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.percent && "border-red-500")} placeholder="% de participação" value={data.percent} onChange={(e) => onChange("percent", e.target.value)} />
-        <div className="text-red-400 text-xs">{errors.percent || ""}</div>
-      </div>
-    </div>
+  return (
+    <button type={type} onClick={onClick} disabled={disabled} className={`${base} ${styles}`}>
+      {children}
+    </button>
   );
 }
 
@@ -704,8 +675,7 @@ function FormWizard({ open, onClose }) {
       } catch {}
 
       try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: (form.company.companyName || (typeof localStorage !== "undefined" && localStorage.getItem("companyName")) || ""), atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
-// (removido: formspree)
-      /* removido: formspree */
+
     } catch {}
 
     setLoading(false);
@@ -1054,10 +1024,7 @@ function _scrapeFormDataStrong(){
   return out;
 }
 
-
-/* removido: formspree */
-function _inflateFormspree(flat){
-  if (!flat || typeof flat !== "object") return {};
+;
   const obj = {};
   const setDeep = (path, value) => {
     let cur = obj;
@@ -1101,10 +1068,7 @@ function _inflateFormspree(flat){
   return obj;
 }
 
-
-/* removido: formspree */
-function _harvestFromFlat(flat){
-  if (!flat || typeof flat!=='object') return { company:{}, members:[] };
+, members:[] };
   const company = {};
   const membersMap = new Map(); // index -> obj
   const toIdxObj = (idx) => {
