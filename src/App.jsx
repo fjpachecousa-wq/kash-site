@@ -1,11 +1,5 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
-import kashLogo from "/kash-logo.jpg";
-
-const APPS_SCRIPT_URL =
-  (typeof import.meta.meta !== "undefined" && import.meta.env?.VITE_APPS_SCRIPT_URL) ||
-  (typeof window !== "undefined" && window.APPS_SCRIPT_URL) ||
-  "";
 
 /* === KASH WIREFIX (Google Sheets) === */
 if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
@@ -13,7 +7,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
 
   // URL publicada do Apps Script
   window.CONFIG = window.CONFIG || {};
-  window.CONFIG.appsScriptUrl = "APPS_SCRIPT_URL";
+  window.CONFIG.appsScriptUrl = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
   const getAPI = () => (window.CONFIG && window.CONFIG.appsScriptUrl) || "";
 
@@ -300,7 +294,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
 })();
 // ====== FIM KASH COMPANY PATCH ======
 
-const SCRIPT_URL = "APPS_SCRIPT_URL";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 /* ================== CONFIG ================== */
 const CONFIG = {
@@ -311,7 +305,7 @@ const CONFIG = {
   formspreeEndpoint: "",
 };
 // === KASH Process API (Google Apps Script) ===
-const PROCESSO_API = "APPS_SCRIPT_URL";
+const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 async function apiGetProcesso(kashId){
   const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
@@ -407,7 +401,7 @@ function CTAButton({ children, variant = "primary", onClick, type = "button", di
     : variant === "ghost"
     ? "bg-transparent border border-slate-700 text-slate-200 hover:bg-slate-800"
     : "bg-slate-700 text-slate-100 hover:bg-slate-600";
-  return <div className="promo">KASH FLOW 30 — fale conosco para mais detalhes.</div>
+  return <div className="promo">KASH FLOW 30 — fale conosco para mais detalhes.</div>}
       </div>
       <div className="grid md:grid-cols-2 gap-2">
         <div>
@@ -461,7 +455,7 @@ function TrackingSearch() {
   const [notFound, setNotFound] = useState(false);
   const handleLookup = async () => {
     try {
-      try { const obj = await apiGetProcesso(code.trim()); setResult({ tracking: obj.kashId, dateISO: obj.atualizadoEm, company: { companyName: ((obj.companyName || '' || (typeof localStorage !== "undefined" && localStorage.getItem("companyName")) || ""))}, updates: obj.updates || [], faseAtual: obj.faseAtual || 1, subFase: obj.subFase || null }); saveTrackingShortcut(code.trim()); setNotFound(false); return; } catch(e) { setResult(null); setNotFound(true); return; }
+      try { const obj = await apiGetProcesso(code.trim()); setResult({ tracking: obj.kashId, dateISO: obj.atualizadoEm, company: { companyName: (obj.companyName || '—' || (typeof localStorage !== "undefined" && localStorage.getItem("companyName")) || "")}, updates: obj.updates || [], faseAtual: obj.faseAtual || 1, subFase: obj.subFase || null }); saveTrackingShortcut(code.trim()); setNotFound(false); return; } catch(e) { setResult(null); setNotFound(true); return; }
       setResult(data);
       setNotFound(false);
     } catch { setResult(null); setNotFound(true); }
@@ -710,7 +704,7 @@ function FormWizard({ open, onClose }) {
         try { await apiUpdate({ kashId: selected, faseAtual: Number(faseAtual)||2, subFase: subFase||null, status, note }); } catch(e) { console.warn("API update falhou", e); }
       } catch {}
 
-      try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: ((form.company.companyName || (typeof localStorage !== "undefined" && localStorage.getItem("companyName")) || "")), atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
+      try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: (form.company.companyName || (typeof localStorage !== "undefined" && localStorage.getItem("companyName")) || ""), atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
 // (removido: formspree)
       /* removido: formspree */
     } catch {}
