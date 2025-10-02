@@ -1,5 +1,6 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
+import kashLogo from "/kash-logo.jpg";
 
 const APPS_SCRIPT_URL =
   (typeof import.meta.meta !== "undefined" && import.meta.env?.VITE_APPS_SCRIPT_URL) ||
