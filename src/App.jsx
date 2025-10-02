@@ -302,7 +302,7 @@ const CONFIG = {
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
   checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
-  formspreeEndpoint: "
+  formspreeEndpoint: "",
 };
 // === KASH Process API (Google Apps Script) ===
 const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
@@ -708,7 +708,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
 
 
 
-/* ================== FORM WIZARD (+ address FL logic, + , + tracking) ================== */
+/* ================== FORM WIZARD (+ address FL logic, + Formspree, + tracking) ================== */
 const initialForm = {
   company: { companyName: ("" || (typeof localStorage !== "undefined" && localStorage.getItem("companyName")) || ""), email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
   members: [
@@ -1038,8 +1038,8 @@ function FormWizard({ open, onClose }) {
       } catch {}
 
       try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: (form.company.companyName || (typeof localStorage !== "undefined" && localStorage.getItem("companyName")) || ""), atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
-// Envia ao  (e-mail / painel)
-      /*  desativado
+// Envia ao Formspree (e-mail / painel)
+      /* FORMspree desativado
 await fetch(CONFIG.formspreeEndpoint, {
         method: "POST",
         headers: { "Accept": "application/json", "Content-Type": "application/json" },
@@ -1233,7 +1233,7 @@ await fetch(CONFIG.formspreeEndpoint, {
     <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
+    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
@@ -1395,7 +1395,7 @@ function _scrapeFormDataStrong(){
 }
 
 
-/* =====  INFLATOR: expand flat keys to nested/arrays ===== */
+/* ===== FORMSPREE INFLATOR: expand flat keys to nested/arrays ===== */
 function _inflateFormspree(flat){
   if (!flat || typeof flat !== "object") return {};
   const obj = {};
@@ -1442,7 +1442,7 @@ function _inflateFormspree(flat){
 }
 
 
-/* ===== ULTRA FLAT HARVESTER ( & generic) ===== */
+/* ===== ULTRA FLAT HARVESTER (Formspree & generic) ===== */
 function _harvestFromFlat(flat){
   if (!flat || typeof flat!=='object') return { company:{}, members:[] };
   const company = {};
