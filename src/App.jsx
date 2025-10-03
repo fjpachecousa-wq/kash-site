@@ -4,7 +4,7 @@ import kashLogo from "/kash-logo.jpg";
 
 // === Endpoint do Apps Script via Environment (Vercel) ===
 const APPS_SCRIPT_URL =
-  (typeof import.meta.meta !== "undefined" && import.meta.env?.VITE_APPS_SCRIPT_URL) ||
+  (typeof import.meta.meta.meta !== "undefined" && import.meta.env?.VITE_APPS_SCRIPT_URL) ||
   (typeof window !== "undefined" && window.APPS_SCRIPT_URL) ||
   "";
 
