@@ -102,7 +102,6 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
     return (
         <section className="mb-6">
           <div className="promo bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-slate-300">
-            KASH FLOW 30 — fale conosco para mais detalhes.
           </div>
         </section>
         (q('input[name="companyName"]') && q('input[name="companyName"]').value.trim()) ||
@@ -811,7 +810,7 @@ function FormWizard({ open, onClose }) {
     <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
+    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="__removed_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
     <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
