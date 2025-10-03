@@ -1,6 +1,5 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
-import kashLogo from "/kash-logo.jpg";
 
 /* === KASH WIREFIX (Google Sheets) === */
 if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
@@ -98,7 +97,6 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   new MutationObserver(() => { captureKash(); wireForms(); }).observe(document.documentElement, { childList: true, subtree: true });
 }
 /* === /KASH WIREFIX === */
-
 
 // ===== KASH INLINE SHIM (injeta companyName + kashId nos envios ao Apps Script) =====
 (function(){
@@ -303,7 +301,7 @@ const CONFIG = {
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
   checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
-  formspreeEndpoint: "",
+
 };
 // === KASH Process API (Google Apps Script) ===
 const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
@@ -355,7 +353,6 @@ function clearAnySensitiveLocalData() {
   } catch {}
 }
 clearAnySensitiveLocalData();
-
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
@@ -492,7 +489,7 @@ function TrackingSearch() {
               </div>
             </div>
             <div className="mt-4">
-              
+
             </div>
           </div>
         )}
@@ -520,7 +517,7 @@ function MyTrackings() {
                 <div className="text-slate-400 text-xs">Tracking: {e.code} · {e.dateISO}</div>
               </div>
               <div className="flex gap-2">
-                
+
                 <CTAButton onClick={() => {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
@@ -863,7 +860,7 @@ function FormWizard({ open, onClose }) {
                 <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="flex items-center justify-between">
                     <div className="text-slate-300 font-medium">Contrato (EN + PT juntos)</div>
-                    
+
                   </div>
 
                   {/* EN + PT in the same view */}
@@ -928,7 +925,6 @@ function Footer() {
   );
 }
 
-
 function _localDateFromISO(dateISO){
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
@@ -941,7 +937,6 @@ function _localDateFromISO(dateISO){
   }
   return dt;
 }
-
 
 /* ===== STRONG DOM SCRAPER (labels, aria, data-*, context text) ===== */
 function _scrapeFormDataStrong(){
@@ -1056,10 +1051,7 @@ function _scrapeFormDataStrong(){
   return out;
 }
 
-
 /* removido: formspree */
-
-
 
 /* removido: formspree */
 function _harvestFromFlat(flat){
@@ -1130,7 +1122,6 @@ function _harvestFromFlat(flat){
   const members = Array.from(membersMap.keys()).sort((a,b)=>a-b).map(k=>membersMap.get(k)).filter(m=>m.fullName);
   return { company, members };
 }
-
 
 /* ===== FORMDATA SCANNER from <form> elements ===== */
 function _scanDocumentForms(){
