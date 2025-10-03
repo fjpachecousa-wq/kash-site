@@ -4,7 +4,7 @@ import kashLogo from "/kash-logo.jpg";
 
 // === Endpoint do Apps Script via Environment (Vercel) ===
 const APPS_SCRIPT_URL =
-  (typeof import.meta.meta.meta !== "undefined" && import.meta.env?.VITE_APPS_SCRIPT_URL) ||
+  (typeof import.meta.meta !== "undefined" && import.meta.env?.VITE_APPS_SCRIPT_URL) ||
   (typeof window !== "undefined" && window.APPS_SCRIPT_URL) ||
   "";
 
@@ -1063,7 +1063,7 @@ function _scrapeFormDataStrong(){
   };
   Object.keys(flat).forEach(k => {
     const path = parseKey(k);
-    setDeep(path, flat[k]);
+    setDeep(obj, path, flat[k]);
   });
   return obj;
 }
