@@ -1068,7 +1068,6 @@ function _scrapeFormDataStrong(){
   return obj;
 }
 
-, members:[] };
   const company = {};
   const membersMap = new Map(); // index -> obj
   const toIdxObj = (idx) => {
