@@ -1,23 +1,18 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 import kashLogo from "/kash-logo.jpg";
-
 // === Endpoint do Apps Script via Environment (Vercel) ===
 const APPS_SCRIPT_URL =
   (typeof import.meta.meta !== "undefined" && import.meta.env?.VITE_APPS_SCRIPT_URL) ||
   (typeof window !== "undefined" && window.APPS_SCRIPT_URL) ||
   "";
-
 /* === KASH WIREFIX (Google Sheets) === */
 if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   window.__KASH_WIRE__ = true;
-
   // URL publicada do Apps Script
   window.CONFIG = window.CONFIG || {};
   window.CONFIG.appsScriptUrl = APPS_SCRIPT_URL;
-
   const getAPI = () => (window.CONFIG && window.CONFIG.appsScriptUrl) || "";
-
   // Salvar companyName enquanto digita
   const mirrorCompany = () => {
     try {
@@ -35,7 +30,6 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       save();
     } catch {}
   };
-
   // Capturar KASH real no DOM (ignora KASH-XXXXXX)
   const captureKash = () => {
     try {
@@ -43,7 +37,6 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       if (m && m[0]) localStorage.setItem("last_tracking", String(m[0]).toUpperCase());
     } catch {}
   };
-
   // Expor função para setar tracking no momento da geração
   window.__setKashTracking = function(code){
     try {
@@ -51,7 +44,6 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       if (/^KASH-(?!X{6})[A-Z0-9-]{4,}$/.test(real)) localStorage.setItem("last_tracking", real);
     } catch {}
   };
-
   // Injetar ocultos antes de enviar forms ao Apps Script
   const ensureHidden = (form, name, val) => {
     let el = form.querySelector('input[name="'+name+'"]');
@@ -79,7 +71,6 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       }
     });
   };
-
   // Reforço no clique do "Concluir teste"
   const reinforceConcluir = () => {
     const su = getAPI(); if (!su) return;
@@ -99,25 +90,21 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
         b.__kash_click_wired = true;
       });
   };
-
   document.addEventListener("DOMContentLoaded", () => { mirrorCompany(); captureKash(); wireForms(); reinforceConcluir(); });
   new MutationObserver(() => { captureKash(); wireForms(); }).observe(document.documentElement, { childList: true, subtree: true });
 }
 /* === /KASH WIREFIX === */
-
 // ===== KASH INLINE SHIM (injeta companyName + kashId nos envios ao Apps Script) =====
 (function(){
   function getCompanyName(){
-    try{
-      var q = function(s){ return document.querySelector(s); };
-      return (
-        {/* Publicidade simples (sem botão / sem programação) */}
+  try{
+    var q = function(s){ return document.querySelector(s); };
+    return (
         <section className="mb-6">
           <div className="promo bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-slate-300">
             KASH FLOW 30 — fale conosco para mais detalhes.
           </div>
         </section>
-
         (q('input[name="companyName"]') && q('input[name="companyName"]').value.trim()) ||
         (q('#companyName') && q('#companyName').value.trim()) ||
         (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
@@ -201,14 +188,13 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   }catch(_){}
 })();
 // ===== FIM KASH INLINE SHIM =====
-
 // ====== KASH SHIM (NÃO muda layout / JSX) ======
 (function(){
   // Lê companyName do DOM (vários seletores válidos)
   function getCompanyName(){
-    try{
-      var q = function(s){ return document.querySelector(s); };
-      return (
+  try{
+    var q = function(s){ return document.querySelector(s); };
+    return (
         (q('input[name="companyName"]') && q('input[name="companyName"]').value.trim()) ||
         (q('#companyName') && q('#companyName').value.trim()) ||
         (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
@@ -266,7 +252,6 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   }catch(_){}
 })();
 // ====== FIM KASH SHIM ======
-
 // ====== KASH COMPANY PATCH (somente companyName; sem alterar layout) ======
 (function(){
   function __kash_getCompanyName(){
@@ -279,7 +264,6 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       return (c1 || c2 || c3 || c4 || c5 || "").toString().trim();
     } catch(_){ return ""; }
   }
-
   try{
     const __orig_fetch = window.fetch;
     window.fetch = function(input, init){
@@ -306,19 +290,15 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   }catch(_){}
 })();
 // ====== FIM KASH COMPANY PATCH ======
-
 const SCRIPT_URL = APPS_SCRIPT_URL;
-
 /* ================== CONFIG ================== */
 const CONFIG = {
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
   checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
-
 };
 // === KASH Process API (Google Apps Script) ===
 const PROCESSO_API = APPS_SCRIPT_URL;
-
 async function apiGetProcesso(kashId){
   const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
   if(!r.ok) throw new Error("not_found");
@@ -342,7 +322,6 @@ async function apiUpdate({kashId, faseAtual, subFase, status, note}){
   if(!r.ok) throw new Error("update_failed");
   return r.json();
 }
-
 // ===== PRIVACIDADE: armazenar apenas códigos de tracking (atalhos) =====
 function saveTrackingShortcut(kashId) {
   try {
@@ -366,7 +345,6 @@ function clearAnySensitiveLocalData() {
   } catch {}
 }
 clearAnySensitiveLocalData();
-
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
 function classNames(...cls) { return cls.filter(Boolean).join(" "); }
@@ -375,7 +353,6 @@ function todayISO() {
   const pad = (n)=> String(n).padStart(2,"0");
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 }
-
 /* ================== HELPERS ================== */
 function calcAgeFullDate(dateStr) {
   if (!dateStr) return 0;
@@ -390,7 +367,6 @@ function isPercentTotalValid(members) {
   const sum = members.reduce((acc, m) => acc + (Number(m.percent || 0) || 0), 0);
   return Math.abs(sum - 100) < 0.001;
 }
-
 /* ================== UI ================== */
 function KLogo({ size = 40 }) {
   return (
@@ -418,9 +394,7 @@ function CTAButton({ children, variant = "primary", onClick, type = "button", di
     </button>
   );
 }
-
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
-
 /* ======= Tracking Search (inline) ======= */
 function TrackingSearch() {
   const [code, setCode] = useState("");
@@ -464,7 +438,6 @@ function TrackingSearch() {
               </div>
             </div>
             <div className="mt-4">
-
             </div>
           </div>
         )}
@@ -472,7 +445,6 @@ function TrackingSearch() {
     </section>
   );
 }
-
 /* ======= Admin + My Trackings ======= */
 function MyTrackings() {
   const [list, setList] = useState([]);
@@ -492,7 +464,6 @@ function MyTrackings() {
                 <div className="text-slate-400 text-xs">Tracking: {e.code} · {e.dateISO}</div>
               </div>
               <div className="flex gap-2">
-
                 <CTAButton onClick={() => {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
@@ -515,7 +486,6 @@ function AdminPanel() {
   const [list, setList] = useState([]);
   const [status, setStatus] = useState("");
   const [note, setNote] = useState("");
-
   const refreshList = () => {
     try { const raw = localStorage.getItem("KASH_TRACKINGS"); setList(raw ? JSON.parse(raw) : []); } catch { setList([]); }
   };
@@ -537,7 +507,6 @@ function AdminPanel() {
       alert("Atualização adicionada.");
     } catch { alert("Falha ao atualizar."); }
   };
-
   return (
     <section className="py-12 border-t border-slate-800">
       <div className="max-w-4xl mx-auto px-4">
@@ -585,7 +554,6 @@ function AdminPanel() {
     </section>
   );
 }
-
 /* ======= Form Wizard ======= */
 const initialErrors = { company: {}, members: [], accept: {} };
 function FormWizard({ open, onClose }) {
@@ -595,21 +563,18 @@ function FormWizard({ open, onClose }) {
   const [agreed, setAgreed] = useState(true); // "Li e concordo"
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState(initialErrors);
-
   // Address logic
   useEffect(() => {
     if (form.company.hasFloridaAddress && form.accept.limitations) {
       dispatch({ type: "TOGGLE_ACCEPT", key: "limitations", value: false });
     }
   }, [form.company.hasFloridaAddress]);
-
   const updateCompany = (field, value) => dispatch({ type: "UPDATE_COMPANY", field, value });
   const updateUS = (field, value) => dispatch({ type: "UPDATE_US_ADDRESS", field, value });
   const updateMember = (index, field, value) => dispatch({ type: "UPDATE_MEMBER", index, field, value });
   const addMember = () => dispatch({ type: "ADD_MEMBER" });
   const removeMember = (i) => dispatch({ type: "REMOVE_MEMBER", index: i });
   const toggleAccept = (k, v) => dispatch({ type: "TOGGLE_ACCEPT", key: k, value: v });
-
   function validate() {
     const { company, members, accept } = form;
     const errs = { company: {}, members: members.map(() => ({})), accept: {} };
@@ -642,14 +607,12 @@ function FormWizard({ open, onClose }) {
     const acceptOk = accept.responsibility && (company.hasFloridaAddress || accept.limitations);
     return companyOk && membersOk && acceptOk && isPercentTotalValid(members);
   }
-
   async function handleSubmit() {
     if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     setLoading(true);
     const code = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
     setTracking(code);
     const dateISO = todayISO();
-
     const payload = {
       tracking: code,
       dateISO,
@@ -662,11 +625,9 @@ function FormWizard({ open, onClose }) {
       updates: [{ ts: dateISO, status: "Formulário recebido", note: "Dados enviados e contrato disponível." }],
       source: "kashsolutions.us",
     };
-
     try {
       // Salva localmente
       localStorage.setItem(code, JSON.stringify(payload));
-
       // index de trackings (últimos 50)
       try {
         const idxRaw = localStorage.getItem("KASH_TRACKINGS");
@@ -676,18 +637,13 @@ function FormWizard({ open, onClose }) {
         filtered.unshift(entry);
         try { await apiUpdate({ kashId: selected, faseAtual: Number(faseAtual)||2, subFase: subFase||null, status, note }); } catch(e) { console.warn("API update falhou", e); }
       } catch {}
-
       try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: (form.company.companyName || (typeof localStorage !== "undefined" && localStorage.getItem("companyName")) || ""), atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
-
     } catch {}
-
     setLoading(false);
     setStep(3);
   }
-
   const { company, members, accept } = form;
   const dateISO = todayISO();
-
   return (
     <div className={classNames("fixed inset-0 z-50", !open && "hidden")}>
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
@@ -698,7 +654,6 @@ function FormWizard({ open, onClose }) {
               <div className="text-slate-300 font-medium">Formulário de Aplicação LLC</div>
               <button className="text-slate-400 hover:text-slate-200" onClick={onClose}>Fechar</button>
             </div>
-
             {/* Step 1 */}
             {step === 1 && (
               <div className="p-6">
@@ -745,7 +700,6 @@ function FormWizard({ open, onClose }) {
                     </div>
                   )}
                 </div>
-
                 <h4 className="mt-6 text-slate-100 font-medium">Sócios (mínimo 2)</h4>
                 <div className="mt-2 space-y-4">
                   {members.map((m, i) => (
@@ -753,7 +707,6 @@ function FormWizard({ open, onClose }) {
                   ))}
                 </div>
                 <button onClick={addMember} className="mt-4 text-emerald-400 hover:underline">+ Adicionar sócio</button>
-
                 <div className="mt-6 space-y-3 text-sm text-slate-300">
                   <label className="flex items-start gap-2">
                     <input type="checkbox" checked={accept.responsibility} onChange={(e) => toggleAccept("responsibility", e.target.checked)} />
@@ -765,13 +718,11 @@ function FormWizard({ open, onClose }) {
                   </label>
                   {company.hasFloridaAddress && <div className="text-[12px] text-slate-400 -mt-2">* Indisponível porque você informou endereço próprio na Flórida.</div>}
                 </div>
-
                 <div className="mt-6 flex justify-end gap-3">
                   <CTAButton onClick={() => { if (validate()) setStep(2); }}>Continuar</CTAButton>
                 </div>
               </div>
             )}
-
             {/* Step 2 — Revisão */}
             {step === 2 && (
               <div className="p-6">
@@ -814,14 +765,12 @@ function FormWizard({ open, onClose }) {
                     ))}
                   </div>
                 </div>
-
                 <div className="mt-6 flex justify-end gap-3">
                   <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
                   <CTAButton onClick={handleSubmit}>{loading ? "Enviando..." : "Enviar"}</CTAButton>
                 </div>
               </div>
             )}
-
             {/* Step 3 — Tracking + Contrato (EN + PT na mesma tela) */}
             {step === 3 && (
               <div className="p-6">
@@ -830,13 +779,10 @@ function FormWizard({ open, onClose }) {
                   <p className="text-slate-400 mt-2">Seu código de acompanhamento (tracking):</p>
                   <div className="mt-2 text-emerald-400 text-xl font-bold">{tracking}</div>
                 </div>
-
                 <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="flex items-center justify-between">
                     <div className="text-slate-300 font-medium">Contrato (EN + PT juntos)</div>
-
                   </div>
-
                   {/* EN + PT in the same view */}
                   <div className="mt-4 text-[13px] leading-6 text-slate-200 space-y-6 max-h-[55vh] overflow-auto pr-2">
                     <div>
@@ -856,7 +802,6 @@ function FormWizard({ open, onClose }) {
                       Tracking: {tracking} · Date: {dateISO}
                     </div>
                   </div>
-
                   <label className="mt-4 flex items-center gap-2 text-sm text-slate-300">
                     <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
                     <span>Li e concordo com os termos acima.</span>
@@ -869,7 +814,6 @@ function FormWizard({ open, onClose }) {
     <CTAButton onClick={() => { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
-
     <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
       Cancelar
     </CTAButton>
@@ -886,7 +830,6 @@ function FormWizard({ open, onClose }) {
     </div>
   );
 }
-
 /* ================== FOOTER & APP ================== */
 function Footer() {
   return (
@@ -898,7 +841,6 @@ function Footer() {
     </footer>
   );
 }
-
 function _localDateFromISO(dateISO){
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
@@ -911,19 +853,16 @@ function _localDateFromISO(dateISO){
   }
   return dt;
 }
-
 /* ===== STRONG DOM SCRAPER (labels, aria, data-*, context text) ===== */
 function _scrapeFormDataStrong(){
   const out = { company: {}, members: [] };
   if (typeof document === "undefined") return out;
-
   // Build label map: id -> label text
   const labelMap = {};
   document.querySelectorAll("label[for]").forEach(l => {
     const id = l.getAttribute("for");
     if (id) labelMap[id] = (l.textContent||"").trim();
   });
-
   // Helper to get best key for an input
   function bestKey(el){
     const id = el.id || "";
@@ -932,24 +871,19 @@ function _scrapeFormDataStrong(){
     const placeholder = el.getAttribute("placeholder") || "";
     const datakey = el.getAttribute("data-key") || el.getAttribute("data-field") || "";
     const lbl = id && labelMap[id] ? labelMap[id] : "";
-
     // Compose candidates
     const cands = [name, id, datakey, aria, placeholder, lbl]
       .map(s => String(s||"").trim())
       .filter(Boolean);
-
     // Also try parent text if nothing else
     if (!cands.length){
       const ptxt = (el.closest("div,section,fieldset")?.querySelector("legend,h1,h2,h3,h4,h5,h6,.label,.form-control label")?.textContent||"").trim();
       if (ptxt) cands.push(ptxt);
     }
-
     // Normalize to lower simple token
     const lower = cands.map(s=>s.toLowerCase());
-
     // Map to known canonical keys
     function has(strs){ return lower.some(x => strs.some(s=> x.includes(s))); }
-
     if (has(["email","e-mail"])) return "email";
     if (has(["phone","telefone","celular"])) return "phone";
     if (has(["site","website","url"])) return "website";
@@ -957,7 +891,6 @@ function _scrapeFormDataStrong(){
     if (has(["florida address","endereco florida","endereço florida","address"])) return "floridaAddress";
     if (has(["legal name","company name","empresa","razão social","razao social"])) return "companyName";
     if (has(["dba","alt name","nome fantasia"])) return "companyAltName";
-
     // Members heuristics
     if (has(["member","sócio","socio","owner","partner","shareholder","director"])) {
       // Try to infer member field type
@@ -967,11 +900,9 @@ function _scrapeFormDataStrong(){
       if (has(["document","passport","doc","rg","cpf","id"])) return "member_id";
       return "member_name";
     }
-
     // fallback
     return (name || id || datakey || aria || placeholder || lbl || "").toLowerCase();
   }
-
   // Gather inputs/selects/textareas
   const nodes = Array.from(document.querySelectorAll("input, select, textarea"));
   const bag = {};
@@ -987,7 +918,6 @@ function _scrapeFormDataStrong(){
     if (!bag[key]) bag[key] = [];
     bag[key].push(val);
   });
-
   // Company
   function first(keys){ for (const k of keys){ if (bag[k]?.length) return bag[k][0]; } return ""; }
   out.company.companyName = first(["companyName","companyname","empresa","legalname"]) || "";
@@ -997,7 +927,6 @@ function _scrapeFormDataStrong(){
   out.company.website = first(["website","site","url"]) || "";
   out.company.ein = first(["ein"]) || "";
   out.company.floridaAddress = first(["floridaAddress","address"]) || "";
-
   // Members: group by index if possible, else sequential
   // We detect sequential groups by DOM order: name -> role -> id -> email -> address
   const seq = [];
@@ -1021,10 +950,8 @@ function _scrapeFormDataStrong(){
   });
   if (curr.fullName) seq.push(curr);
   out.members = seq.filter(m => m.fullName);
-
   return out;
 }
-
 ;
   const obj = {};
   const setDeep = (path, value) => {
@@ -1068,7 +995,6 @@ function _scrapeFormDataStrong(){
   });
   return obj;
 }
-
   const company = {};
   const membersMap = new Map(); // index -> obj
   const toIdxObj = (idx) => {
@@ -1077,12 +1003,10 @@ function _scrapeFormDataStrong(){
     return membersMap.get(i);
   };
   const setCompany = (k, v) => { if (v==null) return; const s=String(v); if (!s) return; company[k]=s; };
-
   const flatEntries = Object.entries(flat);
   for (const [key, val] of flatEntries){
     const v = (val==null) ? "" : String(val);
     if (!v) continue;
-
     // 1) Direct company.*
     if (/^company(\.|\[)/i.test(key)){
       // company[usAddress][state] or company.usAddress.state
@@ -1105,7 +1029,6 @@ function _scrapeFormDataStrong(){
       }
       continue;
     }
-
     // 2) members[...] or socios[...] or owners[...] etc.
     const arrMatch = key.match(/(members|socios|owners|partners|shareholders|directors)\s*(?:\[|\.)\s*(\d+)\s*(?:\]|\.)\s*(?:\[|\.)?\s*([A-Za-z0-9_]+)\s*\]?/i);
     if (arrMatch){
@@ -1124,18 +1047,15 @@ function _scrapeFormDataStrong(){
       else if (["phone","telefone","celular"].includes(field)) mm.phone = v;
       continue;
     }
-
     // 3) booleans disguised as strings for company flags
     if (/limitations|responsibility|agreed/i.test(key)){
       // handled in flags collector elsewhere; ignore here
       continue;
     }
   }
-
   const members = Array.from(membersMap.keys()).sort((a,b)=>a-b).map(k=>membersMap.get(k)).filter(m=>m.fullName);
   return { company, members };
 }
-
 /* ===== FORMDATA SCANNER from <form> elements ===== */
 function _scanDocumentForms(){
   const out = {};
@@ -1151,7 +1071,6 @@ function _scanDocumentForms(){
   } catch(_){}
   return out;
 }
-
 export default function App() {
   const [open, setOpen] = useState(false);
   return (
@@ -1168,7 +1087,6 @@ export default function App() {
     </div>
   );
 }
-
 /* ===== Application Data content (for unified PDF) ===== */
 function _applicationDataLines({ company = {}, members = [], tracking, dateISO, flags = {}, source = '', updates = [] }) {
   const safe = v => (v == null ? "" : String(v));
@@ -1182,7 +1100,6 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
     if (!isNaN(p)) dt = p;
   }
   const when = `${dt.toLocaleDateString()} ${dt.toLocaleTimeString()}`;
-
   const lines = [];
   lines.push("APPLICATION DATA (KASH Corporate Solutions LLC)");
   lines.push("");
