@@ -111,7 +111,6 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
     try{
       var q = function(s){ return document.querySelector(s); };
       return (
-
         {/* Publicidade simples (sem botão / sem programação) */}
         <section className="mb-6">
           <div className="promo bg-slate-800 border border-slate-700 rounded-xl p-3 text-sm text-slate-300">
