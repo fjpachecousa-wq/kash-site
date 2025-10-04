@@ -98,7 +98,6 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
 }
 /* === /KASH WIREFIX === */
 
-
 // ===== KASH INLINE SHIM (injeta companyName + kashId nos envios ao Apps Script) =====
 (function(){
   function getCompanyName(){
@@ -191,6 +190,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
 
 // ====== KASH SHIM (NÃO muda layout / JSX) ======
 (function(){
+  // Lê companyName do DOM (vários seletores válidos)
   function getCompanyName(){
     try{
       var q = function(s){ return document.querySelector(s); };
@@ -203,42 +203,52 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       );
     }catch(_){ return ""; }
   }
+  // Lê kashId do localStorage
   function getKashId(){
     try{
       var v = localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "";
       return String(v).toUpperCase().trim();
     }catch(_){ return ""; }
   }
+  // Adiciona metadados ao JSON
   function addMeta(obj){
-    try{
-      obj = (obj && typeof obj==="object") ? obj : {};
-      var name = getCompanyName();
-      var kid  = getKashId();
-      if (name && !obj.companyName) obj.companyName = name;
-      if (kid && !obj.kashId && !obj.tracking) obj.kashId = kid;
-      return obj;
-    }catch(_){ return obj||{}; }
+    obj = obj || {};
+    var k = getKashId();
+    var c = getCompanyName();
+    if (k && !obj.kashId) obj.kashId = k;
+    if (k && !obj.hashId) obj.hashId = k;
+    if (c && !obj.companyName) obj.companyName = c;
+    if (c && !obj.empresaNome) obj.empresaNome = c;
+    return obj;
   }
+  // Detecta a URL do Apps Script
   function isAppsScriptUrl(u){
-    try{ var su = (window.CONFIG && window.CONFIG.appsScriptUrl) || (typeof SCRIPT_URL==="string" ? SCRIPT_URL : ""); return !!(su && u && String(u).startsWith(su)); }catch(_){ return false; }
+    try{
+      var su = (typeof window!=='undefined' && (window.SCRIPT_URL || (window.CONFIG && window.CONFIG.appsScriptUrl))) || (typeof SCRIPT_URL!=='undefined' && SCRIPT_URL) || "";
+      return su && String(u||"").indexOf(String(su))===0;
+    }catch(_){ return false; }
   }
+  // Patch do fetch (uma vez só)
   try{
-    var _fetch = window.fetch;
-    window.fetch = function(input, init){
-      try{
-        var url = (typeof input==="string") ? input : (input && input.url) || "";
-        if (isAppsScriptUrl(url) && init && typeof init.body==="string" && init.body){
-          try{
-            var obj = JSON.parse(init.body);
-            init.body = JSON.stringify(addMeta(obj));
-          }catch(_){
-            try{ init.body = JSON.stringify(addMeta({raw:init.body})); }catch(__){}
+    if (typeof window!=='undefined' && !window.__kash_fetch_patched){
+      var _fetch = window.fetch;
+      window.fetch = function(input, init){
+        try{
+          var url = (typeof input==="string") ? input : (input && input.url) || "";
+          if (isAppsScriptUrl(url) && init && typeof init.body==="string" && init.body){
+            try{
+              var obj = JSON.parse(init.body);
+              init.body = JSON.stringify(addMeta(obj));
+            }catch(_){
+              // se não for JSON, empacota minimamente
+              try{ init.body = JSON.stringify(addMeta({raw:init.body})); }catch(__){}
+            }
           }
-        }
-      }catch(_){}
-      return _fetch.apply(this, arguments);
-    };
-    window.__kash_fetch_patched = true;
+        }catch(_){}
+        return _fetch.apply(this, arguments);
+      };
+      window.__kash_fetch_patched = true;
+    }
   }catch(_){}
 })();
 // ====== FIM KASH SHIM ======
@@ -255,6 +265,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       return (c1 || c2 || c3 || c4 || c5 || "").toString().trim();
     } catch(_){ return ""; }
   }
+
   try{
     const __orig_fetch = window.fetch;
     window.fetch = function(input, init){
@@ -290,7 +301,6 @@ const CONFIG = {
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
   checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
-  formspreeEndpoint: "#",
 };
 // === KASH Process API (Google Apps Script) ===
 const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
@@ -342,7 +352,6 @@ function clearAnySensitiveLocalData() {
   } catch {}
 }
 clearAnySensitiveLocalData();
-
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
@@ -489,8 +498,8 @@ function Pricing({ onStart }) {
                 {p.features.map((f) => <li key={f}>{f}</li>)}
               </ul>
               <div className="mt-5 flex flex-col items-center gap-1">
-                <CTAButton onClick={onStart} disabled={p.disabled}>{p.cta}</CTAButton>
-                {p.disabled && <span className="text-xs text-slate-500">Em breve</span>}
+                <CTAButton disabled={p.disabled}>{p.cta}</CTAButton>
+                {p.disabled && <span className="text-xs text-slate-500"></span>}
               </div>
             </div>
           ))}
@@ -594,19 +603,13 @@ function _signatureBlockPT(names) {
   return "\n" + names.map((n) => `${n}`).join("\n\n");
 }
 
-
 function _signatureBlockEN(names) {
   if (!names || !names.length) return "";
   // blank line before the first name; names only
   return "\n" + names.map((n) => `${n}`).join("\n\n");
 }
 
-
-
-
 /* ================== PDF (US Letter, Times 10/9) ================== */
-
-
 
 function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], company, members = [] }) {
   // Prefer provided objects; fallback to global state if available
@@ -694,9 +697,6 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   return { doc, fileName };
 }
 
-
-
-/* ================== FORM WIZARD (+ address FL logic, + Formspree, + tracking) ================== */
 const initialForm = {
   company: { companyName: "", email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
   members: [
@@ -1026,14 +1026,8 @@ function FormWizard({ open, onClose }) {
       } catch {}
 
       try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
-// Envia ao Formspree (e-mail / painel)
-      /* FORMspree desativado
-await fetch(CONFIG.formspreeEndpoint, {
-        method: "POST",
-        headers: { "Accept": "application/json", "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-*/
+
+      
     } catch {}
 
     setLoading(false);
@@ -1221,7 +1215,7 @@ await fetch(CONFIG.formspreeEndpoint, {
     <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*="formspree"]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
+    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
@@ -1254,7 +1248,6 @@ function Footer() {
   );
 }
 
-
 function _localDateFromISO(dateISO){
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
@@ -1267,7 +1260,6 @@ function _localDateFromISO(dateISO){
   }
   return dt;
 }
-
 
 /* ===== STRONG DOM SCRAPER (labels, aria, data-*, context text) ===== */
 function _scrapeFormDataStrong(){
@@ -1370,22 +1362,23 @@ function _scrapeFormDataStrong(){
   // Try to reconstruct groups of 5 fields per member
   let curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
   memberEntries.forEach(({key,val}) => {
-    if (key==="member_name"){ if (curr.fullName) { seq.push(curr); curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" }; } curr.fullName = val; }
+    if (key==="member_name"){
+      // When a new member_name appears and current has any data, push and reset
+      if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address){
+        seq.push(curr);
+        curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
+      }
+      curr.fullName = val;
+    }
     else if (key==="member_role"){ curr.role = val; }
     else if (key==="member_id"){ curr.idOrPassport = val; }
     else if (key==="member_email"){ curr.email = val; }
     else if (key==="member_address"){ curr.address = val; }
   });
-  if (curr.fullName) seq.push(curr);
-  out.members = seq.filter(m => m.fullName);
-
-  return out;
-}
-
-
-/* ===== FORMSPREE INFLATOR: expand flat keys to nested/arrays ===== */
-function _inflateFormspree(flat){
-  if (!flat || typeof flat !== "object") return {};
+  // Push last member if any field filled
+  if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address){
+    seq.push(curr);
+  }
   const obj = {};
   const setDeep = (path, value) => {
     let cur = obj;
@@ -1429,8 +1422,6 @@ function _inflateFormspree(flat){
   return obj;
 }
 
-
-/* ===== ULTRA FLAT HARVESTER (Formspree & generic) ===== */
 function _harvestFromFlat(flat){
   if (!flat || typeof flat!=='object') return { company:{}, members:[] };
   const company = {};
@@ -1499,7 +1490,6 @@ function _harvestFromFlat(flat){
   const members = Array.from(membersMap.keys()).sort((a,b)=>a-b).map(k=>membersMap.get(k)).filter(m=>m.fullName);
   return { company, members };
 }
-
 
 /* ===== FORMDATA SCANNER from <form> elements ===== */
 function _scanDocumentForms(){
