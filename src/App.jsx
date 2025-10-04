@@ -1,12 +1,5 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
-import kashLogo from "/kash-logo.jpg";
-
-// === Endpoint do Apps Script via Environment (Vercel) ===
-const APPS_SCRIPT_URL =
-  (typeof import.meta.meta !== "undefined" && import.meta.env?.VITE_APPS_SCRIPT_URL) ||
-  (typeof window !== "undefined" && window.APPS_SCRIPT_URL) ||
-  "";
 
 /* === KASH WIREFIX (Google Sheets) === */
 if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
@@ -14,7 +7,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
 
   // URL publicada do Apps Script
   window.CONFIG = window.CONFIG || {};
-  window.CONFIG.appsScriptUrl = APPS_SCRIPT_URL;
+  window.CONFIG.appsScriptUrl = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
   const getAPI = () => (window.CONFIG && window.CONFIG.appsScriptUrl) || "";
 
@@ -104,6 +97,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   new MutationObserver(() => { captureKash(); wireForms(); }).observe(document.documentElement, { childList: true, subtree: true });
 }
 /* === /KASH WIREFIX === */
+
 
 // ===== KASH INLINE SHIM (injeta companyName + kashId nos envios ao Apps Script) =====
 (function(){
@@ -197,7 +191,6 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
 
 // ====== KASH SHIM (NÃO muda layout / JSX) ======
 (function(){
-  // Lê companyName do DOM (vários seletores válidos)
   function getCompanyName(){
     try{
       var q = function(s){ return document.querySelector(s); };
@@ -209,53 +202,43 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
         ""
       );
     }catch(_){ return ""; }
-
-  // Lê kashId do localStorage
+  }
   function getKashId(){
     try{
       var v = localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "";
       return String(v).toUpperCase().trim();
     }catch(_){ return ""; }
-
-  // Adiciona metadados ao JSON
+  }
   function addMeta(obj){
-    obj = obj || {};
-    var k = getKashId();
-    var c = getCompanyName();
-    if (k && !obj.kashId) obj.kashId = k;
-    if (k && !obj.hashId) obj.hashId = k;
-    if (c && !obj.companyName) obj.companyName = c;
-    if (c && !obj.empresaNome) obj.empresaNome = c;
-    return obj;
-
-  // Detecta a URL do Apps Script
-  function isAppsScriptUrl(u){
     try{
-      var su = (typeof window!=='undefined' && (window.SCRIPT_URL || (window.CONFIG && window.CONFIG.appsScriptUrl))) || (typeof SCRIPT_URL!=='undefined' && SCRIPT_URL) || "";
-      return su && String(u||"").indexOf(String(su))===0;
-    }catch(_){ return false; }
-
-  // Patch do fetch (uma vez só)
+      obj = (obj && typeof obj==="object") ? obj : {};
+      var name = getCompanyName();
+      var kid  = getKashId();
+      if (name && !obj.companyName) obj.companyName = name;
+      if (kid && !obj.kashId && !obj.tracking) obj.kashId = kid;
+      return obj;
+    }catch(_){ return obj||{}; }
+  }
+  function isAppsScriptUrl(u){
+    try{ var su = (window.CONFIG && window.CONFIG.appsScriptUrl) || (typeof SCRIPT_URL==="string" ? SCRIPT_URL : ""); return !!(su && u && String(u).startsWith(su)); }catch(_){ return false; }
+  }
   try{
-    if (typeof window!=='undefined' && !window.__kash_fetch_patched){
-      var _fetch = window.fetch;
-      window.fetch = function(input, init){
-        try{
-          var url = (typeof input==="string") ? input : (input && input.url) || "";
-          if (isAppsScriptUrl(url) && init && typeof init.body==="string" && init.body){
-            try{
-              var obj = JSON.parse(init.body);
-              init.body = JSON.stringify(addMeta(obj));
-            }catch(_){
-              // se não for JSON, empacota minimamente
-              try{ init.body = JSON.stringify(addMeta({raw:init.body})); }catch(__){}
-            }
+    var _fetch = window.fetch;
+    window.fetch = function(input, init){
+      try{
+        var url = (typeof input==="string") ? input : (input && input.url) || "";
+        if (isAppsScriptUrl(url) && init && typeof init.body==="string" && init.body){
+          try{
+            var obj = JSON.parse(init.body);
+            init.body = JSON.stringify(addMeta(obj));
+          }catch(_){
+            try{ init.body = JSON.stringify(addMeta({raw:init.body})); }catch(__){}
           }
-        }catch(_){}
-        return _fetch.apply(this, arguments);
-      };
-      window.__kash_fetch_patched = true;
-    }
+        }
+      }catch(_){}
+      return _fetch.apply(this, arguments);
+    };
+    window.__kash_fetch_patched = true;
   }catch(_){}
 })();
 // ====== FIM KASH SHIM ======
@@ -271,8 +254,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       const c5 = document.querySelector('[name*="company"]')?.value;
       return (c1 || c2 || c3 || c4 || c5 || "").toString().trim();
     } catch(_){ return ""; }
-
-
+  }
   try{
     const __orig_fetch = window.fetch;
     window.fetch = function(input, init){
@@ -300,7 +282,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
 })();
 // ====== FIM KASH COMPANY PATCH ======
 
-const SCRIPT_URL = APPS_SCRIPT_URL;
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 /* ================== CONFIG ================== */
 const CONFIG = {
@@ -308,10 +290,10 @@ const CONFIG = {
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
   checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
-
+  formspreeEndpoint: "#",
 };
 // === KASH Process API (Google Apps Script) ===
-const PROCESSO_API = APPS_SCRIPT_URL;
+const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 async function apiGetProcesso(kashId){
   const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
@@ -335,6 +317,7 @@ async function apiUpdate({kashId, faseAtual, subFase, status, note}){
   });
   if(!r.ok) throw new Error("update_failed");
   return r.json();
+}
 
 // ===== PRIVACIDADE: armazenar apenas códigos de tracking (atalhos) =====
 function saveTrackingShortcut(kashId) {
@@ -360,14 +343,15 @@ function clearAnySensitiveLocalData() {
 }
 clearAnySensitiveLocalData();
 
+
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
 function classNames(...cls) { return cls.filter(Boolean).join(" "); }
 function todayISO() {
   const d = new Date();
   const pad = (n)=> String(n).padStart(2,"0");
-      const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
-
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
 
 /* ================== HELPERS ================== */
 function calcAgeFullDate(dateStr) {
@@ -382,7 +366,7 @@ function calcAgeFullDate(dateStr) {
 function isPercentTotalValid(members) {
   const sum = members.reduce((acc, m) => acc + (Number(m.percent || 0) || 0), 0);
   return Math.abs(sum - 100) < 0.001;
-
+}
 
 /* ================== UI ================== */
 function KLogo({ size = 40 }) {
@@ -405,12 +389,383 @@ function CTAButton({ children, variant = "primary", onClick, type = "button", di
     : variant === "ghost"
     ? "bg-transparent border border-slate-700 text-slate-200 hover:bg-slate-800"
     : "bg-slate-700 text-slate-100 hover:bg-slate-600";
+  return <button type={type} onClick={onClick} disabled={disabled} className={classNames(base, styles)}>{children}</button>;
+}
+function SectionTitle({ title, subtitle }) {
   return (
-    <button type={type} onClick={onClick} disabled={disabled} className={`${base} ${styles}`}>
-      {children}
-    </button>
+    <div>
+      <h3 className="text-2xl text-slate-100 font-semibold">{title}</h3>
+      {subtitle && <p className="text-slate-400 text-sm mt-1">{subtitle}</p>}
+    </div>
   );
+}
 
+/* ================== HERO/SERVICES/PRICING ================== */
+function DemoCalculator() {
+  const [monthly, setMonthly] = useState(4000);
+  const yearly = monthly * 12;
+  const withheld = yearly * 0.30;
+  const saved = Math.max(0, withheld - 1360);
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+      <div className="flex items-center justify-between"><div className="text-slate-300">Estimativa de economia anual</div><span className="text-xs text-emerald-300">Simulador</span></div>
+      <div className="mt-4">
+        <input type="range" min={1000} max={20000} step={100} value={monthly} onChange={(e) => setMonthly(Number(e.target.value))} className="w-full" />
+        <div className="mt-2 text-sm text-slate-400">Receita mensal: <span className="text-slate-200">US$ {monthly.toLocaleString()}</span></div>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+        <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Receita/ano</div><div className="text-lg text-slate-100">US$ {yearly.toLocaleString()}</div></div>
+        <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Retenção 30%</div><div className="text-lg text-slate-100">US$ {withheld.toLocaleString()}</div></div>
+        <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Economia potencial</div><div className="text-lg text-emerald-400">US$ {saved.toLocaleString()}</div></div>
+      </div>
+    </div>
+  );
+}
+function Hero({ onStart }) {
+  return (
+    <section className="pt-16 pb-10">
+      <div className="max-w-6xl mx-auto px-4">
+        <div className="flex items-center gap-3">
+          <KLogo size={42} />
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold text-slate-100">KASH Solutions</h1>
+            <p className="text-slate-400 text-sm">KASH CORPORATE SOLUTIONS LLC · Florida LLC</p>
+          </div>
+        </div>
+        <div className="mt-10 grid md:grid-cols-2 gap-8 items-start">
+          <div>
+            <h2 className="text-3xl md:text-4xl font-semibold text-slate-100">Abra sua LLC na Flórida e elimine a retenção de 30%.</h2>
+            <p className="mt-4 text-slate-300">Abertura da empresa, EIN, endereço e agente por 12 meses.</p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <CTAButton onClick={onStart}>Começar agora</CTAButton>
+              <a href="#como-funciona" className="inline-flex"><CTAButton variant="ghost">Como funciona</CTAButton></a>
+            </div>
+          </div>
+          <DemoCalculator />
+        </div>
+      </div>
+    </section>
+  );
+}
+function Services() {
+  const items = [
+    { t: "Abertura LLC Partnership", d: "Registro oficial na Flórida (Sunbiz)." },
+    { t: "EIN (IRS)", d: "Obtenção do Employer Identification Number." },
+    { t: "Operating Agreement", d: "Documento societário digital." },
+    { t: "Endereço + Agente (12 meses)", d: "Inclusos no pacote de abertura." },
+  ];
+  return (
+    <section className="py-14 border-t border-slate-800">
+      <div className="max-w-6xl mx-auto px-4">
+        <SectionTitle title="Serviços incluídos" subtitle="Pacote completo para começar certo." />
+        <div className="mt-6 grid md:grid-cols-3 gap-4">
+          {items.map((it) => (
+            <div key={it.t} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <div className="text-slate-200 font-medium">{it.t}</div>
+              <div className="text-slate-400 text-sm mt-1">{it.d}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+function Pricing({ onStart }) {
+  const plans = [
+    { name: "Abertura LLC", price: CONFIG.prices.llc, features: ["Endereço + Agente 12 meses", "EIN", "Operating Agreement"], cta: "Contratar", disabled: false },
+    { name: "KASH FLOW 30 (Mensal)", price: CONFIG.prices.flow30, features: ["Classificação contábil", "Relatórios mensais"], cta: "Assinar", disabled: true },
+    { name: "KASH SCALE 5 (Mensal)", price: CONFIG.prices.scale5, features: ["Até 5 contratos", "Suporte prioritário", "W-8BEN-E (emitido no onboarding contábil)"], cta: "Assinar", disabled: true },
+  ];
+  return (
+    <section className="py-14 border-t border-slate-800">
+      <div className="max-w-6xl mx-auto px-4">
+        <SectionTitle title="Planos e preços" subtitle="Transparência desde o início." />
+        <div className="mt-6 grid md:grid-cols-3 gap-4">
+          {plans.map((p) => (
+            <div key={p.name} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <div className="text-slate-100 font-medium">{p.name}</div>
+              <div className="text-2xl text-emerald-400 mt-1">{p.price}</div>
+              <ul className="mt-3 text-sm text-slate-400 space-y-1 list-disc list-inside">
+                {p.features.map((f) => <li key={f}>{f}</li>)}
+              </ul>
+              <div className="mt-5 flex flex-col items-center gap-1">
+                <CTAButton onClick={onStart} disabled={p.disabled}>{p.cta}</CTAButton>
+                {p.disabled && <span className="text-xs text-slate-500">Em breve</span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+function HowItWorks() {
+  const steps = [
+    { t: "Consulta", d: "Alinhamento de expectativas (opcional)." },
+    { t: "Contrato e pagamento", d: "Assinatura eletrônica e checkout." },
+    { t: "Formulário de abertura", d: "Dados da empresa, sócios, KYC/AML." },
+    { t: "Pagamento", d: "Fee e taxa estadual — checkout online." },
+    { t: "Tracking do processo", d: "Número de protocolo e notificações por e-mail." },
+  ];
+  return (
+    <section className="py-16 border-t border-slate-800" id="como-funciona">
+      <div className="max-w-6xl mx-auto px-4">
+        <SectionTitle title="Como funciona" subtitle="Fluxo enxuto e auditável, do onboarding ao registro concluído." />
+        <ol className="mt-10 grid md:grid-cols-5 gap-5">
+          {steps.map((s, i) => (
+            <li key={s.t} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <div className="text-emerald-400 font-semibold">{String(i + 1).padStart(2, "0")}</div>
+              <h4 className="text-slate-100 mt-2 font-medium">{s.t}</h4>
+              <p className="text-slate-400 text-sm mt-1">{s.d}</p>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+  );
+}
+
+/* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
+function buildContractEN(companyName) {
+  return [
+    "SERVICE AGREEMENT – KASH Corporate Solutions",
+    `CLIENT: ${companyName}, identified by the information provided in the electronic form, hereinafter referred to as CLIENT. CONTRACTOR: KASH CORPORATE SOLUTIONS LLC, a limited liability company registered in the State of Florida, United States of America, hereinafter referred to as KASH CORPORATE.`,
+    "SECTION 1 – PURPOSE: This Agreement covers the registration of a limited liability company (LLC) in Florida, followed by the application with the IRS for issuance of the Employer Identification Number (EIN), upon approval of the company formation.",
+    "SECTION 2 – REGISTERED AGENT AND ADDRESS: KASH CORPORATE will provide: (a) a virtual business address in Florida for twelve (12) months; (b) a registered agent in Florida for twelve (12) months. After this period, services may be renewed with additional fees.",
+    "SECTION 3 – INFORMATION RESPONSIBILITY: All information provided by CLIENT is of his/her sole responsibility, including legal and civil liability for inaccuracies or false statements.",
+    "SECTION 4 – LIMITATIONS: This Agreement does not include: licenses/permits, tax filings, bookkeeping, or banking services.",
+    "SECTION 5 – COMPENSATION: CLIENT shall pay KASH CORPORATE the amount of US$ 1,360.00, in one single installment, at the time of hiring, through the official payment methods available on KASH CORPORATE’s website.",
+    "SECTION 6 – TERMINATION: KASH CORPORATE's obligations end after issuance of the EIN and delivery of digital documents to CLIENT.",
+    "SECTION 7 – TERM: This Agreement is effective on the signing date and remains valid until completion of services described herein.",
+    "SECTION 8 – VALIDITY CONDITION: This Agreement only becomes valid after full payment as per Section 5.",
+    "SECTION 9 – CASE TRACKING: After payment, CLIENT will receive a unique Tracking Number to monitor the process progress via KASH CORPORATE’s platform.",
+    "SECTION 10 – PUBLIC AGENCIES: Approval of company formation and EIN issuance depends exclusively on the respective government agencies (State of Florida and IRS). KASH CORPORATE does not guarantee timelines or approvals.",
+    "SECTION 11 – JURISDICTION: For disputes, the forum elected is Rio de Janeiro, Brazil, with optional jurisdiction in Orlando, Florida, USA, at CLIENT’s discretion."
+  ];
+}
+function buildContractPT(companyName) {
+  return [
+    `CONTRATANTE: ${companyName}, identificado(a) pelas informações fornecidas no formulário eletrônico, doravante denominado(a) CLIENTE. CONTRATADA: KASH CORPORATE SOLUTIONS LLC, sociedade de responsabilidade limitada, registrada no Estado da Flórida, Estados Unidos da América, doravante denominada KASH CORPORATE SOLUTIONS LLC.`,
+    "CLÁUSULA 1ª – OBJETO: O presente contrato tem por objeto o registro de empresa (LLC) no Estado da Flórida, seguido da aplicação junto ao IRS para emissão do EIN, após a aprovação da constituição da empresa.",
+    "CLÁUSULA 2ª – AGENTE REGISTRADO E ENDEREÇO: A KASH CORPORATE fornecerá: (a) endereço comercial virtual por 12 (doze) meses; (b) agente registrado na Flórida por 12 (doze) meses. Após esse período, os serviços poderão ser renovados mediante cobrança.",
+    "CLÁUSULA 3ª – RESPONSABILIDADE DAS INFORMAÇÕES: Todas as informações prestadas pelo CLIENTE são de sua exclusiva responsabilidade, incluindo responsabilidade civil e criminal por eventuais incorreções.",
+    "CLÁUSULA 4ª – LIMITAÇÕES: Não estão incluídos: licenças/alvarás, serviços contábeis/fiscais ou serviços bancários.",
+    "CLÁUSULA 5ª – REMUNERAÇÃO: O CLIENTE pagará à KASH CORPORATE o valor de US$ 1.360,00, em parcela única e imediata, por meio dos canais oficiais no site da KASH CORPORATE.",
+    "CLÁUSULA 6ª – ENCERRAMENTO: As obrigações da KASH CORPORATE encerram-se após a emissão do EIN e a entrega dos documentos digitais ao CLIENTE.",
+    "CLÁUSULA 7ª – VIGÊNCIA: Este contrato entra em vigor na data da assinatura e permanece válido até a conclusão dos serviços aqui descritos.",
+    "CLÁUSULA 8ª – CONDIÇÃO DE VALIDADE: Este contrato somente terá validade após o pagamento integral previsto na Cláusula 5ª.",
+    "CLÁUSULA 9ª – ACOMPANHAMENTO: Após o pagamento, o CLIENTE receberá um Número de Rastreamento (Tracking Number) para acompanhar o progresso do processo na plataforma da KASH CORPORATE.",
+    "CLÁUSULA 10ª – ÓRGÃOS PÚBLICOS: A aprovação da constituição da empresa e a emissão do EIN dependem exclusivamente dos órgãos públicos competentes (Estado da Flórida e IRS). A KASH CORPORATE não garante prazos ou aprovações.",
+    "CLÁUSULA 11ª – FORO: Fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, com opção pelo foro de Orlando, Flórida – EUA, a critério do CLIENTE."
+  ];
+}
+/* ===== Acceptance (PT/EN) + Signatures (helpers) ===== */
+function _acceptanceClausePT(fullNameList, dateISO) {
+  let dt = new Date();
+  if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
+    const [y,m,d] = dateISO.split("-").map(Number);
+    const now = new Date();
+    dt = new Date(y,(m||1)-1,d||1, now.getHours(), now.getMinutes(), now.getSeconds());
+  } else if (dateISO) {
+    const parsed = new Date(dateISO);
+    if (!isNaN(parsed)) dt = parsed;
+  }
+  const d = dt.toLocaleDateString();
+  const t = dt.toLocaleTimeString();
+  return `ACEITE E DECLARAÇÃO: Declaro que LI E CONCORDO com todos os termos deste contrato em ${d} e ${t}.`;
+}
+function _acceptanceClauseEN(fullNameList, dateISO) {
+  let dt = new Date();
+  if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
+    const [y,m,d] = dateISO.split("-").map(Number);
+    const now = new Date();
+    dt = new Date(y,(m||1)-1,d||1, now.getHours(), now.getMinutes(), now.getSeconds());
+  } else if (dateISO) {
+    const parsed = new Date(dateISO);
+    if (!isNaN(parsed)) dt = parsed;
+  }
+  const d = dt.toLocaleDateString();
+  const t = dt.toLocaleTimeString();
+  return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${d} at ${t}.`;
+}
+function _signatureBlockPT(names) {
+  if (!names || !names.length) return "";
+  // linha em branco antes do primeiro nome; apenas nomes
+  return "\n" + names.map((n) => `${n}`).join("\n\n");
+}
+
+
+function _signatureBlockEN(names) {
+  if (!names || !names.length) return "";
+  // blank line before the first name; names only
+  return "\n" + names.map((n) => `${n}`).join("\n\n");
+}
+
+
+
+
+/* ================== PDF (US Letter, Times 10/9) ================== */
+
+
+
+function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], company, members = [] }) {
+  // Prefer provided objects; fallback to global state if available
+  const _company = company || (typeof data!=="undefined" && data.company) || (typeof result!=="undefined" && result.company) || { companyName };
+  const _members = (members && members.length)
+    ? members
+    : (Array.isArray(memberNames) && memberNames.length ? memberNames.map(n=>({fullName:n})) 
+       : (typeof data!=="undefined" && Array.isArray(data.members) ? data.members 
+          : (typeof result!=="undefined" && Array.isArray(result.members) ? result.members : [])));
+  const names = _members.map(p => p.fullName || p.name).filter(Boolean);
+
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const marginX = 40;
+  const maxW = doc.internal.pageSize.getWidth() - marginX * 2;
+  const pageH = doc.internal.pageSize.getHeight();
+
+  // --- PAGE 1: Application Data ---
+  doc.setFont("Times", "Normal");
+  doc.setFontSize(12);
+  let y = 60;
+  const appLines = _applicationDataLines({ company: _company, members: _members, tracking, dateISO });
+  const appWrapped = doc.splitTextToSize(appLines.join("\n"), maxW);
+  for (const line of appWrapped) {
+    if (y > pageH - 60) { doc.addPage(); y = 60; }
+    doc.text(line, marginX, y);
+    y += 16;
+  }
+
+  // --- EN Contract ---
+  doc.addPage(); y = 60;
+  const enBody = buildContractEN(companyName);
+  const enText = (Array.isArray(enBody) ? enBody.join("\n") : String(enBody));
+  const en = [
+    `SERVICE AGREEMENT – ${companyName}`,
+    "",
+    enText,
+    "",
+    _acceptanceClauseEN(names, dateISO),
+    "",
+    "SIGNATURES",
+    _signatureBlockEN(names)
+  ].join("\n");
+  const enLines = doc.splitTextToSize(en, maxW);
+  for (const line of enLines) {
+    if (y > pageH - 60) { doc.addPage(); y = 60; }
+    doc.text(line, marginX, y);
+    y += 16;
+  }
+
+  // --- PT Contract ---
+  doc.addPage(); y = 60;
+  const ptBody = buildContractPT(companyName);
+  const ptText = (Array.isArray(ptBody) ? ptBody.join("\n") : String(ptBody));
+  const pt = [
+    `CONTRATO DE PRESTAÇÃO DE SERVIÇOS – ${companyName}`,
+    "",
+    ptText,
+    "",
+    _acceptanceClausePT(names, dateISO),
+    "",
+    "ASSINATURAS",
+    _signatureBlockPT(names)
+  ].join("\n");
+  const ptLines = doc.splitTextToSize(pt, maxW);
+  for (const line of ptLines) {
+    if (y > pageH - 60) { doc.addPage(); y = 60; }
+    doc.text(line, marginX, y);
+    y += 16;
+  }
+
+  // Footer (local date/time + tracking + page numbers)
+  const dt = _localDateFromISO(dateISO);
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+    doc.setFontSize(8);
+    doc.text(`${dt.toLocaleDateString()} ${dt.toLocaleTimeString()} · TN: ${tracking}`, 40, ph - 20);
+    doc.text(`Page ${i} of ${pageCount}`, pw - 40, ph - 20, { align: "right" });
+  }
+
+  const fileName = `KASH_Contract_${tracking}.pdf`;
+  doc.save(fileName);
+  return { doc, fileName };
+}
+
+
+
+/* ================== FORM WIZARD (+ address FL logic, + Formspree, + tracking) ================== */
+const initialForm = {
+  company: { companyName: "", email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
+  members: [
+    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
+    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
+  ],
+  accept: { responsibility: false, limitations: false },
+};
+function formReducer(state, action) {
+  switch (action.type) {
+    case "UPDATE_COMPANY": return { ...state, company: { ...state.company, [action.field]: action.value } };
+    case "UPDATE_US_ADDRESS": return { ...state, company: { ...state.company, usAddress: { ...state.company.usAddress, [action.field]: action.value } } };
+    case "UPDATE_MEMBER": return { ...state, members: state.members.map((m,i)=> i===action.index ? { ...m, [action.field]: action.value } : m) };
+    case "ADD_MEMBER": return { ...state, members: [...state.members, { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" }] };
+    case "REMOVE_MEMBER": return { ...state, members: state.members.filter((_,i)=> i!==action.index) };
+    case "TOGGLE_ACCEPT": return { ...state, accept: { ...state.accept, [action.key]: action.value } };
+    default: return state;
+  }
+}
+
+function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
+  return (
+    <div className="p-4 border border-slate-700 rounded-xl bg-slate-800 space-y-2">
+      <div className="flex items-center justify-between mb-1">
+        <div className="text-slate-300 font-medium">Sócio {index + 1}</div>
+        {canRemove && <button className="text-slate-400 hover:text-slate-200 text-xs" onClick={onRemove}>Remover</button>}
+      </div>
+      <div className="grid md:grid-cols-2 gap-2">
+        <div>
+          <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.fullName && "border-red-500")} placeholder="Nome completo" value={data.fullName} onChange={(e) => onChange("fullName", e.target.value)} />
+          <div className="text-red-400 text-xs">{errors.fullName || ""}</div>
+        </div>
+        <div>
+          <input type="email" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.email && "border-red-500")} placeholder="E-mail do sócio" value={data.email} onChange={(e) => onChange("email", e.target.value)} />
+          <div className="text-red-400 text-xs">{errors.email || ""}</div>
+        </div>
+      </div>
+      <div className="grid md:grid-cols-2 gap-2">
+        <div>
+          <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.phone && "border-red-500")} placeholder="Telefone do sócio" value={data.phone} onChange={(e) => onChange("phone", e.target.value)} />
+          <div className="text-red-400 text-xs">{errors.phone || ""}</div>
+        </div>
+        <div>
+          <input className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.passport && "border-red-500")} placeholder="Passaporte (ou RG)" value={data.passport} onChange={(e) => onChange("passport", e.target.value)} />
+          <div className="text-red-400 text-xs">{errors.passport || ""}</div>
+        </div>
+      </div>
+      <div className="grid md:grid-cols-3 gap-2">
+        <div>
+          <input className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Órgão emissor" value={data.issuer} onChange={(e) => onChange("issuer", e.target.value)} />
+        </div>
+        <div>
+          <input type="date" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.docExpiry && "border-red-500")} value={data.docExpiry} onChange={(e) => onChange("docExpiry", e.target.value)} />
+          <div className="text-[11px] text-slate-400 mt-1">Validade do documento</div>
+          <div className="text-red-400 text-xs">{errors.docExpiry || ""}</div>
+        </div>
+        <div>
+          <input type="date" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.birthdate && "border-red-500")} value={data.birthdate} onChange={(e) => onChange("birthdate", e.target.value)} />
+          <div className="text-[11px] text-slate-400 mt-1">Data de nascimento</div>
+          <div className="text-red-400 text-xs">{errors.birthdate || ""}</div>
+        </div>
+      </div>
+      <div>
+        <input type="number" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.percent && "border-red-500")} placeholder="% de participação" value={data.percent} onChange={(e) => onChange("percent", e.target.value)} />
+        <div className="text-red-400 text-xs">{errors.percent || ""}</div>
+      </div>
+    </div>
+  );
+}
 
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 
@@ -421,7 +776,7 @@ function TrackingSearch() {
   const [notFound, setNotFound] = useState(false);
   const handleLookup = async () => {
     try {
-      try { const obj = await apiGetProcesso(code.trim()); setResult({ tracking: obj.kashId, dateISO: obj.atualizadoEm, company: { companyName: (obj.companyName || '—' || (typeof localStorage !== "undefined" && localStorage.getItem("companyName")) || "")}, updates: obj.updates || [], faseAtual: obj.faseAtual || 1, subFase: obj.subFase || null }); saveTrackingShortcut(code.trim()); setNotFound(false); return; } catch(e) { setResult(null); setNotFound(true); return; }
+      try { const obj = await apiGetProcesso(code.trim()); setResult({ tracking: obj.kashId, dateISO: obj.atualizadoEm, company: { companyName: obj.companyName || '—' }, updates: obj.updates || [], faseAtual: obj.faseAtual || 1, subFase: obj.subFase || null }); saveTrackingShortcut(code.trim()); setNotFound(false); return; } catch(e) { setResult(null); setNotFound(true); return; }
       setResult(data);
       setNotFound(false);
     } catch { setResult(null); setNotFound(true); }
@@ -457,14 +812,14 @@ function TrackingSearch() {
               </div>
             </div>
             <div className="mt-4">
-
+              
             </div>
           </div>
         )}
       </div>
     </section>
   );
-
+}
 
 /* ======= Admin + My Trackings ======= */
 function MyTrackings() {
@@ -485,7 +840,7 @@ function MyTrackings() {
                 <div className="text-slate-400 text-xs">Tracking: {e.code} · {e.dateISO}</div>
               </div>
               <div className="flex gap-2">
-
+                
                 <CTAButton onClick={() => {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
@@ -577,7 +932,7 @@ function AdminPanel() {
       </div>
     </section>
   );
-
+}
 
 /* ======= Form Wizard ======= */
 const initialErrors = { company: {}, members: [], accept: {} };
@@ -634,7 +989,7 @@ function FormWizard({ open, onClose }) {
     const membersOk = errs.members.every((m) => Object.keys(m).length === 0);
     const acceptOk = accept.responsibility && (company.hasFloridaAddress || accept.limitations);
     return companyOk && membersOk && acceptOk && isPercentTotalValid(members);
-
+  }
 
   async function handleSubmit() {
     if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
@@ -670,13 +1025,20 @@ function FormWizard({ open, onClose }) {
         try { await apiUpdate({ kashId: selected, faseAtual: Number(faseAtual)||2, subFase: subFase||null, status, note }); } catch(e) { console.warn("API update falhou", e); }
       } catch {}
 
-      try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: (form.company.companyName || (typeof localStorage !== "undefined" && localStorage.getItem("companyName")) || ""), atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
-
+      try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
+// Envia ao Formspree (e-mail / painel)
+      /* FORMspree desativado
+await fetch(CONFIG.formspreeEndpoint, {
+        method: "POST",
+        headers: { "Accept": "application/json", "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+*/
     } catch {}
 
     setLoading(false);
     setStep(3);
-
+  }
 
   const { company, members, accept } = form;
   const dateISO = todayISO();
@@ -827,7 +1189,7 @@ function FormWizard({ open, onClose }) {
                 <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="flex items-center justify-between">
                     <div className="text-slate-300 font-medium">Contrato (EN + PT juntos)</div>
-
+                    
                   </div>
 
                   {/* EN + PT in the same view */}
@@ -878,7 +1240,7 @@ function FormWizard({ open, onClose }) {
       </div>
     </div>
   );
-
+}
 
 /* ================== FOOTER & APP ================== */
 function Footer() {
@@ -890,6 +1252,7 @@ function Footer() {
       </div>
     </footer>
   );
+}
 
 
 function _localDateFromISO(dateISO){
@@ -903,6 +1266,7 @@ function _localDateFromISO(dateISO){
     if (!isNaN(p)) dt = p;
   }
   return dt;
+}
 
 
 /* ===== STRONG DOM SCRAPER (labels, aria, data-*, context text) ===== */
@@ -935,6 +1299,7 @@ function _scrapeFormDataStrong(){
     if (!cands.length){
       const ptxt = (el.closest("div,section,fieldset")?.querySelector("legend,h1,h2,h3,h4,h5,h6,.label,.form-control label")?.textContent||"").trim();
       if (ptxt) cands.push(ptxt);
+    }
 
     // Normalize to lower simple token
     const lower = cands.map(s=>s.toLowerCase());
@@ -958,9 +1323,11 @@ function _scrapeFormDataStrong(){
       if (has(["role","cargo","função","funcao","position","title"])) return "member_role";
       if (has(["document","passport","doc","rg","cpf","id"])) return "member_id";
       return "member_name";
+    }
 
     // fallback
     return (name || id || datakey || aria || placeholder || lbl || "").toLowerCase();
+  }
 
   // Gather inputs/selects/textareas
   const nodes = Array.from(document.querySelectorAll("input, select, textarea"));
@@ -1013,9 +1380,12 @@ function _scrapeFormDataStrong(){
   out.members = seq.filter(m => m.fullName);
 
   return out;
+}
 
 
-;
+/* ===== FORMSPREE INFLATOR: expand flat keys to nested/arrays ===== */
+function _inflateFormspree(flat){
+  if (!flat || typeof flat !== "object") return {};
   const obj = {};
   const setDeep = (path, value) => {
     let cur = obj;
@@ -1054,11 +1424,15 @@ function _scrapeFormDataStrong(){
   };
   Object.keys(flat).forEach(k => {
     const path = parseKey(k);
-    setDeep(obj, path, flat[k]);
+    setDeep(path, flat[k]);
   });
   return obj;
+}
 
 
+/* ===== ULTRA FLAT HARVESTER (Formspree & generic) ===== */
+function _harvestFromFlat(flat){
+  if (!flat || typeof flat!=='object') return { company:{}, members:[] };
   const company = {};
   const membersMap = new Map(); // index -> obj
   const toIdxObj = (idx) => {
@@ -1094,6 +1468,7 @@ function _scrapeFormDataStrong(){
         }
       }
       continue;
+    }
 
     // 2) members[...] or socios[...] or owners[...] etc.
     const arrMatch = key.match(/(members|socios|owners|partners|shareholders|directors)\s*(?:\[|\.)\s*(\d+)\s*(?:\]|\.)\s*(?:\[|\.)?\s*([A-Za-z0-9_]+)\s*\]?/i);
@@ -1112,16 +1487,18 @@ function _scrapeFormDataStrong(){
       else if (["percent","share","quota"].includes(field)) mm.percent = v;
       else if (["phone","telefone","celular"].includes(field)) mm.phone = v;
       continue;
+    }
 
     // 3) booleans disguised as strings for company flags
     if (/limitations|responsibility|agreed/i.test(key)){
       // handled in flags collector elsewhere; ignore here
       continue;
     }
-
+  }
 
   const members = Array.from(membersMap.keys()).sort((a,b)=>a-b).map(k=>membersMap.get(k)).filter(m=>m.fullName);
   return { company, members };
+}
 
 
 /* ===== FORMDATA SCANNER from <form> elements ===== */
@@ -1138,7 +1515,7 @@ function _scanDocumentForms(){
     });
   } catch(_){}
   return out;
-
+}
 
 export default function App() {
   const [open, setOpen] = useState(false);
@@ -1155,7 +1532,7 @@ export default function App() {
       <FormWizard open={open} onClose={() => setOpen(false)} />
     </div>
   );
-
+}
 
 /* ===== Application Data content (for unified PDF) ===== */
 function _applicationDataLines({ company = {}, members = [], tracking, dateISO, flags = {}, source = '', updates = [] }) {
