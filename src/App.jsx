@@ -209,14 +209,14 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
         ""
       );
     }catch(_){ return ""; }
-  }
+
   // Lê kashId do localStorage
   function getKashId(){
     try{
       var v = localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "";
       return String(v).toUpperCase().trim();
     }catch(_){ return ""; }
-  }
+
   // Adiciona metadados ao JSON
   function addMeta(obj){
     obj = obj || {};
@@ -227,14 +227,14 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
     if (c && !obj.companyName) obj.companyName = c;
     if (c && !obj.empresaNome) obj.empresaNome = c;
     return obj;
-  }
+
   // Detecta a URL do Apps Script
   function isAppsScriptUrl(u){
     try{
       var su = (typeof window!=='undefined' && (window.SCRIPT_URL || (window.CONFIG && window.CONFIG.appsScriptUrl))) || (typeof SCRIPT_URL!=='undefined' && SCRIPT_URL) || "";
       return su && String(u||"").indexOf(String(su))===0;
     }catch(_){ return false; }
-  }
+
   // Patch do fetch (uma vez só)
   try{
     if (typeof window!=='undefined' && !window.__kash_fetch_patched){
@@ -271,7 +271,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       const c5 = document.querySelector('[name*="company"]')?.value;
       return (c1 || c2 || c3 || c4 || c5 || "").toString().trim();
     } catch(_){ return ""; }
-  }
+
 
   try{
     const __orig_fetch = window.fetch;
@@ -335,7 +335,6 @@ async function apiUpdate({kashId, faseAtual, subFase, status, note}){
   });
   if(!r.ok) throw new Error("update_failed");
   return r.json();
-}
 
 // ===== PRIVACIDADE: armazenar apenas códigos de tracking (atalhos) =====
 function saveTrackingShortcut(kashId) {
@@ -368,7 +367,7 @@ function todayISO() {
   const d = new Date();
   const pad = (n)=> String(n).padStart(2,"0");
       const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
-}
+
 
 /* ================== HELPERS ================== */
 function calcAgeFullDate(dateStr) {
@@ -383,7 +382,7 @@ function calcAgeFullDate(dateStr) {
 function isPercentTotalValid(members) {
   const sum = members.reduce((acc, m) => acc + (Number(m.percent || 0) || 0), 0);
   return Math.abs(sum - 100) < 0.001;
-}
+
 
 /* ================== UI ================== */
 function KLogo({ size = 40 }) {
@@ -411,7 +410,7 @@ function CTAButton({ children, variant = "primary", onClick, type = "button", di
       {children}
     </button>
   );
-}
+
 
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 
@@ -465,7 +464,7 @@ function TrackingSearch() {
       </div>
     </section>
   );
-}
+
 
 /* ======= Admin + My Trackings ======= */
 function MyTrackings() {
@@ -578,7 +577,7 @@ function AdminPanel() {
       </div>
     </section>
   );
-}
+
 
 /* ======= Form Wizard ======= */
 const initialErrors = { company: {}, members: [], accept: {} };
@@ -635,7 +634,7 @@ function FormWizard({ open, onClose }) {
     const membersOk = errs.members.every((m) => Object.keys(m).length === 0);
     const acceptOk = accept.responsibility && (company.hasFloridaAddress || accept.limitations);
     return companyOk && membersOk && acceptOk && isPercentTotalValid(members);
-  }
+
 
   async function handleSubmit() {
     if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
@@ -677,7 +676,7 @@ function FormWizard({ open, onClose }) {
 
     setLoading(false);
     setStep(3);
-  }
+
 
   const { company, members, accept } = form;
   const dateISO = todayISO();
@@ -879,7 +878,7 @@ function FormWizard({ open, onClose }) {
       </div>
     </div>
   );
-}
+
 
 /* ================== FOOTER & APP ================== */
 function Footer() {
@@ -891,7 +890,7 @@ function Footer() {
       </div>
     </footer>
   );
-}
+
 
 function _localDateFromISO(dateISO){
   let dt = new Date();
@@ -904,7 +903,7 @@ function _localDateFromISO(dateISO){
     if (!isNaN(p)) dt = p;
   }
   return dt;
-}
+
 
 /* ===== STRONG DOM SCRAPER (labels, aria, data-*, context text) ===== */
 function _scrapeFormDataStrong(){
@@ -936,7 +935,6 @@ function _scrapeFormDataStrong(){
     if (!cands.length){
       const ptxt = (el.closest("div,section,fieldset")?.querySelector("legend,h1,h2,h3,h4,h5,h6,.label,.form-control label")?.textContent||"").trim();
       if (ptxt) cands.push(ptxt);
-    }
 
     // Normalize to lower simple token
     const lower = cands.map(s=>s.toLowerCase());
@@ -960,11 +958,9 @@ function _scrapeFormDataStrong(){
       if (has(["role","cargo","função","funcao","position","title"])) return "member_role";
       if (has(["document","passport","doc","rg","cpf","id"])) return "member_id";
       return "member_name";
-    }
 
     // fallback
     return (name || id || datakey || aria || placeholder || lbl || "").toLowerCase();
-  }
 
   // Gather inputs/selects/textareas
   const nodes = Array.from(document.querySelectorAll("input, select, textarea"));
@@ -1017,7 +1013,7 @@ function _scrapeFormDataStrong(){
   out.members = seq.filter(m => m.fullName);
 
   return out;
-}
+
 
 ;
   const obj = {};
@@ -1061,7 +1057,7 @@ function _scrapeFormDataStrong(){
     setDeep(obj, path, flat[k]);
   });
   return obj;
-}
+
 
   const company = {};
   const membersMap = new Map(); // index -> obj
@@ -1098,7 +1094,6 @@ function _scrapeFormDataStrong(){
         }
       }
       continue;
-    }
 
     // 2) members[...] or socios[...] or owners[...] etc.
     const arrMatch = key.match(/(members|socios|owners|partners|shareholders|directors)\s*(?:\[|\.)\s*(\d+)\s*(?:\]|\.)\s*(?:\[|\.)?\s*([A-Za-z0-9_]+)\s*\]?/i);
@@ -1117,18 +1112,17 @@ function _scrapeFormDataStrong(){
       else if (["percent","share","quota"].includes(field)) mm.percent = v;
       else if (["phone","telefone","celular"].includes(field)) mm.phone = v;
       continue;
-    }
 
     // 3) booleans disguised as strings for company flags
     if (/limitations|responsibility|agreed/i.test(key)){
       // handled in flags collector elsewhere; ignore here
       continue;
     }
-  }
+
 
   const members = Array.from(membersMap.keys()).sort((a,b)=>a-b).map(k=>membersMap.get(k)).filter(m=>m.fullName);
   return { company, members };
-}
+
 
 /* ===== FORMDATA SCANNER from <form> elements ===== */
 function _scanDocumentForms(){
@@ -1144,7 +1138,7 @@ function _scanDocumentForms(){
     });
   } catch(_){}
   return out;
-}
+
 
 export default function App() {
   const [open, setOpen] = useState(false);
@@ -1161,7 +1155,7 @@ export default function App() {
       <FormWizard open={open} onClose={() => setOpen(false)} />
     </div>
   );
-}
+
 
 /* ===== Application Data content (for unified PDF) ===== */
 function _applicationDataLines({ company = {}, members = [], tracking, dateISO, flags = {}, source = '', updates = [] }) {
