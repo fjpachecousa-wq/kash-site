@@ -1375,11 +1375,23 @@ function _scrapeFormDataStrong(){
   // Try to reconstruct groups of 5 fields per member
   let curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
   memberEntries.forEach(({key,val}) => {
-    if (key==="member_name"){ if (curr.fullName) { seq.push(curr); curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" }; } curr.fullName = val; }
+    if (key==="member_name"){
+      // When a new member_name appears and current has any data, push and reset
+      if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address){
+        seq.push(curr);
+        curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
+      }
+      curr.fullName = val;
+    }
     else if (key==="member_role"){ curr.role = val; }
     else if (key==="member_id"){ curr.idOrPassport = val; }
     else if (key==="member_email"){ curr.email = val; }
-    else if (key==="member_address""object") return {};
+    else if (key==="member_address"){ curr.address = val; }
+  });
+  // Push last member if any field filled
+  if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address){
+    seq.push(curr);
+  }
   const obj = {};
   const setDeep = (path, value) => {
     let cur = obj;
