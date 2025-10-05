@@ -1,298 +1,5 @@
-// KASH Audit: Formspree + FLOW30 + SCALE5 (lógica) inexistentes neste arquivo. Comentário não altera layout.
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
-
-/* === KASH WIREFIX (Google Sheets) === */
-if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
-  window.__KASH_WIRE__ = true;
-
-  // URL publicada do Apps Script
-  window.CONFIG = window.CONFIG || {};
-  window.CONFIG.appsScriptUrl = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
-
-  const getAPI = () => (window.CONFIG && window.CONFIG.appsScriptUrl) || "";
-
-  // Salvar companyName enquanto digita
-  const mirrorCompany = () => {
-    try {
-      const $ = (s) => document.querySelector(s);
-      const el =
-        $('input[name="companyName"]') ||
-        $('#companyName') ||
-        $('[data-company-name]') ||
-        $('input[name="empresaNome"]') ||
-        Array.from(document.querySelectorAll('input[type="text"],input:not([type])'))
-          .find(i => (i.placeholder||"").toLowerCase().includes("empresa") || (i.placeholder||"").toLowerCase().includes("company"));
-      if (!el) return;
-      const save = () => { try { localStorage.setItem("companyName", (el.value||"").trim()); } catch {} };
-      el.addEventListener("input", save, { passive: true });
-      save();
-    } catch {}
-  };
-
-  // Capturar KASH real no DOM (ignora KASH-XXXXXX)
-  const captureKash = () => {
-    try {
-      const m = (document.body.innerText||"").match(/KASH-(?!X{6})[A-Z0-9-]{4,}/i);
-      if (m && m[0]) localStorage.setItem("last_tracking", String(m[0]).toUpperCase());
-    } catch {}
-  };
-
-  // Expor função para setar tracking no momento da geração
-  window.__setKashTracking = function(code){
-    try {
-      const real = String(code||"").toUpperCase();
-      if (/^KASH-(?!X{6})[A-Z0-9-]{4,}$/.test(real)) localStorage.setItem("last_tracking", real);
-    } catch {}
-  };
-
-  // Injetar ocultos antes de enviar forms ao Apps Script
-  const ensureHidden = (form, name, val) => {
-    let el = form.querySelector('input[name="'+name+'"]');
-    if (!el) { el = document.createElement("input"); el.type="hidden"; el.name=name; form.appendChild(el); }
-    el.value = val;
-  };
-  const isAppsScriptForm = (f) => {
-    const a = String(f.getAttribute("action")||"");
-    const su = getAPI();
-    return a.includes("script.google.com/macros") || (su && a.startsWith(su));
-  };
-  const prepareForm = (form) => {
-    const kid = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toUpperCase().trim();
-    const cname = (localStorage.getItem("companyName") || "").trim();
-    if (kid)   { ensureHidden(form, "kashId", kid); ensureHidden(form, "hashId", kid); }
-    if (cname) { ensureHidden(form, "companyName", cname); ensureHidden(form, "empresaNome", cname); }
-  };
-  const wireForms = () => {
-    document.querySelectorAll("form").forEach(f => {
-      if (isAppsScriptForm(f) && !f.__kash_wired) {
-        f.addEventListener("submit", () => prepareForm(f), true);
-        f.addEventListener("focusout", () => prepareForm(f), true);
-        prepareForm(f);
-        f.__kash_wired = true;
-      }
-    });
-  };
-
-  // Reforço no clique do "Concluir teste"
-  const reinforceConcluir = () => {
-    const su = getAPI(); if (!su) return;
-    Array.from(document.querySelectorAll("button,a,[role='button']"))
-      .filter(b => /concluir\s*teste/i.test(b.textContent||""))
-      .forEach(b => {
-        if (b.__kash_click_wired) return;
-        b.addEventListener("click", () => {
-          try {
-            const kashId = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toUpperCase().trim();
-            const companyName = (localStorage.getItem("companyName") || "").trim();
-            if (!kashId && !companyName) return;
-            const payload = { kashId, companyName, faseAtual: 1, subFase: 0, atualizadoEm: new Date().toISOString() };
-            fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode: "no-cors" }).catch(()=>{});
-          } catch {}
-        }, { passive: true });
-        b.__kash_click_wired = true;
-      });
-  };
-
-  document.addEventListener("DOMContentLoaded", () => { mirrorCompany(); captureKash(); wireForms(); reinforceConcluir(); });
-  new MutationObserver(() => { captureKash(); wireForms(); }).observe(document.documentElement, { childList: true, subtree: true });
-}
-/* === /KASH WIREFIX === */
-
-// ===== KASH INLINE SHIM (injeta companyName + kashId nos envios ao Apps Script) =====
-(function(){
-  function getCompanyName(){
-    try{
-      var q = function(s){ return document.querySelector(s); };
-      return (
-        (q('input[name="companyName"]') && q('input[name="companyName"]').value.trim()) ||
-        (q('#companyName') && q('#companyName').value.trim()) ||
-        (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
-        (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
-        ""
-      );
-    }catch(_){ return ""; }
-  }
-  function getKashId(){
-    try{
-      var v = localStorage.getItem("last_tracking") ||
-              localStorage.getItem("kashId") ||
-              localStorage.getItem("tracking") || "";
-      return String(v).toUpperCase().trim();
-    }catch(_){ return ""; }
-  }
-  function addMetaObject(obj){
-    obj = obj || {};
-    var k = getKashId();
-    var c = getCompanyName();
-    if (k && !obj.kashId) obj.kashId = k;
-    if (k && !obj.hashId) obj.hashId = k;
-    if (c && !obj.companyName) obj.companyName = c;
-    if (c && !obj.empresaNome) obj.empresaNome = c;
-    return obj;
-  }
-  function addMetaFormData(fd){
-    try{
-      var k = getKashId();
-      var c = getCompanyName();
-      if (k && !fd.has('kashId')) fd.set('kashId', k);
-      if (k && !fd.has('hashId')) fd.set('hashId', k);
-      if (c && !fd.has('companyName')) fd.set('companyName', c);
-      if (c && !fd.has('empresaNome')) fd.set('empresaNome', c);
-    }catch(_){}
-  }
-  function addMetaSearchParams(sp){
-    try{
-      var k = getKashId();
-      var c = getCompanyName();
-      if (k && !sp.has('kashId')) sp.set('kashId', k);
-      if (k && !sp.has('hashId')) sp.set('hashId', k);
-      if (c && !sp.has('companyName')) sp.set('companyName', c);
-      if (c && !sp.has('empresaNome')) sp.set('empresaNome', c);
-    }catch(_){}
-  }
-  function isAppsScriptUrl(u){
-    try{
-      var su = (typeof window!=='undefined' && (window.SCRIPT_URL || (window.CONFIG && window.CONFIG.appsScriptUrl))) ||
-               (typeof SCRIPT_URL!=='undefined' && SCRIPT_URL) || "";
-      return (su && String(u||"").indexOf(String(su))===0) ||
-             String(u||"").indexOf("script.google.com/macros")>=0;
-    }catch(_){ return false; }
-  }
-  try{
-    if (typeof window!=='undefined' && !window.__kash_inline_fetch_patched){
-      var _fetch = window.fetch;
-      window.fetch = function(input, init){
-        try{
-          var url = (typeof input==="string") ? input : (input && input.url) || "";
-          if (isAppsScriptUrl(url) && init){
-            var body = init.body;
-            if (typeof body === "string" && body){
-              try{
-                var obj = JSON.parse(body);
-                init.body = JSON.stringify(addMetaObject(obj));
-              }catch(_){
-                init.body = JSON.stringify(addMetaObject({ raw: body }));
-              }
-            } else if (typeof FormData !== "undefined" && body instanceof FormData){
-              addMetaFormData(body);
-            } else if (typeof URLSearchParams !== "undefined" && body instanceof URLSearchParams){
-              addMetaSearchParams(body);
-            }
-          }
-        }catch(_){}
-        return _fetch.apply(this, arguments);
-      };
-      window.__kash_inline_fetch_patched = true;
-    }
-  }catch(_){}
-})();
-// ===== FIM KASH INLINE SHIM =====
-
-// ====== KASH SHIM (NÃO muda layout / JSX) ======
-(function(){
-  // Lê companyName do DOM (vários seletores válidos)
-  function getCompanyName(){
-    try{
-      var q = function(s){ return document.querySelector(s); };
-      return (
-        (q('input[name="companyName"]') && q('input[name="companyName"]').value.trim()) ||
-        (q('#companyName') && q('#companyName').value.trim()) ||
-        (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
-        (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
-        ""
-      );
-    }catch(_){ return ""; }
-  }
-  // Lê kashId do localStorage
-  function getKashId(){
-    try{
-      var v = localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "";
-      return String(v).toUpperCase().trim();
-    }catch(_){ return ""; }
-  }
-  // Adiciona metadados ao JSON
-  function addMeta(obj){
-    obj = obj || {};
-    var k = getKashId();
-    var c = getCompanyName();
-    if (k && !obj.kashId) obj.kashId = k;
-    if (k && !obj.hashId) obj.hashId = k;
-    if (c && !obj.companyName) obj.companyName = c;
-    if (c && !obj.empresaNome) obj.empresaNome = c;
-    return obj;
-  }
-  // Detecta a URL do Apps Script
-  function isAppsScriptUrl(u){
-    try{
-      var su = (typeof window!=='undefined' && (window.SCRIPT_URL || (window.CONFIG && window.CONFIG.appsScriptUrl))) || (typeof SCRIPT_URL!=='undefined' && SCRIPT_URL) || "";
-      return su && String(u||"").indexOf(String(su))===0;
-    }catch(_){ return false; }
-  }
-  // Patch do fetch (uma vez só)
-  try{
-    if (typeof window!=='undefined' && !window.__kash_fetch_patched){
-      var _fetch = window.fetch;
-      window.fetch = function(input, init){
-        try{
-          var url = (typeof input==="string") ? input : (input && input.url) || "";
-          if (isAppsScriptUrl(url) && init && typeof init.body==="string" && init.body){
-            try{
-              var obj = JSON.parse(init.body);
-              init.body = JSON.stringify(addMeta(obj));
-            }catch(_){
-              // se não for JSON, empacota minimamente
-              try{ init.body = JSON.stringify(addMeta({raw:init.body})); }catch(__){}
-            }
-          }
-        }catch(_){}
-        return _fetch.apply(this, arguments);
-      };
-      window.__kash_fetch_patched = true;
-    }
-  }catch(_){}
-})();
-// ====== FIM KASH SHIM ======
-
-// ====== KASH COMPANY PATCH (somente companyName; sem alterar layout) ======
-(function(){
-  function __kash_getCompanyName(){
-    try{
-      const c1 = document.querySelector('input[name="companyName"]')?.value;
-      const c2 = document.querySelector('input[name="empresaNome"]')?.value;
-      const c3 = document.querySelector('#companyName')?.value;
-      const c4 = document.querySelector('[data-company-name]')?.getAttribute('data-company-name');
-      const c5 = document.querySelector('[name*="company"]')?.value;
-      return (c1 || c2 || c3 || c4 || c5 || "").toString().trim();
-    } catch(_){ return ""; }
-  }
-
-  try{
-    const __orig_fetch = window.fetch;
-    window.fetch = function(input, init){
-      try{
-        const url = (typeof input === "string") ? input : (input && input.url) ? input.url : "";
-        const target = (url || "").toString();
-        const scriptUrl = (window.SCRIPT_URL || (typeof SCRIPT_URL === "string" ? SCRIPT_URL : "")) || "";
-        if (scriptUrl && target.startsWith(scriptUrl)) {
-          if (init && init.body && typeof init.body === "string" && init.body.trim().startsWith("{")) {
-            try{
-              const obj = JSON.parse(init.body);
-              const name = __kash_getCompanyName();
-              if (name) {
-                if (!Object.prototype.hasOwnProperty.call(obj, "companyName")) obj.companyName = name;
-                if (!Object.prototype.hasOwnProperty.call(obj, "empresaNome")) obj.empresaNome = name;
-                init.body = JSON.stringify(obj);
-              }
-            }catch(_){ /* corpo não-json, ignora */ }
-          }
-        }
-      }catch(_){}
-      return __orig_fetch.apply(this, arguments);
-    };
-  }catch(_){}
-})();
-// ====== FIM KASH COMPANY PATCH ======
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
@@ -301,7 +8,7 @@ const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
   checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
-  brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
+  brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions""https:
 };
 // === KASH Process API (Google Apps Script) ===
 const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
@@ -353,6 +60,7 @@ function clearAnySensitiveLocalData() {
   } catch {}
 }
 clearAnySensitiveLocalData();
+
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
@@ -499,8 +207,8 @@ function Pricing({ onStart }) {
                 {p.features.map((f) => <li key={f}>{f}</li>)}
               </ul>
               <div className="mt-5 flex flex-col items-center gap-1">
-                <CTAButton disabled={p.disabled}>{p.cta}</CTAButton>
-                {p.disabled && <span className="text-xs text-slate-500"></span>}
+                <CTAButton onClick={onStart} disabled={p.disabled}>{p.cta}</CTAButton>
+                {p.disabled && <span className="text-xs text-slate-500">Em breve</span>}
               </div>
             </div>
           ))}
@@ -604,13 +312,19 @@ function _signatureBlockPT(names) {
   return "\n" + names.map((n) => `${n}`).join("\n\n");
 }
 
+
 function _signatureBlockEN(names) {
   if (!names || !names.length) return "";
   // blank line before the first name; names only
   return "\n" + names.map((n) => `${n}`).join("\n\n");
 }
 
+
+
+
 /* ================== PDF (US Letter, Times 10/9) ================== */
+
+
 
 function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], company, members = [] }) {
   // Prefer provided objects; fallback to global state if available
@@ -697,6 +411,9 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   doc.save(fileName);
   return { doc, fileName };
 }
+
+
+
 
 const initialForm = {
   company: { companyName: "", email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
@@ -842,7 +559,7 @@ function MyTrackings() {
               </div>
               <div className="flex gap-2">
                 
-                <CTAButton onClick={() => {
+                <CTAButton onClick={() =>  {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
@@ -892,7 +609,7 @@ function AdminPanel() {
       <div className="max-w-4xl mx-auto px-4">
         <div className="flex items-center justify-between">
           <SectionTitle title="Painel interno (admin)" subtitle="Adicionar atualizações de status aos trackings salvos neste navegador." />
-          <button className="text-xs text-emerald-400 hover:underline" onClick={() => setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
+          <button className="text-xs text-emerald-400 hover:underline" onClick={() =>  setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
         </div>
         {!open ? null : (
           <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900 p-4">
@@ -1117,7 +834,7 @@ function FormWizard({ open, onClose }) {
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton onClick={() => { if (validate()) setStep(2); }}>Continuar</CTAButton>
+                  <CTAButton onClick={() =>  { if (validate()) setStep(2); }}>Continuar</CTAButton>
                 </div>
               </div>
             )}
@@ -1166,7 +883,7 @@ function FormWizard({ open, onClose }) {
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
+                  <CTAButton variant="ghost" onClick={() =>  setStep(1)}>Voltar</CTAButton>
                   <CTAButton onClick={handleSubmit}>{loading ? "Enviando..." : "Enviar"}</CTAButton>
                 </div>
               </div>
@@ -1216,11 +933,11 @@ function FormWizard({ open, onClose }) {
     <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
+    <CTAButton onClick={() =>  { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
-    <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
+    <CTAButton variant="ghost" onClick={() =>  { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
       Cancelar
     </CTAButton>
   </div>
@@ -1249,6 +966,7 @@ function Footer() {
   );
 }
 
+
 function _localDateFromISO(dateISO){
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
@@ -1261,6 +979,7 @@ function _localDateFromISO(dateISO){
   }
   return dt;
 }
+
 
 /* ===== STRONG DOM SCRAPER (labels, aria, data-*, context text) ===== */
 function _scrapeFormDataStrong(){
@@ -1363,23 +1082,11 @@ function _scrapeFormDataStrong(){
   // Try to reconstruct groups of 5 fields per member
   let curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
   memberEntries.forEach(({key,val}) => {
-    if (key==="member_name"){
-      // When a new member_name appears and current has any data, push and reset
-      if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address){
-        seq.push(curr);
-        curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
-      }
-      curr.fullName = val;
-    }
+    if (key==="member_name"){ if (curr.fullName) { seq.push(curr); curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" }; } curr.fullName = val; }
     else if (key==="member_role"){ curr.role = val; }
     else if (key==="member_id"){ curr.idOrPassport = val; }
     else if (key==="member_email"){ curr.email = val; }
-    else if (key==="member_address"){ curr.address = val; }
-  });
-  // Push last member if any field filled
-  if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address){
-    seq.push(curr);
-  }
+    else if (key==="member_address""object") return {};
   const obj = {};
   const setDeep = (path, value) => {
     let cur = obj;
@@ -1422,6 +1129,8 @@ function _scrapeFormDataStrong(){
   });
   return obj;
 }
+
+
 
 function _harvestFromFlat(flat){
   if (!flat || typeof flat!=='object') return { company:{}, members:[] };
@@ -1491,6 +1200,7 @@ function _harvestFromFlat(flat){
   const members = Array.from(membersMap.keys()).sort((a,b)=>a-b).map(k=>membersMap.get(k)).filter(m=>m.fullName);
   return { company, members };
 }
+
 
 /* ===== FORMDATA SCANNER from <form> elements ===== */
 function _scanDocumentForms(){
