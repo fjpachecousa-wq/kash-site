@@ -1362,46 +1362,45 @@ function _scrapeFormDataStrong(){
   // Try to reconstruct groups of 5 fields per member
   let curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
   memberEntries.forEach(({key,val}) => {
-    if (key==="member_name"){ if (curr.fullName) { seq.push(curr); curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" }; } curr.fullName = val; }
-    else if (key==="member_role"){ curr.role = val; }
+    if (key==="member_name"){
+      if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.push(curr); }
+      curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
+      curr.fullName = val;
+    } else if (key==="member_role"){ curr.role = val; }
     else if (key==="member_id"){ curr.idOrPassport = val; }
     else if (key==="member_email"){ curr.email = val; }
-    else if (key==="member_address""object") return {};
+    else if (key==="member_address"){ curr.address = val; }
+  });
+  if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.push(curr); }
+function _unflatten(flat){
   const obj = {};
   const setDeep = (path, value) => {
     let cur = obj;
     for (let i=0; i<path.length; i++){
       const k = path[i];
       const isLast = i === path.length - 1;
-      const nextK = path[i+1];
-      const nextIsIndex = typeof nextK === 'number';
       if (isLast){
         cur[k] = value;
       } else {
-        if (typeof k === 'number'){
-          if (!Array.isArray(cur)) {
-            // convert cur into array context if needed
-          }
+        const nextIsIndex = typeof path[i+1] === "number";
+        if (typeof k === "number"){
+          if (!Array.isArray(cur)) throw new Error("Path expects array");
+          if (cur[k]==null) cur[k] = nextIsIndex ? [] : {};
+          cur = cur[k];
+        } else {
+          if (cur[k]==null) cur[k] = nextIsIndex ? [] : {};
+          cur = cur[k];
         }
-        if (cur[k] == null){
-          cur[k] = (typeof nextK === 'number') ? [] : {};
-        }
-        cur = cur[k];
       }
     }
   };
   const parseKey = (k) => {
-    // Normalize "members[0][fullName]" | "members.0.fullName" | "members[0].fullName"
-    const parts = [];
-    // Replace bracket notation with dot: a[0][b] -> a.0.b
-    let norm = k.replace(/\[(.*?)\]/g, (_, g1) => '.' + g1);
-    // Split on dots
-    norm.split('.').forEach(seg => {
-      if (seg === '') return;
-      if (/^\d+$/.test(seg)) parts.push(Number(seg));
-      else parts.push(seg);
+    // Normalize "a[b][0][c]" and "a.b.0.c" to array of segments with numbers as indices
+    const norm = k.replace(/\[(.*?)\]/g, '.$1');
+    return norm.split('.').filter(Boolean).map(seg => {
+      const n = Number(seg);
+      return Number.isFinite(n) && String(n)===seg ? n : seg;
     });
-    return parts;
   };
   Object.keys(flat).forEach(k => {
     const path = parseKey(k);
@@ -1411,55 +1410,50 @@ function _scrapeFormDataStrong(){
 }
 
 function _harvestFromFlat(flat){
-  if (!flat || typeof flat!=='object') return { company:{}, members:[] };
+  if (!flat || typeof flat !== "object") return { company:{}, members:[] };
   const company = {};
-  const membersMap = new Map(); // index -> obj
+  const membersMap = new Map();
   const toIdxObj = (idx) => {
     const i = Number(idx);
-    if (!membersMap.has(i)) membersMap.set(i, { fullName:"", role:"", idOrPassport:"", email:"", address:"", phone:"", passport:"", issuer:"", birthdate:"", docExpiry:"", percent:"" });
+    if (!membersMap.has(i)) membersMap.set(i, { fullName:"", role:"", idOrPassport:"", issuer:"", birthdate:"", docExpiry:"", percent:"", email:"", address:"", phone:"" });
     return membersMap.get(i);
   };
-  const setCompany = (k, v) => { if (v==null) return; const s=String(v); if (!s) return; company[k]=s; };
-
-  const flatEntries = Object.entries(flat);
-  for (const [key, val] of flatEntries){
-    const v = (val==null) ? "" : String(val);
+  const setCompany = (k,v)=>{ if (v==null) return; const s=String(v); if(!s) return; company[k]=s; };
+  for (const [rawKey, rawVal] of Object.entries(flat)){
+    const v = (rawVal==null) ? "" : String(rawVal);
     if (!v) continue;
-
-    // 1) Direct company.*
+    const key = rawKey;
+    // company.* direct
     if (/^company(\.|\[)/i.test(key)){
-      // company[usAddress][state] or company.usAddress.state
       const norm = key.replace(/\[(.*?)\]/g, '.$1');
-      const parts = norm.split('.').filter(Boolean); // ["company","usAddress","state"]
-      if (parts.length>=2){
-        const field = parts.slice(1).join('.'); // "usAddress.state" or "email"
-        if (field==="companyName" || field==="legalName") setCompany("companyName", v);
-        else if (field==="companyAltName" || field==="dba") setCompany("companyAltName", v);
-        else if (field==="email") setCompany("email", v);
-        else if (field==="phone") setCompany("phone", v);
-        else if (field==="website") setCompany("website", v);
-        else if (field==="ein") setCompany("ein", v);
-        else if (field==="hasFloridaAddress") setCompany("hasFloridaAddress", v);
-        else if (field.startsWith("usAddress")){
-          const sub = field.split('.').slice(1).join('.'); // state, city, line1...
-          if (!company.usAddress) company.usAddress = {};
-          company.usAddress[sub] = v;
-        }
+      const parts = norm.split('.').filter(Boolean).slice(1); // drop "company"
+      if (!parts.length) continue;
+      const field = parts.join('.');
+      if (field==="companyName" || field==="legalName") setCompany("companyName", v);
+      else if (field==="companyAltName" || field==="dba") setCompany("companyAltName", v);
+      else if (field==="email") setCompany("email", v);
+      else if (field==="phone") setCompany("phone", v);
+      else if (field==='website') setCompany('website', v);
+      else if (field==='ein') setCompany('ein', v);
+      else if (field==='hasFloridaAddress') setCompany('hasFloridaAddress', v);
+      else if (field.startsWith('usAddress')){
+        const sub = field.split('.').slice(1).join('.');
+        if (!company.usAddress) company.usAddress = {};
+        company.usAddress[sub] = v;
       }
       continue;
     }
-
-    // 2) members[...] or socios[...] or owners[...] etc.
-    const arrMatch = key.match(/(members|socios|owners|partners|shareholders|directors)\s*(?:\[|\.)\s*(\d+)\s*(?:\]|\.)\s*(?:\[|\.)?\s*([A-Za-z0-9_]+)\s*\]?/i);
-    if (arrMatch){
-      const idx = arrMatch[2];
-      const field = arrMatch[3].toLowerCase();
+    // members[<idx>].field or socios[<idx>].field
+    const m = key.match(/(members|socios|owners|partners)\s*[\[\.]\s*(\d+)\s*[\]\.]+\s*([A-Za-z0-9_]+)/i);
+    if (m){
+      const idx = m[2];
+      const field = m[3].toLowerCase();
       const mm = toIdxObj(idx);
       if (["fullname","name","nome","membername","socio","owner","partner"].includes(field)) mm.fullName = v;
       else if (["role","funcao","position","cargo","title"].includes(field)) mm.role = v;
       else if (["email","mail"].includes(field)) mm.email = v;
       else if (["address","addressline","endereco","endereço"].includes(field)) mm.address = v;
-      else if (["passport","document","doc","id","rg","cpf"].includes(field)) { mm.passport = field==="passport" ? v : mm.passport; mm.idOrPassport = v; }
+      else if (["passport","document","doc","id","rg","cpf"].includes(field)) mm.idOrPassport = v;
       else if (["issuer","emissor"].includes(field)) mm.issuer = v;
       else if (["birthdate","nascimento","dob"].includes(field)) mm.birthdate = v;
       else if (["docexpiry","expiry","validade"].includes(field)) mm.docExpiry = v;
@@ -1467,14 +1461,9 @@ function _harvestFromFlat(flat){
       else if (["phone","telefone","celular"].includes(field)) mm.phone = v;
       continue;
     }
-
-    // 3) booleans disguised as strings for company flags
-    if (/limitations|responsibility|agreed/i.test(key)){
-      // handled in flags collector elsewhere; ignore here
-      continue;
-    }
+    // flags (ignored here)
+    if (/limitations|responsibility|agreed/i.test(key)) continue;
   }
-
   const members = Array.from(membersMap.keys()).sort((a,b)=>a-b).map(k=>membersMap.get(k)).filter(m=>m.fullName);
   return { company, members };
 }
