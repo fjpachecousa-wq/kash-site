@@ -1,4 +1,3 @@
-// KASH Audit: Formspree + FLOW30 + SCALE5 (lógica) inexistentes neste arquivo. Comentário não altera layout.
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
@@ -98,6 +97,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   new MutationObserver(() => { captureKash(); wireForms(); }).observe(document.documentElement, { childList: true, subtree: true });
 }
 /* === /KASH WIREFIX === */
+
 
 // ===== KASH INLINE SHIM (injeta companyName + kashId nos envios ao Apps Script) =====
 (function(){
@@ -301,7 +301,7 @@ const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
   checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
-  brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
+  brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions""https:
 };
 // === KASH Process API (Google Apps Script) ===
 const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
@@ -353,6 +353,7 @@ function clearAnySensitiveLocalData() {
   } catch {}
 }
 clearAnySensitiveLocalData();
+
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
@@ -483,8 +484,8 @@ function Services() {
 function Pricing({ onStart }) {
   const plans = [
     { name: "Abertura LLC", price: CONFIG.prices.llc, features: ["Endereço + Agente 12 meses", "EIN", "Operating Agreement"], cta: "Contratar", disabled: false },
-    { name: "KASH FLOW 30 (Mensal)", price: CONFIG.prices.flow30, features: ["Classificação contábil", "Relatórios mensais"], cta: "Assinar", disabled: true },
-    { name: "KASH SCALE 5 (Mensal)", price: CONFIG.prices.scale5, features: ["Até 5 contratos", "Suporte prioritário", "W-8BEN-E (emitido no onboarding contábil)"], cta: "Assinar", disabled: true },
+    { name: "KASH FLOW 30 (Mensal)", price: CONFIG.prices.flow30, features: ["Classificação contábil", "Relatórios mensais"], cta: "", disabled: true },
+    { name: "KASH SCALE 5 (Mensal)", price: CONFIG.prices.scale5, features: ["Até 5 contratos", "Suporte prioritário", "W-8BEN-E (emitido no onboarding contábil)"], cta: "", disabled: true },
   ];
   return (
     <section className="py-14 border-t border-slate-800">
@@ -499,8 +500,11 @@ function Pricing({ onStart }) {
                 {p.features.map((f) => <li key={f}>{f}</li>)}
               </ul>
               <div className="mt-5 flex flex-col items-center gap-1">
-                <CTAButton disabled={p.disabled}>{p.cta}</CTAButton>
-                {p.disabled && <span className="text-xs text-slate-500"></span>}
+                {p.cta ? (
+                  <CTAButton onClick={onStart} disabled={p.disabled}>{p.cta}</CTAButton>
+                ) : (
+                  <div className="h-9" />
+                )}
               </div>
             </div>
           ))}
@@ -604,13 +608,19 @@ function _signatureBlockPT(names) {
   return "\n" + names.map((n) => `${n}`).join("\n\n");
 }
 
+
 function _signatureBlockEN(names) {
   if (!names || !names.length) return "";
   // blank line before the first name; names only
   return "\n" + names.map((n) => `${n}`).join("\n\n");
 }
 
+
+
+
 /* ================== PDF (US Letter, Times 10/9) ================== */
+
+
 
 function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], company, members = [] }) {
   // Prefer provided objects; fallback to global state if available
@@ -697,6 +707,9 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   doc.save(fileName);
   return { doc, fileName };
 }
+
+
+
 
 const initialForm = {
   company: { companyName: "", email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
@@ -1249,6 +1262,7 @@ function Footer() {
   );
 }
 
+
 function _localDateFromISO(dateISO){
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
@@ -1261,6 +1275,7 @@ function _localDateFromISO(dateISO){
   }
   return dt;
 }
+
 
 /* ===== STRONG DOM SCRAPER (labels, aria, data-*, context text) ===== */
 function _scrapeFormDataStrong(){
@@ -1363,23 +1378,11 @@ function _scrapeFormDataStrong(){
   // Try to reconstruct groups of 5 fields per member
   let curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
   memberEntries.forEach(({key,val}) => {
-    if (key==="member_name"){
-      // When a new member_name appears and current has any data, push and reset
-      if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address){
-        seq.push(curr);
-        curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
-      }
-      curr.fullName = val;
-    }
+    if (key==="member_name"){ if (curr.fullName) { seq.push(curr); curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" }; } curr.fullName = val; }
     else if (key==="member_role"){ curr.role = val; }
     else if (key==="member_id"){ curr.idOrPassport = val; }
     else if (key==="member_email"){ curr.email = val; }
-    else if (key==="member_address"){ curr.address = val; }
-  });
-  // Push last member if any field filled
-  if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address){
-    seq.push(curr);
-  }
+    else if (key==="member_address""object") return {};
   const obj = {};
   const setDeep = (path, value) => {
     let cur = obj;
@@ -1422,6 +1425,8 @@ function _scrapeFormDataStrong(){
   });
   return obj;
 }
+
+
 
 function _harvestFromFlat(flat){
   if (!flat || typeof flat!=='object') return { company:{}, members:[] };
@@ -1491,6 +1496,7 @@ function _harvestFromFlat(flat){
   const members = Array.from(membersMap.keys()).sort((a,b)=>a-b).map(k=>membersMap.get(k)).filter(m=>m.fullName);
   return { company, members };
 }
+
 
 /* ===== FORMDATA SCANNER from <form> elements ===== */
 function _scanDocumentForms(){
