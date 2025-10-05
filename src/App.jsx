@@ -555,17 +555,17 @@ function buildContractEN(companyName) {
 function buildContractPT(companyName) {
   return [
     `CONTRATANTE: ${companyName}, identificado(a) pelas informações fornecidas no formulário eletrônico, doravante denominado(a) CLIENTE. CONTRATADA: KASH CORPORATE SOLUTIONS LLC, sociedade de responsabilidade limitada, registrada no Estado da Flórida, Estados Unidos da América, doravante denominada KASH CORPORATE SOLUTIONS LLC.`,
-    "CLÁUSULA 1ª – OBJETO: O presente contrato tem por objeto o registro de empresa (LLC) no Estado da Flórida, seguido da aplicação junto ao IRS para emissão do EIN, após a aprovação da constituição da empresa.",
-    "CLÁUSULA 2ª – AGENTE REGISTRADO E ENDEREÇO: A KASH CORPORATE fornecerá: (a) endereço comercial virtual por 12 (doze) meses; (b) agente registrado na Flórida por 12 (doze) meses. Após esse período, os serviços poderão ser renovados mediante cobrança.",
-    "CLÁUSULA 3ª – RESPONSABILIDADE DAS INFORMAÇÕES: Todas as informações prestadas pelo CLIENTE são de sua exclusiva responsabilidade, incluindo responsabilidade civil e criminal por eventuais incorreções.",
-    "CLÁUSULA 4ª – LIMITAÇÕES: Não estão incluídos: licenças/alvarás, serviços contábeis/fiscais ou serviços bancários.",
-    "CLÁUSULA 5ª – REMUNERAÇÃO: O CLIENTE pagará à KASH CORPORATE o valor de US$ 1.360,00, em parcela única e imediata, por meio dos canais oficiais no site da KASH CORPORATE.",
-    "CLÁUSULA 6ª – ENCERRAMENTO: As obrigações da KASH CORPORATE encerram-se após a emissão do EIN e a entrega dos documentos digitais ao CLIENTE.",
-    "CLÁUSULA 7ª – VIGÊNCIA: Este contrato entra em vigor na data da assinatura e permanece válido até a conclusão dos serviços aqui descritos.",
-    "CLÁUSULA 8ª – CONDIÇÃO DE VALIDADE: Este contrato somente terá validade após o pagamento integral previsto na Cláusula 5ª.",
-    "CLÁUSULA 9ª – ACOMPANHAMENTO: Após o pagamento, o CLIENTE receberá um Número de Rastreamento (Tracking Number) para acompanhar o progresso do processo na plataforma da KASH CORPORATE.",
-    "CLÁUSULA 10ª – ÓRGÃOS PÚBLICOS: A aprovação da constituição da empresa e a emissão do EIN dependem exclusivamente dos órgãos públicos competentes (Estado da Flórida e IRS). A KASH CORPORATE não garante prazos ou aprovações.",
-    "CLÁUSULA 11ª – FORO: Fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, com opção pelo foro de Orlando, Flórida – EUA, a critério do CLIENTE."
+    "CLÁUSULA 1a – OBJETO: O presente contrato tem por objeto o registro de empresa (LLC) no Estado da Flórida, seguido da aplicação junto ao IRS para emissão do EIN, após a aprovação da constituição da empresa.",
+    "CLÁUSULA 2a – AGENTE REGISTRADO E ENDEREÇO: A KASH CORPORATE fornecerá: (a) endereço comercial virtual por 12 (doze) meses; (b) agente registrado na Flórida por 12 (doze) meses. Após esse período, os serviços poderão ser renovados mediante cobrança.",
+    "CLÁUSULA 3a – RESPONSABILIDADE DAS INFORMAÇÕES: Todas as informações prestadas pelo CLIENTE são de sua exclusiva responsabilidade, incluindo responsabilidade civil e criminal por eventuais incorreções.",
+    "CLÁUSULA 4a – LIMITAÇÕES: Não estão incluídos: licenças/alvarás, serviços contábeis/fiscais ou serviços bancários.",
+    "CLÁUSULA 5a – REMUNERAÇÃO: O CLIENTE pagará à KASH CORPORATE o valor de US$ 1.360,00, em parcela única e imediata, por meio dos canais oficiais no site da KASH CORPORATE.",
+    "CLÁUSULA 6a – ENCERRAMENTO: As obrigações da KASH CORPORATE encerram-se após a emissão do EIN e a entrega dos documentos digitais ao CLIENTE.",
+    "CLÁUSULA 7a – VIGÊNCIA: Este contrato entra em vigor na data da assinatura e permanece válido até a conclusão dos serviços aqui descritos.",
+    "CLÁUSULA 8a – CONDIÇÃO DE VALIDADE: Este contrato somente terá validade após o pagamento integral previsto na Cláusula 5a.",
+    "CLÁUSULA 9a – ACOMPANHAMENTO: Após o pagamento, o CLIENTE receberá um Número de Rastreamento (Tracking Number) para acompanhar o progresso do processo na plataforma da KASH CORPORATE.",
+    "CLÁUSULA 10a – ÓRGÃOS PÚBLICOS: A aprovação da constituição da empresa e a emissão do EIN dependem exclusivamente dos órgãos públicos competentes (Estado da Flórida e IRS). A KASH CORPORATE não garante prazos ou aprovações.",
+    "CLÁUSULA 11a – FORO: Fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, com opção pelo foro de Orlando, Flórida – EUA, a critério do CLIENTE."
   ];
 }
 /* ===== Acceptance (PT/EN) + Signatures (helpers) ===== */
@@ -909,7 +909,7 @@ function AdminPanel() {
                   <div>
                     <div className="text-sm text-slate-300">Tracking</div>
                     <select value={selected} onChange={(e)=>setSelected(e.target.value)} className="w-full rounded bg-slate-950 px-3 py-2 text-sm text-slate-100 border border-slate-700">
-                      <option value="">Selecione…</option>
+                      <option value="">Selecione...</option>
                       {list.map((e)=> <option key={e.code} value={e.code}>{e.code} — {e.company}</option>)}
                     </select>
                   </div>
@@ -1423,27 +1423,25 @@ function _harvestFromFlat(flat){
     const v = (rawVal==null) ? "" : String(rawVal);
     if (!v) continue;
     const key = rawKey;
-    // company.* direct
     if (/^company(\.|\[)/i.test(key)){
       const norm = key.replace(/\[(.*?)\]/g, '.$1');
-      const parts = norm.split('.').filter(Boolean).slice(1); // drop "company"
+      const parts = norm.split('.').filter(Boolean).slice(1);
       if (!parts.length) continue;
       const field = parts.join('.');
       if (field==="companyName" || field==="legalName") setCompany("companyName", v);
       else if (field==="companyAltName" || field==="dba") setCompany("companyAltName", v);
       else if (field==="email") setCompany("email", v);
       else if (field==="phone") setCompany("phone", v);
-      else if (field==='website') setCompany('website', v);
-      else if (field==='ein') setCompany('ein', v);
-      else if (field==='hasFloridaAddress') setCompany('hasFloridaAddress', v);
-      else if (field.startsWith('usAddress')){
+      else if (field==="website") setCompany("website", v);
+      else if (field==="ein") setCompany("ein", v);
+      else if (field==="hasFloridaAddress") setCompany("hasFloridaAddress", v);
+      else if (field.startsWith("usAddress")){
         const sub = field.split('.').slice(1).join('.');
         if (!company.usAddress) company.usAddress = {};
         company.usAddress[sub] = v;
       }
       continue;
     }
-    // members[<idx>].field or socios[<idx>].field
     const m = key.match(/(members|socios|owners|partners)\s*[\[\.]\s*(\d+)\s*[\]\.]+\s*([A-Za-z0-9_]+)/i);
     if (m){
       const idx = m[2];
@@ -1461,7 +1459,6 @@ function _harvestFromFlat(flat){
       else if (["phone","telefone","celular"].includes(field)) mm.phone = v;
       continue;
     }
-    // flags (ignored here)
     if (/limitations|responsibility|agreed/i.test(key)) continue;
   }
   const members = Array.from(membersMap.keys()).sort((a,b)=>a-b).map(k=>membersMap.get(k)).filter(m=>m.fullName);
@@ -1480,7 +1477,7 @@ function _scanDocumentForms(){
         if (!out[k]) out[k] = v;
       }
     });
-  } catch(_){}
+  } catch(_){/* noop */}
   return out;
 }
 
