@@ -1,4 +1,3 @@
-// KASH Audit: Formspree + FLOW30 + SCALE5 (lógica) inexistentes neste arquivo. Comentário não altera layout.
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
@@ -482,10 +481,7 @@ function Services() {
 }
 function Pricing({ onStart }) {
   const plans = [
-    { name: "Abertura LLC", price: CONFIG.prices.llc, features: ["Endereço + Agente 12 meses", "EIN", "Operating Agreement"], cta: "Contratar", disabled: false },
-    { name: "KASH FLOW 30 (Mensal)", price: CONFIG.prices.flow30, features: ["Classificação contábil", "Relatórios mensais"], cta: "Assinar", disabled: true },
-    { name: "KASH SCALE 5 (Mensal)", price: CONFIG.prices.scale5, features: ["Até 5 contratos", "Suporte prioritário", "W-8BEN-E (emitido no onboarding contábil)"], cta: "Assinar", disabled: true },
-  ];
+    { name: "Abertura LLC", price: CONFIG.prices.llc, features: ["Endereço + Agente 12 meses", "EIN", "Operating Agreement"], cta: "Contratar", disabled: false },  ];
   return (
     <section className="py-14 border-t border-slate-800">
       <div className="max-w-6xl mx-auto px-4">
