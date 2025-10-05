@@ -398,7 +398,7 @@ function CTAButton({ children, variant = "primary", onClick, type = "button", di
     : variant === "ghost"
     ? "bg-transparent border border-slate-700 text-slate-200 hover:bg-slate-800"
     : "bg-slate-700 text-slate-100 hover:bg-slate-600";
-  return ;
+  return <button type={type} onClick={onClick} disabled={disabled} className={classNames(base, styles)}>{children}</button>;
 }
 function SectionTitle({ title, subtitle }) {
   return (
@@ -409,7 +409,30 @@ function SectionTitle({ title, subtitle }) {
   );
 }
 
-/* ================== HERO/pt-16 pb-10">
+/* ================== HERO/SERVICES/PRICING ================== */
+function DemoCalculator() {
+  const [monthly, setMonthly] = useState(4000);
+  const yearly = monthly * 12;
+  const withheld = yearly * 0.30;
+  const saved = Math.max(0, withheld - 1360);
+  return (
+    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+      <div className="flex items-center justify-between"><div className="text-slate-300">Estimativa de economia anual</div><span className="text-xs text-emerald-300">Simulador</span></div>
+      <div className="mt-4">
+        <input type="range" min={1000} max={20000} step={100} value={monthly} onChange={(e) => setMonthly(Number(e.target.value))} className="w-full" />
+        <div className="mt-2 text-sm text-slate-400">Receita mensal: <span className="text-slate-200">US$ {monthly.toLocaleString()}</span></div>
+      </div>
+      <div className="mt-4 grid grid-cols-3 gap-3 text-center">
+        <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Receita/ano</div><div className="text-lg text-slate-100">US$ {yearly.toLocaleString()}</div></div>
+        <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Retenção 30%</div><div className="text-lg text-slate-100">US$ {withheld.toLocaleString()}</div></div>
+        <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Economia potencial</div><div className="text-lg text-emerald-400">US$ {saved.toLocaleString()}</div></div>
+      </div>
+    </div>
+  );
+}
+function Hero({ onStart }) {
+  return (
+    <section className="pt-16 pb-10">
       <div className="max-w-6xl mx-auto px-4">
         <div className="flex items-center gap-3">
           <KLogo size={42} />
@@ -433,7 +456,59 @@ function SectionTitle({ title, subtitle }) {
     </section>
   );
 }
-function Contrato e pagamento", d: "Assinatura eletrônica e checkout." },
+function Services() {
+  const items = [
+    { t: "Abertura LLC Partnership", d: "Registro oficial na Flórida (Sunbiz)." },
+    { t: "EIN (IRS)", d: "Obtenção do Employer Identification Number." },
+    { t: "Operating Agreement", d: "Documento societário digital." },
+    { t: "Endereço + Agente (12 meses)", d: "Inclusos no pacote de abertura." },
+  ];
+  return (
+    <section className="py-14 border-t border-slate-800">
+      <div className="max-w-6xl mx-auto px-4">
+        <SectionTitle title="Serviços incluídos" subtitle="Pacote completo para começar certo." />
+        <div className="mt-6 grid md:grid-cols-3 gap-4">
+          {items.map((it) => (
+            <div key={it.t} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <div className="text-slate-200 font-medium">{it.t}</div>
+              <div className="text-slate-400 text-sm mt-1">{it.d}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+function Pricing({ onStart }) {
+  const plans = [
+    { name: "Abertura LLC", price: CONFIG.prices.llc, features: ["Endereço + Agente 12 meses", "EIN", "Operating Agreement"], cta: "Contratar", disabled: false },  ];
+  return (
+    <section className="py-14 border-t border-slate-800">
+      <div className="max-w-6xl mx-auto px-4">
+        <SectionTitle title="Planos e preços" subtitle="Transparência desde o início." />
+        <div className="mt-6 grid md:grid-cols-3 gap-4">
+          {plans.map((p) => (
+            <div key={p.name} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
+              <div className="text-slate-100 font-medium">{p.name}</div>
+              <div className="text-2xl text-emerald-400 mt-1">{p.price}</div>
+              <ul className="mt-3 text-sm text-slate-400 space-y-1 list-disc list-inside">
+                {p.features.map((f) => <li key={f}>{f}</li>)}
+              </ul>
+              <div className="mt-5 flex flex-col items-center gap-1">
+                <CTAButton disabled={p.disabled}>{p.cta}</CTAButton>
+                {p.disabled && <span className="text-xs text-slate-500"></span>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+function HowItWorks() {
+  const steps = [
+    { t: "Consulta", d: "Alinhamento de expectativas (opcional)." },
+    { t: "Contrato e pagamento", d: "Assinatura eletrônica e checkout." },
     { t: "Formulário de abertura", d: "Dados da empresa, sócios, KYC/AML." },
     { t: "Pagamento", d: "Fee e taxa estadual — checkout online." },
     { t: "Tracking do processo", d: "Número de protocolo e notificações por e-mail." },
@@ -456,8 +531,25 @@ function Contrato e pagamento", d: "Assinatura eletrônica e checkout." },
   );
 }
 
-/* ================== PT) ================== */
-function buildPT(companyName) {
+/* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
+function buildContractEN(companyName) {
+  return [
+    "SERVICE AGREEMENT – KASH Corporate Solutions",
+    `CLIENT: ${companyName}, identified by the information provided in the electronic form, hereinafter referred to as CLIENT. CONTRACTOR: KASH CORPORATE SOLUTIONS LLC, a limited liability company registered in the State of Florida, United States of America, hereinafter referred to as KASH CORPORATE.`,
+    "SECTION 1 – PURPOSE: This Agreement covers the registration of a limited liability company (LLC) in Florida, followed by the application with the IRS for issuance of the Employer Identification Number (EIN), upon approval of the company formation.",
+    "SECTION 2 – REGISTERED AGENT AND ADDRESS: KASH CORPORATE will provide: (a) a virtual business address in Florida for twelve (12) months; (b) a registered agent in Florida for twelve (12) months. After this period, services may be renewed with additional fees.",
+    "SECTION 3 – INFORMATION RESPONSIBILITY: All information provided by CLIENT is of his/her sole responsibility, including legal and civil liability for inaccuracies or false statements.",
+    "SECTION 4 – LIMITATIONS: This Agreement does not include: licenses/permits, tax filings, bookkeeping, or banking services.",
+    "SECTION 5 – COMPENSATION: CLIENT shall pay KASH CORPORATE the amount of US$ 1,360.00, in one single installment, at the time of hiring, through the official payment methods available on KASH CORPORATE’s website.",
+    "SECTION 6 – TERMINATION: KASH CORPORATE's obligations end after issuance of the EIN and delivery of digital documents to CLIENT.",
+    "SECTION 7 – TERM: This Agreement is effective on the signing date and remains valid until completion of services described herein.",
+    "SECTION 8 – VALIDITY CONDITION: This Agreement only becomes valid after full payment as per Section 5.",
+    "SECTION 9 – CASE TRACKING: After payment, CLIENT will receive a unique Tracking Number to monitor the process progress via KASH CORPORATE’s platform.",
+    "SECTION 10 – PUBLIC AGENCIES: Approval of company formation and EIN issuance depends exclusively on the respective government agencies (State of Florida and IRS). KASH CORPORATE does not guarantee timelines or approvals.",
+    "SECTION 11 – JURISDICTION: For disputes, the forum elected is Rio de Janeiro, Brazil, with optional jurisdiction in Orlando, Florida, USA, at CLIENT’s discretion."
+  ];
+}
+function buildContractPT(companyName) {
   return [
     `CONTRATANTE: ${companyName}, identificado(a) pelas informações fornecidas no formulário eletrônico, doravante denominado(a) CLIENTE. CONTRATADA: KASH CORPORATE SOLUTIONS LLC, sociedade de responsabilidade limitada, registrada no Estado da Flórida, Estados Unidos da América, doravante denominada KASH CORPORATE SOLUTIONS LLC.`,
     "CLÁUSULA 1ª – OBJETO: O presente contrato tem por objeto o registro de empresa (LLC) no Estado da Flórida, seguido da aplicação junto ao IRS para emissão do EIN, após a aprovação da constituição da empresa.",
@@ -473,7 +565,8 @@ function buildPT(companyName) {
     "CLÁUSULA 11ª – FORO: Fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, com opção pelo foro de Orlando, Flórida – EUA, a critério do CLIENTE."
   ];
 }
-/* ===== Acceptance (PT/EN) + PT(fullNameList, dateISO) {
+/* ===== Acceptance (PT/EN) + Signatures (helpers) ===== */
+function _acceptanceClausePT(fullNameList, dateISO) {
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
     const [y,m,d] = dateISO.split("-").map(Number);
@@ -499,7 +592,9 @@ function _acceptanceClauseEN(fullNameList, dateISO) {
   }
   const d = dt.toLocaleDateString();
   const t = dt.toLocaleTimeString();
-  return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all PT(names) {
+  return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${d} at ${t}.`;
+}
+function _signatureBlockPT(names) {
   if (!names || !names.length) return "";
   // linha em branco antes do primeiro nome; apenas nomes
   return "\n" + names.map((n) => `${n}`).join("\n\n");
@@ -540,7 +635,30 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
     y += 16;
   }
 
-  // --- EN PT PT(companyName);
+  // --- EN Contract ---
+  doc.addPage(); y = 60;
+  const enBody = buildContractEN(companyName);
+  const enText = (Array.isArray(enBody) ? enBody.join("\n") : String(enBody));
+  const en = [
+    `SERVICE AGREEMENT – ${companyName}`,
+    "",
+    enText,
+    "",
+    _acceptanceClauseEN(names, dateISO),
+    "",
+    "SIGNATURES",
+    _signatureBlockEN(names)
+  ].join("\n");
+  const enLines = doc.splitTextToSize(en, maxW);
+  for (const line of enLines) {
+    if (y > pageH - 60) { doc.addPage(); y = 60; }
+    doc.text(line, marginX, y);
+    y += 16;
+  }
+
+  // --- PT Contract ---
+  doc.addPage(); y = 60;
+  const ptBody = buildContractPT(companyName);
   const ptText = (Array.isArray(ptBody) ? ptBody.join("\n") : String(ptBody));
   const pt = [
     `CONTRATO DE PRESTAÇÃO DE SERVIÇOS – ${companyName}`,
@@ -571,7 +689,18 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
     doc.text(`Page ${i} of ${pageCount}`, pw - 40, ph - 20, { align: "right" });
   }
 
-  const fileName = `KASH_pt: { responsibility: false, limitations: false },
+  const fileName = `KASH_Contract_${tracking}.pdf`;
+  doc.save(fileName);
+  return { doc, fileName };
+}
+
+const initialForm = {
+  company: { companyName: "", email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
+  members: [
+    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
+    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
+  ],
+  accept: { responsibility: false, limitations: false },
 };
 function formReducer(state, action) {
   switch (action.type) {
@@ -670,7 +799,7 @@ function TrackingSearch() {
                     <div className="h-2 w-2 rounded-full bg-emerald-400 mt-1" />
                     <div className="text-sm text-slate-300">
                       <div className="font-medium">{u.status}</div>
-                      <div className="text-xs text-slate-400">{u.ts}{u.note ? ` — ${u.note}` : ""}</div>
+                      <div className="text-xs text-slate-400">{u.ts}{u.note ? " — " + u.note : ""}</div>
                     </div>
                   </div>
                 ))}
@@ -759,7 +888,8 @@ function AdminPanel() {
       <div className="max-w-4xl mx-auto px-4">
         <div className="flex items-center justify-between">
           <SectionTitle title="Painel interno (admin)" subtitle="Adicionar atualizações de status aos trackings salvos neste navegador." />
-          </div>
+          <button className="text-xs text-emerald-400 hover:underline" onClick={() => setOpen(!open)}>{open ? "Ocultar" : "Abrir"}</button>
+        </div>
         {!open ? null : (
           <div className="mt-4 rounded-xl border border-slate-800 bg-slate-900 p-4">
             {!authed ? (
@@ -768,7 +898,8 @@ function AdminPanel() {
                   <div className="text-sm text-slate-300">PIN de acesso (teste)</div>
                   <input value={pin} onChange={(e)=>setPin(e.target.value)} className="w-full rounded bg-slate-950 px-3 py-2 text-sm text-slate-100 border border-slate-700" placeholder="Digite o PIN" />
                 </div>
-                </div>
+                <CTAButton onClick={tryAuth}>Entrar</CTAButton>
+              </div>
             ) : (
               <div className="space-y-3">
                 <div className="grid md:grid-cols-3 gap-2">
@@ -871,7 +1002,8 @@ function FormWizard({ open, onClose }) {
       company: form.company,
       members: form.members,
       accepts: form.accept,
-      PT: buildPT(form.company.companyName).join("\n"),
+      contractEN: buildContractEN(form.company.companyName).join("\n"),
+      contractPT: buildContractPT(form.company.companyName).join("\n"),
       updates: [{ ts: dateISO, status: "Formulário recebido", note: "Dados enviados e contrato disponível." }],
       source: "kashsolutions.us",
     };
@@ -1031,7 +1163,8 @@ function FormWizard({ open, onClose }) {
 
                 <div className="mt-6 flex justify-end gap-3">
                   <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
-                  </div>
+                  <CTAButton onClick={handleSubmit}>{loading ? "Enviando..." : "Enviar"}</CTAButton>
+                </div>
               </div>
             )}
 
@@ -1046,16 +1179,23 @@ function FormWizard({ open, onClose }) {
 
                 <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="flex items-center justify-between">
-                    <div className="text-slate-300 font-medium">Contrato (PT)</div>
+                    <div className="text-slate-300 font-medium">Contrato (EN + PT juntos)</div>
                     
                   </div>
 
                   {/* EN + PT in the same view */}
                   <div className="mt-4 text-[13px] leading-6 text-slate-200 space-y-6 max-h-[55vh] overflow-auto pr-2">
                     <div>
-                      <div className="font-semibold text-slate-100">SERVICE CONTRATO — KASH Corporate Solutions</div>
+                      <div className="font-semibold text-slate-100">SERVICE AGREEMENT – KASH Corporate Solutions</div>
                       <div className="mt-2 space-y-2 text-slate-300">
-                        {buildPT(company.companyName).map((p, idx) => <p key={idx}>{p}</p>)}
+                        {buildContractEN(company.companyName).slice(1).map((p, idx) => <p key={idx}>{p}</p>)}
+                      </div>
+                    </div>
+                    <div className="text-slate-400">— Portuguese Version Below —</div>
+                    <div>
+                      <div className="font-semibold text-slate-100">CONTRATO — KASH Corporate Solutions</div>
+                      <div className="mt-2 space-y-2 text-slate-300">
+                        {buildContractPT(company.companyName).map((p, idx) => <p key={idx}>{p}</p>)}
                       </div>
                     </div>
                     <div className="text-xs text-slate-400 border-t border-slate-700 pt-2">
@@ -1072,6 +1212,10 @@ function FormWizard({ open, onClose }) {
     <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
+    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
+      Concluir (teste)
+    </CTAButton>
+
     <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
       Cancelar
     </CTAButton>
