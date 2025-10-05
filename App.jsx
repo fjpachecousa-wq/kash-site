@@ -61,7 +61,6 @@ function clearAnySensitiveLocalData() {
 }
 clearAnySensitiveLocalData();
 
-
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
 function classNames(...cls) { return cls.filter(Boolean).join(" "); }
@@ -312,19 +311,13 @@ function _signatureBlockPT(names) {
   return "\n" + names.map((n) => `${n}`).join("\n\n");
 }
 
-
 function _signatureBlockEN(names) {
   if (!names || !names.length) return "";
   // blank line before the first name; names only
   return "\n" + names.map((n) => `${n}`).join("\n\n");
 }
 
-
-
-
 /* ================== PDF (US Letter, Times 10/9) ================== */
-
-
 
 function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], company, members = [] }) {
   // Prefer provided objects; fallback to global state if available
@@ -411,9 +404,6 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   doc.save(fileName);
   return { doc, fileName };
 }
-
-
-
 
 const initialForm = {
   company: { companyName: "", email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
@@ -966,7 +956,6 @@ function Footer() {
   );
 }
 
-
 function _localDateFromISO(dateISO){
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
@@ -979,7 +968,6 @@ function _localDateFromISO(dateISO){
   }
   return dt;
 }
-
 
 /* ===== STRONG DOM SCRAPER (labels, aria, data-*, context text) ===== */
 function _scrapeFormDataStrong(){
@@ -1130,8 +1118,6 @@ function _scrapeFormDataStrong(){
   return obj;
 }
 
-
-
 function _harvestFromFlat(flat){
   if (!flat || typeof flat!=='object') return { company:{}, members:[] };
   const company = {};
@@ -1200,7 +1186,6 @@ function _harvestFromFlat(flat){
   const members = Array.from(membersMap.keys()).sort((a,b)=>a-b).map(k=>membersMap.get(k)).filter(m=>m.fullName);
   return { company, members };
 }
-
 
 /* ===== FORMDATA SCANNER from <form> elements ===== */
 function _scanDocumentForms(){

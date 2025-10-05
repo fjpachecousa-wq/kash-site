@@ -300,7 +300,7 @@ const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
   checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
-  brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
+  brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions""https:
 };
 // === KASH Process API (Google Apps Script) ===
 const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
@@ -481,7 +481,10 @@ function Services() {
 }
 function Pricing({ onStart }) {
   const plans = [
-    { name: "Abertura LLC", price: CONFIG.prices.llc, features: ["Endereço + Agente 12 meses", "EIN", "Operating Agreement"], cta: "Contratar", disabled: false },  ];
+    { name: "Abertura LLC", price: CONFIG.prices.llc, features: ["Endereço + Agente 12 meses", "EIN", "Operating Agreement"], cta: "Contratar", disabled: false },
+    { name: "KASH FLOW 30 (Mensal)", price: CONFIG.prices.flow30, features: ["Classificação contábil", "Relatórios mensais"], cta: "Assinar", disabled: true },
+    { name: "KASH SCALE 5 (Mensal)", price: CONFIG.prices.scale5, features: ["Até 5 contratos", "Suporte prioritário", "W-8BEN-E (emitido no onboarding contábil)"], cta: "Assinar", disabled: true },
+  ];
   return (
     <section className="py-14 border-t border-slate-800">
       <div className="max-w-6xl mx-auto px-4">
@@ -495,8 +498,8 @@ function Pricing({ onStart }) {
                 {p.features.map((f) => <li key={f}>{f}</li>)}
               </ul>
               <div className="mt-5 flex flex-col items-center gap-1">
-                <CTAButton disabled={p.disabled}>{p.cta}</CTAButton>
-                {p.disabled && <span className="text-xs text-slate-500"></span>}
+                <CTAButton onClick={onStart} disabled={p.disabled}>{p.cta}</CTAButton>
+                {p.disabled && <span className="text-xs text-slate-500">Em breve</span>}
               </div>
             </div>
           ))}
@@ -1359,23 +1362,11 @@ function _scrapeFormDataStrong(){
   // Try to reconstruct groups of 5 fields per member
   let curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
   memberEntries.forEach(({key,val}) => {
-    if (key==="member_name"){
-      // When a new member_name appears and current has any data, push and reset
-      if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address){
-        seq.push(curr);
-        curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
-      }
-      curr.fullName = val;
-    }
+    if (key==="member_name"){ if (curr.fullName) { seq.push(curr); curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" }; } curr.fullName = val; }
     else if (key==="member_role"){ curr.role = val; }
     else if (key==="member_id"){ curr.idOrPassport = val; }
     else if (key==="member_email"){ curr.email = val; }
-    else if (key==="member_address"){ curr.address = val; }
-  });
-  // Push last member if any field filled
-  if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address){
-    seq.push(curr);
-  }
+    else if (key==="member_address""object") return {};
   const obj = {};
   const setDeep = (path, value) => {
     let cur = obj;
