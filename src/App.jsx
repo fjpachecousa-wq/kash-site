@@ -498,7 +498,7 @@ function Pricing({ onStart }) {
                 {p.features.map((f) => <li key={f}>{f}</li>)}
               </ul>
               <div className="mt-5 flex flex-col items-center gap-1">
-                <CTAButton onClick={onStart} disabled={p.disabled}>{p.cta}</CTAButton>
+                {!p.disabled && <CTAButton onClick={onStart}>{p.cta}</CTAButton>}
                 {p.disabled && <span className="text-xs text-slate-500">Em breve</span>}
               </div>
             </div>
