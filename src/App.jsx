@@ -1371,7 +1371,7 @@ function _scrapeFormDataStrong(){
     else if (key==="member_role"){ curr.role = val; }
     else if (key==="member_id"){ curr.idOrPassport = val; }
     else if (key==="member_email"){ curr.email = val; }
-    else if (key==="member_address""object") return {};
+      else if (key==="member_address"){ curr.address = val; }
   const obj = {};
   const setDeep = (path, value) => {
     let cur = obj;
