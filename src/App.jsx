@@ -86,6 +86,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
             const companyName = (localStorage.getItem("companyName") || "").trim();
             if (!kashId && !companyName) return;
             const payload = { kashId, companyName, faseAtual: 1, subFase: 0, atualizadoEm: new Date().toISOString() };
+            fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode: "no-cors" }).catch(()=>{});
           } catch {}
         }, { passive: true });
         b.__kash_click_wired = true;
@@ -301,7 +302,7 @@ const CONFIG = {
   checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
 };
-  brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
+// === KASH Process API (Google Apps Script) ===
 const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 async function apiGetProcesso(kashId){
@@ -1211,9 +1212,12 @@ function FormWizard({ open, onClose }) {
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
- <CTAButton onClick={() => (window.location.href = CONFIG.checkout.stripeUrl)}>
+    <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
+    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
+      Concluir (teste)
+    </CTAButton>
 
     <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
       Cancelar
