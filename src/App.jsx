@@ -98,6 +98,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
 }
 /* === /KASH WIREFIX === */
 
+
 // ===== KASH INLINE SHIM (injeta companyName + kashId nos envios ao Apps Script) =====
 (function(){
   function getCompanyName(){
@@ -300,10 +301,10 @@ const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
   checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
-  brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
+  brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions""https:
 };
 // === KASH Process API (Google Apps Script) ===
-const PROCESSO_API = (typeof window!=="undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) ? window.CONFIG.appsScriptUrl : "https://script.google.com/macros/s/APP_SCRIPT_DEPLOYMENT_ID/exec";
+const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 async function apiGetProcesso(kashId){
   const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
@@ -318,13 +319,6 @@ async function apiUpsert({kashId, companyName, atualizadoEm}){
   });
   if(!r.ok) throw new Error("upsert_failed");
   return r.json();
-}
-async function apiUpsertFull(payload){
-  // Envia todos os dados do formulário + tracking ao Apps Script
-  const body = { action:"upsert", ...payload };
-  const r = await fetch(PROCESSO_API, { method:"POST", headers:{ "Content-Type":"application/json" }, body: JSON.stringify(body) });
-  if (!r.ok) throw new Error("api_upsert_failed");
-  return r.json().catch(()=>({ ok:true }));
 }
 async function apiUpdate({kashId, faseAtual, subFase, status, note}){
   const r = await fetch(PROCESSO_API,{
@@ -359,6 +353,7 @@ function clearAnySensitiveLocalData() {
   } catch {}
 }
 clearAnySensitiveLocalData();
+
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
@@ -610,13 +605,19 @@ function _signatureBlockPT(names) {
   return "\n" + names.map((n) => `${n}`).join("\n\n");
 }
 
+
 function _signatureBlockEN(names) {
   if (!names || !names.length) return "";
   // blank line before the first name; names only
   return "\n" + names.map((n) => `${n}`).join("\n\n");
 }
 
+
+
+
 /* ================== PDF (US Letter, Times 10/9) ================== */
+
+
 
 function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], company, members = [] }) {
   // Prefer provided objects; fallback to global state if available
@@ -703,6 +704,9 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   doc.save(fileName);
   return { doc, fileName };
 }
+
+
+
 
 const initialForm = {
   company: { companyName: "", email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
@@ -1003,7 +1007,6 @@ function FormWizard({ open, onClose }) {
     setLoading(true);
     const code = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
     setTracking(code);
-    try { localStorage.setItem("last_tracking", code); localStorage.setItem("tracking", code); } catch(_) {}
     const dateISO = todayISO();
 
     const payload = {
@@ -1033,14 +1036,8 @@ function FormWizard({ open, onClose }) {
         try { await apiUpdate({ kashId: selected, faseAtual: Number(faseAtual)||2, subFase: subFase||null, status, note }); } catch(e) { console.warn("API update falhou", e); }
       } catch {}
 
-    try {
-      // Envia ao Google Sheets (Apps Script) o pacote completo
-      await apiUpsertFull({
-        kashId: code,
-        companyName: form.company.companyName,
-        ...payload
-      });
-    } catch(e) { console.warn("API falhou", e); }
+      try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
+
       
     } catch {}
 
@@ -1262,6 +1259,7 @@ function Footer() {
   );
 }
 
+
 function _localDateFromISO(dateISO){
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
@@ -1274,6 +1272,7 @@ function _localDateFromISO(dateISO){
   }
   return dt;
 }
+
 
 /* ===== STRONG DOM SCRAPER (labels, aria, data-*, context text) ===== */
 function _scrapeFormDataStrong(){
@@ -1424,6 +1423,8 @@ function _scrapeFormDataStrong(){
   return obj;
 }
 
+
+
 function _harvestFromFlat(flat){
   if (!flat || typeof flat!=='object') return { company:{}, members:[] };
   const company = {};
@@ -1492,6 +1493,7 @@ function _harvestFromFlat(flat){
   const members = Array.from(membersMap.keys()).sort((a,b)=>a-b).map(k=>membersMap.get(k)).filter(m=>m.fullName);
   return { company, members };
 }
+
 
 /* ===== FORMDATA SCANNER from <form> elements ===== */
 function _scanDocumentForms(){
