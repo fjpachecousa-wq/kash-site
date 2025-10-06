@@ -86,6 +86,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
             const companyName = (localStorage.getItem("companyName") || "").trim();
             if (!kashId && !companyName) return;
             const payload = { kashId, companyName, faseAtual: 1, subFase: 0, atualizadoEm: new Date().toISOString() };
+            fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode:"cors" }).catch(()=>{});
           } catch {}
         }, { passive: true });
         b.__kash_click_wired = true;
@@ -302,7 +303,26 @@ const CONFIG = {
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
 };
 // === KASH Process API (Google Apps Script) ===
-const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
+const PROCESSO_API = (typeof window!=="undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) ? window.CONFIG.appsScriptUrl : "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
+
+async function apiUpsertFull(payload){
+  const r = await fetch(PROCESSO_API, {
+    method: "POST",
+    mode: "cors",
+    redirect: "follow",
+    credentials: "omit",
+    headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
+    body: JSON.stringify({ action: "upsert", payload })
+  });
+  const text = await r.text();
+  let data;
+  try { data = text ? JSON.parse(text) : {}; } catch { data = { ok:false, raw:text }; }
+  if (!r.ok || (data && data.error)) {
+    const msg = (data && data.error) || `HTTP ${r.status} - ${text?.slice(0,200)}`;
+    throw new Error(msg);
+  }
+  return data;
+}
 
 async function apiGetProcesso(kashId){
   const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
@@ -354,7 +374,7 @@ clearAnySensitiveLocalData();
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
-function classNames(...cls) { return cls.filter(Boolean).join(" "); }
+function classNames(cls) { return cls.filter(Boolean).join(" "); }
 function todayISO() {
   const d = new Date();
   const pad = (n)=> String(n).padStart(2,"0");
@@ -706,12 +726,12 @@ const initialForm = {
 };
 function formReducer(state, action) {
   switch (action.type) {
-    case "UPDATE_COMPANY": return { ...state, company: { ...state.company, [action.field]: action.value } };
-    case "UPDATE_US_ADDRESS": return { ...state, company: { ...state.company, usAddress: { ...state.company.usAddress, [action.field]: action.value } } };
-    case "UPDATE_MEMBER": return { ...state, members: state.members.map((m,i)=> i===action.index ? { ...m, [action.field]: action.value } : m) };
-    case "ADD_MEMBER": return { ...state, members: [...state.members, { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" }] };
-    case "REMOVE_MEMBER": return { ...state, members: state.members.filter((_,i)=> i!==action.index) };
-    case "TOGGLE_ACCEPT": return { ...state, accept: { ...state.accept, [action.key]: action.value } };
+    case "UPDATE_COMPANY": return { state, company: { state.company, [action.field]: action.value } };
+    case "UPDATE_US_ADDRESS": return { state, company: { state.company, usAddress: { state.company.usAddress, [action.field]: action.value } } };
+    case "UPDATE_MEMBER": return { state, members: state.members.map((m,i)=> i===action.index ? { m, [action.field]: action.value } : m) };
+    case "ADD_MEMBER": return { state, members: [state.members, { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" }] };
+    case "REMOVE_MEMBER": return { state, members: state.members.filter((_,i)=> i!==action.index) };
+    case "TOGGLE_ACCEPT": return { state, accept: { state.accept, [action.key]: action.value } };
     default: return state;
   }
 }
@@ -878,7 +898,7 @@ function AdminPanel() {
       const now = new Date();
       const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
       const upd = { ts, status, note };
-      data.updates = Array.isArray(data.updates) ? [...data.updates, upd] : [upd];
+      data.updates = Array.isArray(data.updates) ? [data.updates, upd] : [upd];
       localStorage.setItem(selected, JSON.stringify(data));
       setStatus(""); setNote("");
       alert("Atualização adicionada.");
@@ -1012,7 +1032,32 @@ function FormWizard({ open, onClose }) {
 
     try {
       // Salva localmente
-      localStorage.setItem(code, JSON.stringify(payload));
+      
+    // === KASH: robust upsert to Google Sheets ===
+    try {
+      const snap = getFormSnapshot?.() || {};
+      const companyNamePlain = (snap.company && snap.company.companyName) || (form?.company?.companyName) || "";
+      const payloadFull = {
+        kashId: code,
+        dateISO,
+        companyName: companyNamePlain,
+        company: form.company,
+        members: form.members,
+        accepts: form.accept,
+        contractEN: (typeof buildContractEN==="function") ? buildContractEN(companyNamePlain).join("\n") : "",
+        contractPT: (typeof buildContractPT==="function") ? buildContractPT(companyNamePlain).join("\n") : "",
+        faseAtual: "Recebido",
+        subFase: "Formulário",
+        statusNota: "Envio inicial pelo formulário",
+        source: "kashsolutions.us",
+        updates: [{ ts: dateISO, status: "Formulário recebido", note: "Dados enviados e contrato disponível.", faseAtual:"Recebido", subFase:"Formulário" }]
+      };
+      await apiUpsertFull(payloadFull);
+    } catch(err) {
+      console.warn("API upsert falhou:", err);
+    }
+    // === /KASH robust upsert ===
+localStorage.setItem(code, JSON.stringify(payload));
 
       // index de trackings (últimos 50)
       try {
@@ -1165,7 +1210,7 @@ function FormWizard({ open, onClose }) {
 
                 <div className="mt-6 flex justify-end gap-3">
                   <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
-                  <CTAButton onClick={handleSubmit}>{loading ? "Enviando..." : "Enviar"}</CTAButton>
+                  <CTAButton onClick={handleSubmit}>{loading ? "Enviando" : "Enviar"}</CTAButton>
                 </div>
               </div>
             )}
@@ -1211,9 +1256,12 @@ function FormWizard({ open, onClose }) {
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
- <CTAButton onClick={() => (window.location.href = CONFIG.checkout.stripeUrl)}>
+    <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
+    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"cors"}); } catch(_err) {} }}>
+      Concluir (teste)
+    </CTAButton>
 
     <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
       Cancelar
@@ -1466,9 +1514,7 @@ function _harvestFromFlat(flat){
   const members = Array.from(membersMap.keys()).sort((a,b)=>a-b).map(k=>membersMap.get(k)).filter(m=>m.fullName);
   return { company, members };
 }
-/* ===== FORMDATA SCANNER from <form>
-  <div style={{marginTop: 12}}><button type="button" onClick={handleTestSave} className="btn btn-secondary">Gravar teste</button></div>
- elements ===== */
+/* ===== FORMDATA SCANNER from <form> elements ===== */
 function _scanDocumentForms(){
   const out = {};
   if (typeof document==="undefined" || !document.forms) return out;
@@ -1490,9 +1536,9 @@ function getFormSnapshot(){
     const st = (typeof window!=="undefined" && window.__KASH_FORM__) ? window.__KASH_FORM__ : null;
     const out = { company:{}, members:[], accepts:{} };
     if (st && typeof st==="object"){
-      if (st.company) out.company = { ...st.company };
+      if (st.company) out.company = { st.company };
       if (Array.isArray(st.members)) out.members = st.members.slice();
-      if (st.accept) out.accepts = { ...st.accept };
+      if (st.accept) out.accepts = { st.accept };
       if (!out.company.companyName){
         const nameEl = document.querySelector('input[name="companyName"], input[name="company_name"], input#companyName');
         if (nameEl && nameEl.value) out.company.companyName = nameEl.value.trim();
@@ -1503,66 +1549,7 @@ function getFormSnapshot(){
   const out = { company:{}, members:[], accepts:{} };
   const nameEl = document.querySelector('input[name="companyName"], input[name="company_name"], input#companyName');
   if (nameEl && nameEl.value) out.company.companyName = nameEl.value.trim();
-  document.querySelectorAll('input[type="checkbox"][name^="accept"]').forEach(cb => { out.accepts[cb.name] = !!cb.checked; });
-  const memberEntries = [];
-  document.querySelectorAll('input[name^="member_"], textarea[name^="member_"], select[name^="member_"]').forEach(el => {
-    const m = el.name.match(/^member_(\d+)_(name|role|id|email|address|phone)$/); if (!m) return;
-    const idx = parseInt(m[1],10), key = m[2], val = (el.value||"").trim();
-    memberEntries.push({ idx, key, val });
-  });
-  if (memberEntries.length){
-    const byIdx = new Map();
-    memberEntries.forEach(({idx,key,val}) => {
-      if (!byIdx.has(idx)) byIdx.set(idx, { fullName:"", role:"", idOrPassport:"", email:"", address:"", phone:"" });
-      const ref = byIdx.get(idx);
-      if (key==="name") ref.fullName = val;
-      else if (key==="role") ref.role = val;
-      else if (key==="id") ref.idOrPassport = val;
-      else if (key==="email") ref.email = val;
-      else if (key==="address") ref.address = val;
-      else if (key==="phone") ref.phone = val;
-    });
-    out.members = Array.from(byIdx.keys()).sort((a,b)=>a-b).map(k=>byIdx.get(k));
-  }
-  if (typeof window!=="undefined"){
-    window.__KASH_FORM__ = window.__KASH_FORM__ || {};
-    window.__KASH_FORM__.company = Object.assign({}, window.__KASH_FORM__.company||{}, out.company);
-    window.__KASH_FORM__.members = Array.isArray(out.members) ? out.members : [];
-    window.__KASH_FORM__.accept = Object.assign({}, window.__KASH_FORM__.accept||{}, out.accepts);
-  }
   return out;
-}
-
-async function handleTestSave(e){
-  try {
-    if (e && e.preventDefault) e.preventDefault();
-    const snap = getFormSnapshot();
-    const dateISO = new Date().toISOString();
-    const code = (window.last_tracking && window.last_tracking.code)
-      || (window.localStorage && JSON.parse(window.localStorage.getItem("last_tracking")||"{}").code)
-      || `KASH-${Math.random().toString(36).slice(2,8).toUpperCase()}`;
-    const companyName = (snap.company && snap.company.companyName) || "";
-    const payload = {
-      kashId: code,
-      dateISO,
-      companyName,
-      company: snap.company || {},
-      members: Array.isArray(snap.members) ? snap.members : [],
-      accepts: snap.accepts || snap.accept || {},
-      contractEN: (typeof buildContractEN==="function") ? buildContractEN(companyName).join("\n") : "",
-      contractPT: (typeof buildContractPT==="function") ? buildContractPT(companyName).join("\n") : "",
-      faseAtual: "Recebido",
-      subFase: "Formulário",
-      statusNota: "Teste manual",
-      source: "kashsolutions.us",
-      updates: [{ ts: dateISO, status: "Formulário recebido (teste)", note: "Envio manual de teste", faseAtual: "Recebido", subFase: "Formulário" }]
-    };
-    await apiUpsertFull({ ...payload });
-    if (typeof alert==="function") alert("Teste gravado com sucesso: "+code);
-  } catch(err){
-    console.error("Falha na gravação de teste", err);
-    if (typeof alert==="function") alert("Falha na gravação de teste");
-  }
 }
 export default function App() {
   const [open, setOpen] = useState(false);
@@ -1656,36 +1643,4 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
   }
   lines.push("");
   return lines;
-}
-
-async function apiUpsertFull(payload){
-  const r = await fetch(PROCESSO_API, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "upsert", ...payload })
-  });
-  if (!r.ok) throw new Error("api_upsert_failed");
-  return r.json().catch(()=>({ ok:true }));
-}
-
-
-// === Fallback runtime test button (ensures visibility even if JSX injection point not found) ===
-if (typeof window !== "undefined") {
-  window.addEventListener("load", () => {
-    try {
-      if (!document.querySelector("#kash-test-button")) {
-        const b = document.createElement("button");
-        b.id = "kash-test-button";
-        b.type = "button";
-        b.textContent = "Gravar teste";
-        b.onclick = () => { try { return handleTestSave(); } catch(e){ console.error(e); alert("Falha ao acionar teste"); } };
-        b.style.position = "fixed";
-        b.style.bottom = "16px";
-        b.style.right = "16px";
-        b.style.zIndex = "9999";
-        b.className = "btn btn-secondary";
-        document.body.appendChild(b);
-      }
-    } catch(_) {}
-  });
 }
