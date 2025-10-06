@@ -1359,7 +1359,7 @@ function _scrapeFormDataStrong(){
   let curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
   memberEntries.forEach(({key,val}) => {
     if (key==="member_name"){
-      if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.pushh(curr); }
+      if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.push(curr); }
       curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
       curr.fullName = val;
     } else if (key==="member_role"){ curr.role = val; }
@@ -1367,7 +1367,7 @@ function _scrapeFormDataStrong(){
     else if (key==="member_email"){ curr.email = val; }
     else if (key==="member_address"){ curr.address = val; }
   });
-  if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.pushh(curr); }
+  if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.push(curr); }
   const obj = {};
   const setDeep = (path, value) => {
     let cur = obj;
@@ -1484,6 +1484,86 @@ function _scanDocumentForms(){
   return out;
 }
 
+
+function getFormSnapshot(){
+  try {
+    const st = (typeof window!=="undefined" && window.__KASH_FORM__) ? window.__KASH_FORM__ : null;
+    const out = { company:{}, members:[], accepts:{} };
+    if (st && typeof st==="object"){
+      if (st.company) out.company = { ...st.company };
+      if (Array.isArray(st.members)) out.members = st.members.slice();
+      if (st.accept) out.accepts = { ...st.accept };
+      if (!out.company.companyName){
+        const nameEl = document.querySelector('input[name="companyName"], input[name="company_name"], input#companyName');
+        if (nameEl && nameEl.value) out.company.companyName = nameEl.value.trim();
+      }
+      return out;
+    }
+  } catch(e){}
+  const out = { company:{}, members:[], accepts:{} };
+  const nameEl = document.querySelector('input[name="companyName"], input[name="company_name"], input#companyName');
+  if (nameEl && nameEl.value) out.company.companyName = nameEl.value.trim();
+  document.querySelectorAll('input[type="checkbox"][name^="accept"]').forEach(cb => { out.accepts[cb.name] = !!cb.checked; });
+  const memberEntries = [];
+  document.querySelectorAll('input[name^="member_"], textarea[name^="member_"], select[name^="member_"]').forEach(el => {
+    const m = el.name.match(/^member_(\d+)_(name|role|id|email|address|phone)$/); if (!m) return;
+    const idx = parseInt(m[1],10), key = m[2], val = (el.value||"").trim();
+    memberEntries.push({ idx, key, val });
+  });
+  if (memberEntries.length){
+    const byIdx = new Map();
+    memberEntries.forEach(({idx,key,val}) => {
+      if (!byIdx.has(idx)) byIdx.set(idx, { fullName:"", role:"", idOrPassport:"", email:"", address:"", phone:"" });
+      const ref = byIdx.get(idx);
+      if (key==="name") ref.fullName = val;
+      else if (key==="role") ref.role = val;
+      else if (key==="id") ref.idOrPassport = val;
+      else if (key==="email") ref.email = val;
+      else if (key==="address") ref.address = val;
+      else if (key==="phone") ref.phone = val;
+    });
+    out.members = Array.from(byIdx.keys()).sort((a,b)=>a-b).map(k=>byIdx.get(k));
+  }
+  if (typeof window!=="undefined"){
+    window.__KASH_FORM__ = window.__KASH_FORM__ || {};
+    window.__KASH_FORM__.company = Object.assign({}, window.__KASH_FORM__.company||{}, out.company);
+    window.__KASH_FORM__.members = Array.isArray(out.members) ? out.members : [];
+    window.__KASH_FORM__.accept = Object.assign({}, window.__KASH_FORM__.accept||{}, out.accepts);
+  }
+  return out;
+}
+
+async function handleTestSave(e){
+  try {
+    if (e && e.preventDefault) e.preventDefault();
+    const snap = getFormSnapshot();
+    const dateISO = new Date().toISOString();
+    const code = (window.last_tracking && window.last_tracking.code)
+      || (window.localStorage && JSON.parse(window.localStorage.getItem("last_tracking")||"{}").code)
+      || `KASH-${Math.random().toString(36).slice(2,8).toUpperCase()}`;
+    const companyName = (snap.company && snap.company.companyName) || "";
+    const payload = {
+      kashId: code,
+      dateISO,
+      companyName,
+      company: snap.company || {},
+      members: Array.isArray(snap.members) ? snap.members : [],
+      accepts: snap.accepts || snap.accept || {},
+      contractEN: (typeof buildContractEN==="function") ? buildContractEN(companyName).join("\n") : "",
+      contractPT: (typeof buildContractPT==="function") ? buildContractPT(companyName).join("\n") : "",
+      faseAtual: "Recebido",
+      subFase: "Formulário",
+      statusNota: "Teste manual",
+      source: "kashsolutions.us",
+      updates: [{ ts: dateISO, status: "Formulário recebido (teste)", note: "Envio manual de teste", faseAtual: "Recebido", subFase: "Formulário" }]
+    };
+    await apiUpsertFull({ ...payload });
+    if (typeof alert==="function") alert("Teste gravado com sucesso: "+code);
+  } catch(err){
+    console.error("Falha na gravação de teste", err);
+    if (typeof alert==="function") alert("Falha na gravação de teste");
+  }
+}
 export default function App() {
   const [open, setOpen] = useState(false);
   return (
@@ -1577,49 +1657,6 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
   lines.push("");
   return lines;
 }
-function getFormSnapshot(){
-  const st = (typeof window!=="undefined" && window.__KASH_FORM__) ? window.__KASH_FORM__ : {};
-  const out = { company:{}, members:[], accepts:{} };
-  if (st.company) out.company = { ...st.company };
-  if (Array.isArray(st.members)) out.members = st.members.slice();
-  if (st.accept) out.accepts = { ...st.accept };
-  const nameEl = document.querySelector('input[name="companyName"], input[name="company_name"], input#companyName');
-  if (!out.company.companyName && nameEl && nameEl.value) out.company.companyName = nameEl.value.trim();
-  return out;
-}
-
-async function handleTestSave(e){
-  try {
-    if (e && e.preventDefault) e.preventDefault();
-    const snap = getFormSnapshot();
-    const dateISO = new Date().toISOString();
-    const code = (window.last_tracking && window.last_tracking.code)
-      || (window.localStorage && JSON.parse(window.localStorage.getItem("last_tracking")||"{}").code)
-      || `KASH-${Math.random().toString(36).slice(2,8).toUpperCase()}`;
-    const companyName = (snap.company && snap.company.companyName) || "";
-    const payload = {
-      kashId: code,
-      dateISO,
-      companyName,
-      company: snap.company || {},
-      members: Array.isArray(snap.members) ? snap.members : [],
-      accepts: snap.accepts || snap.accept || {},
-      contractEN: (typeof buildContractEN==="function") ? buildContractEN(companyName).join("\n") : "",
-      contractPT: (typeof buildContractPT==="function") ? buildContractPT(companyName).join("\n") : "",
-      faseAtual: "Recebido",
-      subFase: "Formulário",
-      statusNota: "Teste manual",
-      source: "kashsolutions.us",
-      updates: [{ ts: dateISO, status: "Formulário recebido (teste)", note: "Envio manual de teste", faseAtual: "Recebido", subFase: "Formulário" }]
-    };
-    const res = await apiUpsertFull({ ...payload });
-    console.log("Gravação de teste OK:", res);
-    if (typeof alert==="function") alert("Teste gravado com sucesso: "+code);
-  } catch(err){
-    console.error("Falha na gravação de teste", err);
-    if (typeof alert==="function") alert("Falha na gravação de teste");
-  }
-}
 
 async function apiUpsertFull(payload){
   const r = await fetch(PROCESSO_API, {
@@ -1629,4 +1666,26 @@ async function apiUpsertFull(payload){
   });
   if (!r.ok) throw new Error("api_upsert_failed");
   return r.json().catch(()=>({ ok:true }));
+}
+
+
+// === Fallback runtime test button (ensures visibility even if JSX injection point not found) ===
+if (typeof window !== "undefined") {
+  window.addEventListener("load", () => {
+    try {
+      if (!document.querySelector("#kash-test-button")) {
+        const b = document.createElement("button");
+        b.id = "kash-test-button";
+        b.type = "button";
+        b.textContent = "Gravar teste";
+        b.onclick = () => { try { return handleTestSave(); } catch(e){ console.error(e); alert("Falha ao acionar teste"); } };
+        b.style.position = "fixed";
+        b.style.bottom = "16px";
+        b.style.right = "16px";
+        b.style.zIndex = "9999";
+        b.className = "btn btn-secondary";
+        document.body.appendChild(b);
+      }
+    } catch(_) {}
+  });
 }
