@@ -1466,7 +1466,9 @@ function _harvestFromFlat(flat){
   const members = Array.from(membersMap.keys()).sort((a,b)=>a-b).map(k=>membersMap.get(k)).filter(m=>m.fullName);
   return { company, members };
 }
-/* ===== FORMDATA SCANNER from <form> elements ===== */
+/* ===== FORMDATA SCANNER from <form>
+  <div style={{marginTop: 12}}><button type="button" onClick={handleTestSave} className="btn btn-secondary">Gravar teste</button></div>
+ elements ===== */
 function _scanDocumentForms(){
   const out = {};
   if (typeof document==="undefined" || !document.forms) return out;
