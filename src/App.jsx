@@ -303,7 +303,26 @@ const CONFIG = {
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
 };
 // === KASH Process API (Google Apps Script) ===
-const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
+const PROCESSO_API = (typeof window!=="undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) ? window.CONFIG.appsScriptUrl : "https://script.google.com/macros/s/PLACEHOLDER/exec";
+
+async function apiUpsertFull(payload){
+  const r = await fetch(PROCESSO_API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "upsert", ...payload })
+  });
+  if (!r.ok) throw new Error("api_upsert_failed");
+  return r.json().catch(()=>({ ok:true }));
+}
+async function apiUpdateStatus(payload){
+  const r = await fetch(PROCESSO_API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "update", ...payload })
+  });
+  if (!r.ok) throw new Error("api_update_failed");
+  return r.json().catch(()=>({ ok:true }));
+}
 
 async function apiGetProcesso(kashId){
   const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
@@ -498,7 +517,7 @@ function Pricing({ onStart }) {
                 {p.features.map((f) => <li key={f}>{f}</li>)}
               </ul>
               <div className="mt-5 flex flex-col items-center gap-1">
-                {!p.disabled && <CTAButton onClick={onStart}>{p.cta}</CTAButton>}
+                <CTAButton onClick={onStart} disabled={p.disabled}>{p.cta}</CTAButton>
                 {p.disabled && <span className="text-xs text-slate-500">Em breve</span>}
               </div>
             </div>
@@ -999,6 +1018,7 @@ function FormWizard({ open, onClose }) {
     const dateISO = todayISO();
 
     const payload = {
+      companyName: form.company?.companyName || "",
       tracking: code,
       dateISO,
       agreed: true,
@@ -1025,7 +1045,7 @@ function FormWizard({ open, onClose }) {
         try { await apiUpdate({ kashId: selected, faseAtual: Number(faseAtual)||2, subFase: subFase||null, status, note }); } catch(e) { console.warn("API update falhou", e); }
       } catch {}
 
-      try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
+      try { saveTrackingShortcut(code); await apiUpsertFull({ kashId: code, companyName: form.company?.companyName || "", ...payload, faseAtual: "Recebido", subFase: "Formulário", statusNota: "Contrato disponível", source: "kashsolutions.us", updates: [{ ts: dateISO, status: "Formulário recebido", note: "Contrato disponível", faseAtual: "Recebido", subFase: "Formulário" }] }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
 
       
     } catch {}
@@ -1212,7 +1232,7 @@ function FormWizard({ open, onClose }) {
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
- <CTAButton onClick={() => (window.location.href = CONFIG.checkout.stripeUrl)}>
+    <CTAButton disabled title="Temporariamente indisponível (testes)">
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
     <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
@@ -1362,16 +1382,11 @@ function _scrapeFormDataStrong(){
   // Try to reconstruct groups of 5 fields per member
   let curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
   memberEntries.forEach(({key,val}) => {
-    if (key==="member_name"){
-      if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.push(curr); }
-      curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
-      curr.fullName = val;
-    } else if (key==="member_role"){ curr.role = val; }
+    if (key==="member_name"){ if (curr.fullName) { seq.push(curr); curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" }; } curr.fullName = val; }
+    else if (key==="member_role"){ curr.role = val; }
     else if (key==="member_id"){ curr.idOrPassport = val; }
     else if (key==="member_email"){ curr.email = val; }
-    else if (key==="member_address"){ curr.address = val; }
-  });
-  if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.push(curr); }
+    else if (key==="member_address""object") return {};
   const obj = {};
   const setDeep = (path, value) => {
     let cur = obj;
@@ -1416,48 +1431,55 @@ function _scrapeFormDataStrong(){
 }
 
 function _harvestFromFlat(flat){
-  if (!flat || typeof flat !== "object") return { company:{}, members:[] };
+  if (!flat || typeof flat!=='object') return { company:{}, members:[] };
   const company = {};
-  const membersMap = new Map();
+  const membersMap = new Map(); // index -> obj
   const toIdxObj = (idx) => {
     const i = Number(idx);
-    if (!membersMap.has(i)) membersMap.set(i, { fullName:"", role:"", idOrPassport:"", issuer:"", birthdate:"", docExpiry:"", percent:"", email:"", address:"", phone:"" });
+    if (!membersMap.has(i)) membersMap.set(i, { fullName:"", role:"", idOrPassport:"", email:"", address:"", phone:"", passport:"", issuer:"", birthdate:"", docExpiry:"", percent:"" });
     return membersMap.get(i);
   };
-  const setCompany = (k,v)=>{ if (v==null) return; const s=String(v); if(!s) return; company[k]=s; };
-  for (const [rawKey, rawVal] of Object.entries(flat)){
-    const v = (rawVal==null) ? "" : String(rawVal);
+  const setCompany = (k, v) => { if (v==null) return; const s=String(v); if (!s) return; company[k]=s; };
+
+  const flatEntries = Object.entries(flat);
+  for (const [key, val] of flatEntries){
+    const v = (val==null) ? "" : String(val);
     if (!v) continue;
-    const key = rawKey;
+
+    // 1) Direct company.*
     if (/^company(\.|\[)/i.test(key)){
+      // company[usAddress][state] or company.usAddress.state
       const norm = key.replace(/\[(.*?)\]/g, '.$1');
-      const parts = norm.split('.').filter(Boolean).slice(1);
-      if (!parts.length) continue;
-      const field = parts.join('.');
-      if (field==="companyName" || field==="legalName") setCompany("companyName", v);
-      else if (field==="companyAltName" || field==="dba") setCompany("companyAltName", v);
-      else if (field==="email") setCompany("email", v);
-      else if (field==="phone") setCompany("phone", v);
-      else if (field==="website") setCompany("website", v);
-      else if (field==="ein") setCompany("ein", v);
-      else if (field==="hasFloridaAddress") setCompany("hasFloridaAddress", v);
-      else if (field.startsWith("usAddress")){
-        const sub = field.split('.').slice(1).join('.');
-        if (!company.usAddress) company.usAddress = {};
-        company.usAddress[sub] = v;
+      const parts = norm.split('.').filter(Boolean); // ["company","usAddress","state"]
+      if (parts.length>=2){
+        const field = parts.slice(1).join('.'); // "usAddress.state" or "email"
+        if (field==="companyName" || field==="legalName") setCompany("companyName", v);
+        else if (field==="companyAltName" || field==="dba") setCompany("companyAltName", v);
+        else if (field==="email") setCompany("email", v);
+        else if (field==="phone") setCompany("phone", v);
+        else if (field==="website") setCompany("website", v);
+        else if (field==="ein") setCompany("ein", v);
+        else if (field==="hasFloridaAddress") setCompany("hasFloridaAddress", v);
+        else if (field.startsWith("usAddress")){
+          const sub = field.split('.').slice(1).join('.'); // state, city, line1...
+          if (!company.usAddress) company.usAddress = {};
+          company.usAddress[sub] = v;
+        }
       }
       continue;
     }
-    const m = key.match(/(members|socios|owners|partners)\s*[\[\.]\s*(\d+)\s*[\]\.]+\s*([A-Za-z0-9_]+)/i);
-    if (m){
-      const idx = m[2];
-      const field = m[3].toLowerCase();
+
+    // 2) members[...] or socios[...] or owners[...] etc.
+    const arrMatch = key.match(/(members|socios|owners|partners|shareholders|directors)\s*(?:\[|\.)\s*(\d+)\s*(?:\]|\.)\s*(?:\[|\.)?\s*([A-Za-z0-9_]+)\s*\]?/i);
+    if (arrMatch){
+      const idx = arrMatch[2];
+      const field = arrMatch[3].toLowerCase();
       const mm = toIdxObj(idx);
       if (["fullname","name","nome","membername","socio","owner","partner"].includes(field)) mm.fullName = v;
       else if (["role","funcao","position","cargo","title"].includes(field)) mm.role = v;
       else if (["email","mail"].includes(field)) mm.email = v;
       else if (["address","addressline","endereco","endereço"].includes(field)) mm.address = v;
-      else if (["passport","document","doc","id","rg","cpf"].includes(field)) mm.idOrPassport = v;
+      else if (["passport","document","doc","id","rg","cpf"].includes(field)) { mm.passport = field==="passport" ? v : mm.passport; mm.idOrPassport = v; }
       else if (["issuer","emissor"].includes(field)) mm.issuer = v;
       else if (["birthdate","nascimento","dob"].includes(field)) mm.birthdate = v;
       else if (["docexpiry","expiry","validade"].includes(field)) mm.docExpiry = v;
@@ -1465,11 +1487,18 @@ function _harvestFromFlat(flat){
       else if (["phone","telefone","celular"].includes(field)) mm.phone = v;
       continue;
     }
-    if (/limitations|responsibility|agreed/i.test(key)) continue;
+
+    // 3) booleans disguised as strings for company flags
+    if (/limitations|responsibility|agreed/i.test(key)){
+      // handled in flags collector elsewhere; ignore here
+      continue;
+    }
   }
+
   const members = Array.from(membersMap.keys()).sort((a,b)=>a-b).map(k=>membersMap.get(k)).filter(m=>m.fullName);
   return { company, members };
 }
+
 /* ===== FORMDATA SCANNER from <form> elements ===== */
 function _scanDocumentForms(){
   const out = {};
@@ -1486,39 +1515,6 @@ function _scanDocumentForms(){
   return out;
 }
 
-
-async function handleTestSave(e){
-  try {
-    if (e && e.preventDefault) e.preventDefault();
-    const dateISO = new Date().toISOString();
-    const code = (window.last_tracking && window.last_tracking.code)
-      || (window.localStorage && JSON.parse(window.localStorage.getItem("last_tracking")||"{}").code)
-      || `KASH-${Math.random().toString(36).slice(2,8).toUpperCase()}`;
-    const form = (typeof window!=="undefined" && window.__KASH_FORM__) ? window.__KASH_FORM__ : {};
-    const companyName = form?.company?.companyName || "";
-    const payload = {
-      kashId: code,
-      dateISO,
-      companyName,
-      company: { ...(form.company||{}) },
-      members: Array.isArray(form.members) ? form.members : [],
-      accepts: form.accept || {},
-      contractEN: (typeof buildContractEN==="function") ? buildContractEN(companyName).join("\n") : "",
-      contractPT: (typeof buildContractPT==="function") ? buildContractPT(companyName).join("\n") : "",
-      faseAtual: "Recebido",
-      subFase: "Formulário",
-      statusNota: "Teste manual",
-      source: "kashsolutions.us",
-      updates: [{ ts: dateISO, status: "Formulário recebido (teste)", note: "Envio manual de teste", faseAtual: "Recebido", subFase: "Formulário" }]
-    };
-    const res = await apiUpsertFull({ kashId: code, companyName, ...payload });
-    console.log("Gravação de teste OK:", res);
-    if (typeof alert==="function") alert("Teste gravado com sucesso: "+code);
-  } catch(err){
-    console.error("Falha na gravação de teste", err);
-    if (typeof alert==="function") alert("Falha na gravação de teste");
-  }
-}
 export default function App() {
   const [open, setOpen] = useState(false);
   return (
@@ -1611,24 +1607,4 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
   }
   lines.push("");
   return lines;
-}
-
-async function apiUpsertFull(payload){
-  const r = await fetch(PROCESSO_API, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "upsert", ...payload })
-  });
-  if (!r.ok) throw new Error("api_upsert_failed");
-  return r.json().catch(()=>({ ok:true }));
-}
-
-async function apiUpdateStatus(payload){
-  const r = await fetch(PROCESSO_API, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "update", ...payload })
-  });
-  if (!r.ok) throw new Error("api_update_failed");
-  return r.json().catch(()=>({ ok:true }));
 }
