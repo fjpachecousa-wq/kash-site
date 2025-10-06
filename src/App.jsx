@@ -303,7 +303,27 @@ const CONFIG = {
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
 };
 // === KASH Process API (Google Apps Script) ===
-const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
+const PROCESSO_API = (typeof window!=="undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) ? window.CONFIG.appsScriptUrl : "https://script.google.com/macros/s/PLACEHOLDER/exec";
+async function apiUpsertFull(payload){
+  const r = await fetch(PROCESSO_API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "upsert", ...payload })
+  });
+  if (!r.ok) throw new Error("api_upsert_failed");
+  return r.json().catch(()=>({ ok:true }));
+}
+async function apiUpdateStatus(payload){
+  const r = await fetch(PROCESSO_API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "update", ...payload })
+  });
+  if (!r.ok) throw new Error("api_update_failed");
+  return r.json().catch(()=>({ ok:true }));
+}
+
+
 
 async function apiGetProcesso(kashId){
   const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
@@ -1002,9 +1022,9 @@ function FormWizard({ open, onClose }) {
       tracking: code,
       dateISO,
       agreed: true,
-      company: form.company,
-      members: form.members,
-      accepts: form.accept,
+      company: { ...form.company },
+      members: Array.isArray(form.members) ? form.members : [],
+      accepts: form.accept || {},
       contractEN: buildContractEN(form.company.companyName).join("\n"),
       contractPT: buildContractPT(form.company.companyName).join("\n"),
       updates: [{ ts: dateISO, status: "Formulário recebido", note: "Dados enviados e contrato disponível." }],
@@ -1025,7 +1045,13 @@ function FormWizard({ open, onClose }) {
         try { await apiUpdate({ kashId: selected, faseAtual: Number(faseAtual)||2, subFase: subFase||null, status, note }); } catch(e) { console.warn("API update falhou", e); }
       } catch {}
 
-      try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
+    try {
+      await apiUpsertFull({
+        kashId: code,
+        companyName: form.company?.companyName || "",
+        ...payload
+      });
+    } catch (e) { console.warn("Falha ao enviar para Google Sheets", e); }
 
       
     } catch {}
