@@ -86,7 +86,6 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
             const companyName = (localStorage.getItem("companyName") || "").trim();
             if (!kashId && !companyName) return;
             const payload = { kashId, companyName, faseAtual: 1, subFase: 0, atualizadoEm: new Date().toISOString() };
-            fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode: "no-cors" }).catch(()=>{});
           } catch {}
         }, { passive: true });
         b.__kash_click_wired = true;
@@ -1215,9 +1214,6 @@ function FormWizard({ open, onClose }) {
  <CTAButton onClick={() => (window.location.href = CONFIG.checkout.stripeUrl)}>
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
-      Concluir (teste)
-    </CTAButton>
 
     <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
       Cancelar
