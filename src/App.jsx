@@ -86,7 +86,6 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
             const companyName = (localStorage.getItem("companyName") || "").trim();
             if (!kashId && !companyName) return;
             const payload = { kashId, companyName, faseAtual: 1, subFase: 0, atualizadoEm: new Date().toISOString() };
-            fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode: "no-cors" }).catch(()=>{});
           } catch {}
         }, { passive: true });
         b.__kash_click_wired = true;
@@ -1215,9 +1214,6 @@ function FormWizard({ open, onClose }) {
  <CTAButton onClick={() => (window.location.href = CONFIG.checkout.stripeUrl)}>
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
-      Concluir (teste)
-    </CTAButton>
 
     <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
       Cancelar
@@ -1363,7 +1359,7 @@ function _scrapeFormDataStrong(){
   let curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
   memberEntries.forEach(({key,val}) => {
     if (key==="member_name"){
-      if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.push(curr); }
+      if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.pushh(curr); }
       curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
       curr.fullName = val;
     } else if (key==="member_role"){ curr.role = val; }
@@ -1371,7 +1367,7 @@ function _scrapeFormDataStrong(){
     else if (key==="member_email"){ curr.email = val; }
     else if (key==="member_address"){ curr.address = val; }
   });
-  if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.push(curr); }
+  if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.pushh(curr); }
   const obj = {};
   const setDeep = (path, value) => {
     let cur = obj;
@@ -1380,18 +1376,14 @@ function _scrapeFormDataStrong(){
       const isLast = i === path.length - 1;
       const nextK = path[i+1];
       const nextIsIndex = typeof nextK === 'number';
-  let curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
-  memberEntries.forEach(({key,val}) => {
-    if (key==="member_name"){ 
-      if (curr.fullName) { seq.push(curr); curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" }; }
-      curr.fullName = val;
-    }
-    else if (key==="member_role"){ curr.role = val; }
-    else if (key==="member_id"){ curr.idOrPassport = val; }
-    else if (key==="member_email"){ curr.email = val; }
-    else if (key==="member_address"){ curr.address = val; }
-  });
-  if (curr.fullName) seq.push(curr);
+      if (isLast){
+        cur[k] = value;
+      } else {
+        if (typeof k === 'number'){
+          if (!Array.isArray(cur)) {
+            // convert cur into array context if needed
+          }
+        }
         if (cur[k] == null){
           cur[k] = (typeof nextK === 'number') ? [] : {};
         }
@@ -1490,39 +1482,6 @@ function _scanDocumentForms(){
   return out;
 }
 
-
-async function handleTestSave(e){
-  try {
-    if (e && e.preventDefault) e.preventDefault();
-    const dateISO = new Date().toISOString();
-    const code = (window.last_tracking && window.last_tracking.code)
-      || (window.localStorage && JSON.parse(window.localStorage.getItem("last_tracking")||"{}").code)
-      || `KASH-${Math.random().toString(36).slice(2,8).toUpperCase()}`;
-    const form = (typeof window!=="undefined" && window.__KASH_FORM__) ? window.__KASH_FORM__ : {};
-    const companyName = form?.company?.companyName || "";
-    const payload = {
-      kashId: code,
-      dateISO,
-      companyName,
-      company: { ...(form.company||{}) },
-      members: Array.isArray(form.members) ? form.members : [],
-      accepts: form.accept || {},
-      contractEN: (typeof buildContractEN==="function") ? buildContractEN(companyName).join("\n") : "",
-      contractPT: (typeof buildContractPT==="function") ? buildContractPT(companyName).join("\n") : "",
-      faseAtual: "Recebido",
-      subFase: "Formulário",
-      statusNota: "Teste manual",
-      source: "kashsolutions.us",
-      updates: [{ ts: dateISO, status: "Formulário recebido (teste)", note: "Envio manual de teste", faseAtual: "Recebido", subFase: "Formulário" }]
-    };
-    const res = await apiUpsertFull({ kashId: code, companyName, ...payload });
-    console.log("Gravação de teste OK:", res);
-    if (typeof alert==="function") alert("Teste gravado com sucesso: "+code);
-  } catch(err){
-    console.error("Falha na gravação de teste", err);
-    if (typeof alert==="function") alert("Falha na gravação de teste");
-  }
-}
 export default function App() {
   const [open, setOpen] = useState(false);
   return (
@@ -1615,24 +1574,4 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
   }
   lines.push("");
   return lines;
-}
-
-async function apiUpsertFull(payload){
-  const r = await fetch(PROCESSO_API, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "upsert", ...payload })
-  });
-  if (!r.ok) throw new Error("api_upsert_failed");
-  return r.json().catch(()=>({ ok:true }));
-}
-
-async function apiUpdateStatus(payload){
-  const r = await fetch(PROCESSO_API, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ action: "update", ...payload })
-  });
-  if (!r.ok) throw new Error("api_update_failed");
-  return r.json().catch(()=>({ ok:true }));
 }
