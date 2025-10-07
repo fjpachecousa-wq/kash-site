@@ -1,9 +1,6 @@
 import { jsPDF } from "jspdf";
 import React, { useReducer, useState, useEffect } from "react";
 
-// === KASH Process API (Google Apps Script) ===
-const PROCESSO_API = (typeof window!=="undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) ? window.CONFIG.appsScriptUrl : "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
-
 /* === KASH WIREFIX (Google Sheets) === */
 if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   window.__KASH_WIRE__ = true;
@@ -306,54 +303,26 @@ const CONFIG = {
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
 };
 // === KASH Process API (Google Apps Script) ===
+const PROCESSO_API = (typeof window!=="undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) ? window.CONFIG.appsScriptUrl : "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
-
-
-// === KASH: cliente Apps Script com fallback (JSON -> urlencoded) ===
-
-// === KASH: cliente Apps Script com fallback (JSON -> urlencoded) ===
-async function apiUpsertFull(payload, opts = { sendContracts: false }) {
-  const clean = (x) => (x == null ? "" : x);
-  try {
-    const r = await fetch(PROCESSO_API, {
-      method: "POST",
-      mode: "cors",
-      credentials: "omit",
-      redirect: "follow",
-      headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
-      body: JSON.stringify({ action: "upsert", ...payload, contractEN: opts.sendContracts ? clean(payload.contractEN) : "", contractPT: opts.sendContracts ? clean(payload.contractPT) : "" }),
-    });
-    const text = await r.text();
-    let data; try { data = text ? JSON.parse(text) : {}; } catch { data = { ok:false, raw:text }; }
-    if (!r.ok || data.error) throw new Error((data && data.error) || `HTTP ${r.status} - ${text?.slice(0,200)}`);
-    return data;
-  } catch (err1) { console.warn("[KASH] JSON post falhou, fallback urlencoded:", err1?.message || err1); }
-  const form = new URLSearchParams();
-  form.set("action", "upsert");
-  form.set("kashId", clean(payload.kashId));
-  form.set("dateISO", clean(payload.dateISO));
-  form.set("companyName", clean(payload.companyName));
-  form.set("company_json", JSON.stringify(payload.company || {}));
-  form.set("members_json", JSON.stringify(Array.isArray(payload.members) ? payload.members : []));
-  form.set("accepts_json", JSON.stringify(payload.accepts || {}));
-  form.set("contractEN", opts.sendContracts ? clean(payload.contractEN) : "");
-  form.set("contractPT", opts.sendContracts ? clean(payload.contractPT) : "");
-  form.set("consentAccepted", payload.consentAccepted ? "true" : "false");
-  form.set("consentVersion", clean(payload.consentVersion));
-  form.set("consentTs", clean(payload.consentTs));
-  form.set("faseAtual", clean(payload.faseAtual || "Recebido"));
-  form.set("subFase", clean(payload.subFase || "Formulário"));
-  form.set("statusNota", clean(payload.statusNota || ""));
-  form.set("source", clean(payload.source || "kashsolutions.us"));
-  form.set("updates_json", JSON.stringify(payload.updates || []));
-  const r2 = await fetch(PROCESSO_API, { method: "POST", mode: "cors", credentials: "omit", headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" }, body: form.toString() });
-  const text2 = await r2.text();
-  let data2; try { data2 = text2 ? JSON.parse(text2) : {}; } catch { data2 = { ok:false, raw:text2 }; }
-  if (!r2.ok || data2.error) throw new Error((data2 && data2.error) || `HTTP ${r2.status} - ${text2?.slice(0,200)}`);
-  return data2;
+async function apiUpsertFull(payload){
+  const r = await fetch(PROCESSO_API, {
+    method: "POST",
+    mode: "cors",
+    redirect: "follow",
+    credentials: "omit",
+    headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
+    body: JSON.stringify({ action: "upsert", ...payload })
+  });
+  const text = await r.text();
+  let data;
+  try { data = text ? JSON.parse(text) : {}; } catch { data = { ok:false, raw:text }; }
+  if (!r.ok || (data && data.error)) {
+    const msg = (data && data.error) || `HTTP ${r.status} - ${text?.slice(0,200)}`;
+    throw new Error(msg);
+  }
+  return data;
 }
-
-
 
 async function apiGetProcesso(kashId){
   const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
@@ -585,8 +554,39 @@ function HowItWorks() {
 }
 
 /* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
-// buildContractEN removido
-// buildContractPT removido
+function buildContractEN(companyName) {
+  return [
+    "SERVICE AGREEMENT – KASH Corporate Solutions",
+    `CLIENT: ${companyName}, identified by the information provided in the electronic form, hereinafter referred to as CLIENT. CONTRACTOR: KASH CORPORATE SOLUTIONS LLC, a limited liability company registered in the State of Florida, United States of America, hereinafter referred to as KASH CORPORATE.`,
+    "SECTION 1 – PURPOSE: This Agreement covers the registration of a limited liability company (LLC) in Florida, followed by the application with the IRS for issuance of the Employer Identification Number (EIN), upon approval of the company formation.",
+    "SECTION 2 – REGISTERED AGENT AND ADDRESS: KASH CORPORATE will provide: (a) a virtual business address in Florida for twelve (12) months; (b) a registered agent in Florida for twelve (12) months. After this period, services may be renewed with additional fees.",
+    "SECTION 3 – INFORMATION RESPONSIBILITY: All information provided by CLIENT is of his/her sole responsibility, including legal and civil liability for inaccuracies or false statements.",
+    "SECTION 4 – LIMITATIONS: This Agreement does not include: licenses/permits, tax filings, bookkeeping, or banking services.",
+    "SECTION 5 – COMPENSATION: CLIENT shall pay KASH CORPORATE the amount of US$ 1,360.00, in one single installment, at the time of hiring, through the official payment methods available on KASH CORPORATE’s website.",
+    "SECTION 6 – TERMINATION: KASH CORPORATE's obligations end after issuance of the EIN and delivery of digital documents to CLIENT.",
+    "SECTION 7 – TERM: This Agreement is effective on the signing date and remains valid until completion of services described herein.",
+    "SECTION 8 – VALIDITY CONDITION: This Agreement only becomes valid after full payment as per Section 5.",
+    "SECTION 9 – CASE TRACKING: After payment, CLIENT will receive a unique Tracking Number to monitor the process progress via KASH CORPORATE’s platform.",
+    "SECTION 10 – PUBLIC AGENCIES: Approval of company formation and EIN issuance depends exclusively on the respective government agencies (State of Florida and IRS). KASH CORPORATE does not guarantee timelines or approvals.",
+    "SECTION 11 – JURISDICTION: For disputes, the forum elected is Rio de Janeiro, Brazil, with optional jurisdiction in Orlando, Florida, USA, at CLIENT’s discretion."
+  ];
+}
+function buildContractPT(companyName) {
+  return [
+    `CONTRATANTE: ${companyName}, identificado(a) pelas informações fornecidas no formulário eletrônico, doravante denominado(a) CLIENTE. CONTRATADA: KASH CORPORATE SOLUTIONS LLC, sociedade de responsabilidade limitada, registrada no Estado da Flórida, Estados Unidos da América, doravante denominada KASH CORPORATE SOLUTIONS LLC.`,
+    "CLÁUSULA 1ª – OBJETO: O presente contrato tem por objeto o registro de empresa (LLC) no Estado da Flórida, seguido da aplicação junto ao IRS para emissão do EIN, após a aprovação da constituição da empresa.",
+    "CLÁUSULA 2ª – AGENTE REGISTRADO E ENDEREÇO: A KASH CORPORATE fornecerá: (a) endereço comercial virtual por 12 (doze) meses; (b) agente registrado na Flórida por 12 (doze) meses. Após esse período, os serviços poderão ser renovados mediante cobrança.",
+    "CLÁUSULA 3ª – RESPONSABILIDADE DAS INFORMAÇÕES: Todas as informações prestadas pelo CLIENTE são de sua exclusiva responsabilidade, incluindo responsabilidade civil e criminal por eventuais incorreções.",
+    "CLÁUSULA 4ª – LIMITAÇÕES: Não estão incluídos: licenças/alvarás, serviços contábeis/fiscais ou serviços bancários.",
+    "CLÁUSULA 5ª – REMUNERAÇÃO: O CLIENTE pagará à KASH CORPORATE o valor de US$ 1.360,00, em parcela única e imediata, por meio dos canais oficiais no site da KASH CORPORATE.",
+    "CLÁUSULA 6ª – ENCERRAMENTO: As obrigações da KASH CORPORATE encerram-se após a emissão do EIN e a entrega dos documentos digitais ao CLIENTE.",
+    "CLÁUSULA 7ª – VIGÊNCIA: Este contrato entra em vigor na data da assinatura e permanece válido até a conclusão dos serviços aqui descritos.",
+    "CLÁUSULA 8ª – CONDIÇÃO DE VALIDADE: Este contrato somente terá validade após o pagamento integral previsto na Cláusula 5ª.",
+    "CLÁUSULA 9ª – ACOMPANHAMENTO: Após o pagamento, o CLIENTE receberá um Número de Rastreamento (Tracking Number) para acompanhar o progresso do processo na plataforma da KASH CORPORATE.",
+    "CLÁUSULA 10ª – ÓRGÃOS PÚBLICOS: A aprovação da constituição da empresa e a emissão do EIN dependem exclusivamente dos órgãos públicos competentes (Estado da Flórida e IRS). A KASH CORPORATE não garante prazos ou aprovações.",
+    "CLÁUSULA 11ª – FORO: Fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, com opção pelo foro de Orlando, Flórida – EUA, a critério do CLIENTE."
+  ];
+}
 /* ===== Acceptance (PT/EN) + Signatures (helpers) ===== */
 function _acceptanceClausePT(fullNameList, dateISO) {
   let dt = new Date();
@@ -1024,8 +1024,8 @@ function FormWizard({ open, onClose }) {
       company: form.company,
       members: form.members,
       accepts: form.accept,
-      contractEN: "",
-      contractPT: "",
+      contractEN: buildContractEN(form.company.companyName).join("\n"),
+      contractPT: buildContractPT(form.company.companyName).join("\n"),
       updates: [{ ts: dateISO, status: "Formulário recebido", note: "Dados enviados e contrato disponível." }],
       source: "kashsolutions.us",
     };
@@ -1529,8 +1529,8 @@ function buildPayloadFromState(formState, code) {
   const company = formState?.company || {};
   const members = Array.isArray(formState?.members) ? formState.members : [];
   const accepts = formState?.accept || formState?.accepts || {};
-  const contractEN = (typeof buildContractEN === "function") ? "" : "";
-  const contractPT = (typeof buildContractPT === "function") ? "" : "";
+  const contractEN = (typeof buildContractEN === "function") ? buildContractEN(companyName).join("\n") : "";
+  const contractPT = (typeof buildContractPT === "function") ? buildContractPT(companyName).join("\n") : "";
   const faseAtual = "Recebido";
   const subFase   = "Formulário";
   return {
@@ -1555,169 +1555,7 @@ function buildPayloadFromState(formState, code) {
     }]
   };
 }
-
-// === KASH: helpers DOM-safe (não mexem no layout) ===
-function _kashReadTracking() {
-  try { if (window.last_tracking && window.last_tracking.code) return window.last_tracking.code; } catch {}
-  try { const obj = JSON.parse(localStorage.getItem("last_tracking")||"{}"); if (obj && obj.code) return obj.code; } catch {}
-  return `KASH-${Math.random().toString(36).slice(2,8).toUpperCase()}`;
-}
-
-function _kashEnsureConsentUI(formEl, versionStr="1.0") {
-  if (!formEl) return;
-  if (formEl.querySelector('[data-kash-consent="row"]')) return; // já existe
-  const row = document.createElement("div");
-  row.setAttribute("data-kash-consent", "row");
-  row.style.marginTop = "0.75rem";
-  row.style.display = "flex";
-  row.style.alignItems = "center";
-  row.style.gap = "0.5rem";
-
-  const cb = document.createElement("input");
-  cb.type = "checkbox";
-  cb.name = "accept_terms";
-  cb.id = "accept_terms_cb";
-
-  const label = document.createElement("label");
-  label.setAttribute("for", "accept_terms_cb");
-  label.textContent = "Li e concordo com os termos da contratação (versão " + versionStr + ").";
-
-  row.appendChild(cb);
-  row.appendChild(label);
-  formEl.appendChild(row);
-}
-
-function _kashScrapeForm() {
-  const out = { company: {}, members: [], accepts: {} };
-  const nameEl =
-    document.querySelector('input[name="companyName"], input[name="company_name"], #companyName') ||
-    document.querySelector('input[name="empresa"], input[name="empresa_nome"]');
-  if (nameEl && nameEl.value) out.company.companyName = String(nameEl.value).trim();
-
-  document.querySelectorAll('input[type="checkbox"][name^="accept"]').forEach(cb => {
-    out.accepts[cb.name] = !!cb.checked;
-  });
-  const cbConsent = document.querySelector('#accept_terms_cb');
-  if (cbConsent) out.accepts["accept_terms"] = !!cbConsent.checked;
-
-  const memberEntries = [];
-  document.querySelectorAll('input[name^="member_"], textarea[name^="member_"], select[name^="member_"]').forEach(el => {
-    const m = el.name.match(/^member_(\d+)_(name|role|id|email|address|phone|issuer|docExpiry|birthdate|percent)$/);
-    if (!m) return;
-    const idx = parseInt(m[1],10), key = m[2], val = (el.value||"").trim();
-    memberEntries.push({ idx, key, val });
-  });
-  if (memberEntries.length){
-    const byIdx = new Map();
-    memberEntries.forEach(({idx,key,val}) => {
-      if (!byIdx.has(idx)) byIdx.set(idx, { fullName:"", role:"", idOrPassport:"", email:"", address:"", phone:"", issuer:"", docExpiry:"", birthdate:"", percent:"" });
-      const ref = byIdx.get(idx);
-      if (key==="name") ref.fullName = val;
-      else if (key==="role") ref.role = val;
-      else if (key==="id") ref.idOrPassport = val;
-      else if (key==="email") ref.email = val;
-      else if (key==="address") ref.address = val;
-      else if (key==="phone") ref.phone = val;
-      else if (key==="issuer") ref.issuer = val;
-      else if (key==="docExpiry") ref.docExpiry = val;
-      else if (key==="birthdate") ref.birthdate = val;
-      else if (key==="percent") ref.percent = val;
-    });
-    out.members = Array.from(byIdx.keys()).sort((a,b)=>a-b).map(k=>byIdx.get(k));
-  }
-  return out;
-}
-
-function _kashBuildPayload(scraped, code, consentVersion="1.0") {
-  const dateISO = new Date().toISOString();
-  const companyName = scraped?.company?.companyName || "";
-  const consentAccepted = !!(scraped?.accepts?.accept_terms);
-
-  return {
-    kashId: code,
-    dateISO,
-    companyName,
-    company: scraped.company || {},
-    members: Array.isArray(scraped.members) ? scraped.members : [],
-    accepts: scraped.accepts || {},
-    contractEN: "",  // contratos removidos do front
-    contractPT: "",
-    consentAccepted,
-    consentVersion,
-    consentTs: dateISO,
-    faseAtual: "Recebido",
-    subFase: "Formulário",
-    statusNota: "Envio inicial pelo formulário (com consentimento)",
-    source: "kashsolutions.us",
-    updates: [{
-      ts: dateISO,
-      status: "Formulário recebido (consent)",
-      note: "Dados enviados; contratos não gerados no front.",
-      faseAtual: "Recebido",
-      subFase: "Formulário"
-    }],
-  };
-}
-
-// === KASH: helpers DOM-safe ===
-function _kashReadTracking(){try{if(window.last_tracking&&window.last_tracking.code)return window.last_tracking.code;}catch{}try{const o=JSON.parse(localStorage.getItem("last_tracking")||"{}");if(o&&o.code)return o.code;}catch{}return`KASH-${Math.random().toString(36).slice(2,8).toUpperCase()}`;}
-function _kashEnsureConsentUI(formEl,versionStr="1.0"){if(!formEl)return;if(formEl.querySelector('[data-kash-consent="row"]'))return;const r=document.createElement("div");r.setAttribute("data-kash-consent","row");r.style.marginTop="0.75rem";r.style.display="flex";r.style.alignItems="center";r.style.gap="0.5rem";const cb=document.createElement("input");cb.type="checkbox";cb.name="accept_terms";cb.id="accept_terms_cb";const l=document.createElement("label");l.setAttribute("for","accept_terms_cb");l.textContent="Li e concordo com os termos da contratação (versão "+versionStr+").";r.appendChild(cb);r.appendChild(l);formEl.appendChild(r);}
-function _kashScrapeForm(){const out={company:{},members:[],accepts:{}};const nameEl=document.querySelector('input[name="companyName"], input[name="company_name"], #companyName')||document.querySelector('input[name="empresa"], input[name="empresa_nome"]');if(nameEl&&nameEl.value)out.company.companyName=String(nameEl.value).trim();document.querySelectorAll('input[type="checkbox"][name^="accept"]').forEach(cb=>{out.accepts[cb.name]=!!cb.checked;});const cbConsent=document.querySelector('#accept_terms_cb');if(cbConsent)out.accepts["accept_terms"]=!!cbConsent.checked;const entries=[];document.querySelectorAll('input[name^="member_"], textarea[name^="member_"], select[name^="member_"]').forEach(el=>{const m=el.name.match(/^member_(\d+)_(name|role|id|email|address|phone|issuer|docExpiry|birthdate|percent)$/);if(!m)return;const idx=parseInt(m[1],10),key=m[2],val=(el.value||"").trim();entries.push({idx,key,val});});if(entries.length){const map=new Map();entries.forEach(({idx,key,val})=>{if(!map.has(idx))map.set(idx,{fullName:"",role:"",idOrPassport:"",email:"",address:"",phone:"",issuer:"",docExpiry:"",birthdate:"",percent:""});const ref=map.get(idx);if(key==="name")ref.fullName=val;else if(key==="role")ref.role=val;else if(key==="id")ref.idOrPassport=val;else if(key==="email")ref.email=val;else if(key==="address")ref.address=val;else if(key==="phone")ref.phone=val;else if(key==="issuer")ref.issuer=val;else if(key==="docExpiry")ref.docExpiry=val;else if(key==="birthdate")ref.birthdate=val;else if(key==="percent")ref.percent=val;});out.members=Array.from(map.keys()).sort((a,b)=>a-b).map(k=>map.get(k));}return out;}
-function _kashBuildPayload(scraped,code,consentVersion="1.0"){const dateISO=new Date().toISOString();const companyName=scraped?.company?.companyName||"";const consentAccepted=!!(scraped?.accepts?.accept_terms);return{ kashId:code,dateISO,companyName,company:scraped.company||{},members:Array.isArray(scraped.members)?scraped.members:[],accepts:scraped.accepts||{},contractEN:"",contractPT:"",consentAccepted,consentVersion,consentTs:dateISO,faseAtual:"Recebido",subFase:"Formulário",statusNota:"Envio inicial pelo formulário (consent)",source:"kashsolutions.us",updates:[{ts:dateISO,status:"Formulário recebido (consent)",note:"Dados enviados; contratos não gerados no front.",faseAtual:"Recebido",subFase:"Formulário"}]};}
 export default function App() {
-  // === KASH: consent + envio (limpo, sem contratos) ===
-  useEffect(()=>{
-    const formEl = document.querySelector('form[data-kash-app="application"]') || document.querySelector("form");
-    if(!formEl) return;
-    _kashEnsureConsentUI(formEl, "1.0");
-    const onSubmit = async ()=>{
-      try{
-        const code = _kashReadTracking();
-        const scraped = _kashScrapeForm();
-        if(!scraped?.accepts?.accept_terms){ alert("Para continuar, é necessário aceitar os termos."); return; }
-        const payload = _kashBuildPayload(scraped, code, "1.0");
-        await apiUpsertFull(payload, { sendContracts:false });
-        console.log("[KASH] Upsert OK:", { kashId: code, companyName: payload.companyName });
-      }catch(err){ console.warn("[KASH] Falha no upsert:", err); }
-    };
-    formEl.addEventListener("submit", onSubmit);
-    return ()=> formEl.removeEventListener("submit", onSubmit);
-  },[]);
-
-  // === KASH: consent + envio para planilha (não altera o desenho do formulário) ===
-  useEffect(() => {
-    const formEl = document.querySelector('form[data-kash-app="application"]') || document.querySelector("form");
-    if (!formEl) return;
-
-    // injeta consentimento se não existir
-    _kashEnsureConsentUI(formEl, "1.0");
-
-    const onSubmit = async () => {
-      try {
-        const code = _kashReadTracking();
-        const scraped = _kashScrapeForm();
-
-        // impede envio se não marcou o consentimento
-        if (!scraped?.accepts?.accept_terms) {
-          alert("Para continuar, é necessário aceitar os termos.");
-          return;
-        }
-
-        const payload = _kashBuildPayload(scraped, code, "1.0");
-        await apiUpsertFull(payload, { sendContracts: false });
-
-        console.log("[KASH] Upsert OK:", { kashId: code, companyName: payload.companyName });
-        // se você quiser, aqui dá para acionar a exibição do botão de pagamento
-        // ex: document.querySelector('[data-kash="pay"]')?.classList.remove('hidden');
-      } catch (err) {
-        console.warn("[KASH] Falha no upsert:", err);
-      }
-    };
-
-    formEl.addEventListener("submit", onSubmit);
-    return () => formEl.removeEventListener("submit", onSubmit);
-  }, []);
-
   const [open, setOpen] = useState(false);
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200">
