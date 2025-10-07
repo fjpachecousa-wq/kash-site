@@ -86,7 +86,6 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
             const companyName = (localStorage.getItem("companyName") || "").trim();
             if (!kashId && !companyName) return;
             const payload = { kashId, companyName, faseAtual: 1, subFase: 0, atualizadoEm: new Date().toISOString() };
-            fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode:"cors" }).catch(()=>{});
           } catch {}
         }, { passive: true });
         b.__kash_click_wired = true;
@@ -304,56 +303,6 @@ const CONFIG = {
 };
 // === KASH Process API (Google Apps Script) ===
 const PROCESSO_API = (typeof window!=="undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) ? window.CONFIG.appsScriptUrl : "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
-
-
-async function apiUpsertFull(payload){
-  const clean = (x) => (x == null ? "" : x);
-  try {
-    const r = await fetch(PROCESSO_API, {
-      method: "POST",
-      mode: "cors",
-      credentials: "omit",
-      redirect: "follow",
-      headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
-      body: JSON.stringify({ action: "upsert", ...payload, contractEN: "", contractPT: "" })
-    });
-    const text = await r.text();
-    let data; try { data = text ? JSON.parse(text) : {}; } catch { data = { ok:false, raw:text }; }
-    if (!r.ok || data.error) throw new Error((data && data.error) || `HTTP ${r.status} - ${text?.slice(0,200)}`);
-    return data;
-  } catch (err1) {
-    console.warn("[KASH] JSON post falhou, tentando urlencoded:", err1?.message || err1);
-  }
-  const form = new URLSearchParams();
-  form.set("action", "upsert");
-  form.set("kashId", clean(payload.kashId));
-  form.set("dateISO", clean(payload.dateISO));
-  form.set("companyName", clean(payload.companyName));
-  form.set("company_json", JSON.stringify(payload.company || {}));
-  form.set("members_json", JSON.stringify(Array.isArray(payload.members) ? payload.members : []));
-  form.set("accepts_json", JSON.stringify(payload.accepts || {}));
-  form.set("contractEN", ""); form.set("contractPT", "");
-  form.set("consentAccepted", payload.consentAccepted ? "true" : "false");
-  form.set("consentVersion", clean(payload.consentVersion || ""));
-  form.set("consentTs", clean(payload.consentTs || ""));
-  form.set("faseAtual", clean(payload.faseAtual || "Recebido"));
-  form.set("subFase", clean(payload.subFase || "Formulário"));
-  form.set("statusNota", clean(payload.statusNota || ""));
-  form.set("source", clean(payload.source || "kashsolutions.us"));
-  form.set("updates_json", JSON.stringify(payload.updates || []));
-  const r2 = await fetch(PROCESSO_API, {
-    method: "POST",
-    mode: "cors",
-    credentials: "omit",
-    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-    body: form.toString(),
-  });
-  const text2 = await r2.text();
-  let data2; try { data2 = text2 ? JSON.parse(text2) : {}; } catch { data2 = { ok:false, raw:text2 }; }
-  if (!r2.ok || data2.error) throw new Error((data2 && data2.error) || `HTTP ${r2.status} - ${text2?.slice(0,200)}`);
-  return data2;
-}
-
 
 async function apiGetProcesso(kashId){
   const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
@@ -760,7 +709,7 @@ function formReducer(state, action) {
     case "UPDATE_COMPANY": return { ...state, company: { ...state.company, [action.field]: action.value } };
     case "UPDATE_US_ADDRESS": return { ...state, company: { ...state.company, usAddress: { ...state.company.usAddress, [action.field]: action.value } } };
     case "UPDATE_MEMBER": return { ...state, members: state.members.map((m,i)=> i===action.index ? { ...m, [action.field]: action.value } : m) };
-    case "ADD_MEMBER": return { ...state, members: [...state.members, { fullName:"", role:"", idOrPassport:"", issuer:"", docExpiry:"", birthdate:"", percent:"", email:"", address:"", phone:"" }] };
+    case "ADD_MEMBER": return { ...state, members: [...state.members, { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" }] };
     case "REMOVE_MEMBER": return { ...state, members: state.members.filter((_,i)=> i!==action.index) };
     case "TOGGLE_ACCEPT": return { ...state, accept: { ...state.accept, [action.key]: action.value } };
     default: return state;
@@ -1063,21 +1012,7 @@ function FormWizard({ open, onClose }) {
 
     try {
       // Salva localmente
-      
-    // === KASH: envio oficial para a planilha (Apps Script) ===
-    try {
-      const formState = (typeof state !== "undefined") ? state
-        : (typeof form !== "undefined") ? form
-        : (typeof formData !== "undefined") ? formData
-        : {};
-      const fullPayload = buildPayloadFromState(formState, code);
-      await apiUpsertFull(fullPayload);
-      console.log("Upsert OK:", { kashId: code, companyName: fullPayload.companyName });
-    } catch (err) {
-      console.warn("Falha no upsert para o Apps Script:", err);
-    }
-    // === /KASH: envio oficial ===
-localStorage.setItem(code, JSON.stringify(payload));
+      localStorage.setItem(code, JSON.stringify(payload));
 
       // index de trackings (últimos 50)
       try {
@@ -1279,9 +1214,6 @@ localStorage.setItem(code, JSON.stringify(payload));
  <CTAButton onClick={() => (window.location.href = CONFIG.checkout.stripeUrl)}>
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"cors"}); } catch(_err) {} }}>
-      Concluir (teste)
-    </CTAButton>
 
     <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
       Cancelar
@@ -1427,7 +1359,7 @@ function _scrapeFormDataStrong(){
   let curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
   memberEntries.forEach(({key,val}) => {
     if (key==="member_name"){
-      if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.push(curr); }
+      if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.pushh(curr); }
       curr = { fullName:"", role:"", idOrPassport:"", email:"", address:"" };
       curr.fullName = val;
     } else if (key==="member_role"){ curr.role = val; }
@@ -1435,7 +1367,7 @@ function _scrapeFormDataStrong(){
     else if (key==="member_email"){ curr.email = val; }
     else if (key==="member_address"){ curr.address = val; }
   });
-  if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.push(curr); }
+  if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.pushh(curr); }
   const obj = {};
   const setDeep = (path, value) => {
     let cur = obj;
@@ -1550,41 +1482,6 @@ function _scanDocumentForms(){
   return out;
 }
 
-
-function buildPayloadFromState(formState, code) {
-  const dateISO = new Date().toISOString();
-  const companyName = (formState?.company?.companyName
-    || document.querySelector('input[name="companyName"], input[name="company_name"], #companyName')?.value
-    || ""
-  ).toString().trim();
-  const company = formState?.company || {};
-  const members = Array.isArray(formState?.members) ? formState.members : [];
-  const accepts = formState?.accept || formState?.accepts || {};
-  const contractEN = "";
-  const contractPT = "";
-  const faseAtual = "Recebido";
-  const subFase   = "Formulário";
-  return { consentAccepted: true, consentVersion: "1.0", consentTs: new Date().toISOString(), kashId: code,
-    dateISO,
-    companyName,
-    company,
-    members,
-    accepts,
-    contractEN,
-    contractPT,
-    faseAtual,
-    subFase,
-    statusNota: "Envio inicial pelo formulário",
-    source: "kashsolutions.us",
-    updates: [{
-      ts: dateISO,
-      status: "Formulário recebido",
-      note: "Dados enviados e contrato disponível.",
-      faseAtual,
-      subFase
-    }]
-  };
-}
 export default function App() {
   const [open, setOpen] = useState(false);
   return (
