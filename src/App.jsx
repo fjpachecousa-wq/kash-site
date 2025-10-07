@@ -305,24 +305,55 @@ const CONFIG = {
 // === KASH Process API (Google Apps Script) ===
 const PROCESSO_API = (typeof window!=="undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) ? window.CONFIG.appsScriptUrl : "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
+
 async function apiUpsertFull(payload){
-  const r = await fetch(PROCESSO_API, {
+  const clean = (x) => (x == null ? "" : x);
+  try {
+    const r = await fetch(PROCESSO_API, {
+      method: "POST",
+      mode: "cors",
+      credentials: "omit",
+      redirect: "follow",
+      headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
+      body: JSON.stringify({ action: "upsert", ...payload, contractEN: "", contractPT: "" })
+    });
+    const text = await r.text();
+    let data; try { data = text ? JSON.parse(text) : {}; } catch { data = { ok:false, raw:text }; }
+    if (!r.ok || data.error) throw new Error((data && data.error) || `HTTP ${r.status} - ${text?.slice(0,200)}`);
+    return data;
+  } catch (err1) {
+    console.warn("[KASH] JSON post falhou, tentando urlencoded:", err1?.message || err1);
+  }
+  const form = new URLSearchParams();
+  form.set("action", "upsert");
+  form.set("kashId", clean(payload.kashId));
+  form.set("dateISO", clean(payload.dateISO));
+  form.set("companyName", clean(payload.companyName));
+  form.set("company_json", JSON.stringify(payload.company || {}));
+  form.set("members_json", JSON.stringify(Array.isArray(payload.members) ? payload.members : []));
+  form.set("accepts_json", JSON.stringify(payload.accepts || {}));
+  form.set("contractEN", ""); form.set("contractPT", "");
+  form.set("consentAccepted", payload.consentAccepted ? "true" : "false");
+  form.set("consentVersion", clean(payload.consentVersion || ""));
+  form.set("consentTs", clean(payload.consentTs || ""));
+  form.set("faseAtual", clean(payload.faseAtual || "Recebido"));
+  form.set("subFase", clean(payload.subFase || "Formulário"));
+  form.set("statusNota", clean(payload.statusNota || ""));
+  form.set("source", clean(payload.source || "kashsolutions.us"));
+  form.set("updates_json", JSON.stringify(payload.updates || []));
+  const r2 = await fetch(PROCESSO_API, {
     method: "POST",
     mode: "cors",
-    redirect: "follow",
     credentials: "omit",
-    headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
-    body: JSON.stringify({ action: "upsert", ...payload })
+    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+    body: form.toString(),
   });
-  const text = await r.text();
-  let data;
-  try { data = text ? JSON.parse(text) : {}; } catch { data = { ok:false, raw:text }; }
-  if (!r.ok || (data && data.error)) {
-    const msg = (data && data.error) || `HTTP ${r.status} - ${text?.slice(0,200)}`;
-    throw new Error(msg);
-  }
-  return data;
+  const text2 = await r2.text();
+  let data2; try { data2 = text2 ? JSON.parse(text2) : {}; } catch { data2 = { ok:false, raw:text2 }; }
+  if (!r2.ok || data2.error) throw new Error((data2 && data2.error) || `HTTP ${r2.status} - ${text2?.slice(0,200)}`);
+  return data2;
 }
+
 
 async function apiGetProcesso(kashId){
   const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
@@ -1529,12 +1560,11 @@ function buildPayloadFromState(formState, code) {
   const company = formState?.company || {};
   const members = Array.isArray(formState?.members) ? formState.members : [];
   const accepts = formState?.accept || formState?.accepts || {};
-  const contractEN = (typeof buildContractEN === "function") ? buildContractEN(companyName).join("\n") : "";
-  const contractPT = (typeof buildContractPT === "function") ? buildContractPT(companyName).join("\n") : "";
+  const contractEN = "";
+  const contractPT = "";
   const faseAtual = "Recebido";
   const subFase   = "Formulário";
-  return {
-    kashId: code,
+  return { consentAccepted: true, consentVersion: "1.0", consentTs: new Date().toISOString(), kashId: code,
     dateISO,
     companyName,
     company,
