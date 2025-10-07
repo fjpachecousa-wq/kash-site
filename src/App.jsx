@@ -86,7 +86,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
             const companyName = (localStorage.getItem("companyName") || "").trim();
             if (!kashId && !companyName) return;
             const payload = { kashId, companyName, faseAtual: 1, subFase: 0, atualizadoEm: new Date().toISOString() };
-            fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode:"cors" }).catch(()=>{});
+            fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode: "no-cors" }).catch(()=>{});
           } catch {}
         }, { passive: true });
         b.__kash_click_wired = true;
@@ -303,26 +303,7 @@ const CONFIG = {
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
 };
 // === KASH Process API (Google Apps Script) ===
-const PROCESSO_API = (typeof window!=="undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) ? window.CONFIG.appsScriptUrl : "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
-
-async function apiUpsertFull(payload){
-  const r = await fetch(PROCESSO_API, {
-    method: "POST",
-    mode: "cors",
-    redirect: "follow",
-    credentials: "omit",
-    headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
-    body: JSON.stringify({ action: "upsert", payload })
-  });
-  const text = await r.text();
-  let data;
-  try { data = text ? JSON.parse(text) : {}; } catch { data = { ok:false, raw:text }; }
-  if (!r.ok || (data && data.error)) {
-    const msg = (data && data.error) || `HTTP ${r.status} - ${text?.slice(0,200)}`;
-    throw new Error(msg);
-  }
-  return data;
-}
+const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 async function apiGetProcesso(kashId){
   const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
@@ -374,7 +355,7 @@ clearAnySensitiveLocalData();
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
-function classNames(cls) { return cls.filter(Boolean).join(" "); }
+function classNames(...cls) { return cls.filter(Boolean).join(" "); }
 function todayISO() {
   const d = new Date();
   const pad = (n)=> String(n).padStart(2,"0");
@@ -726,12 +707,12 @@ const initialForm = {
 };
 function formReducer(state, action) {
   switch (action.type) {
-    case "UPDATE_COMPANY": return { state, company: { state.company, [action.field]: action.value } };
-    case "UPDATE_US_ADDRESS": return { state, company: { state.company, usAddress: { state.company.usAddress, [action.field]: action.value } } };
-    case "UPDATE_MEMBER": return { state, members: state.members.map((m,i)=> i===action.index ? { m, [action.field]: action.value } : m) };
-    case "ADD_MEMBER": return { state, members: [state.members, { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" }] };
-    case "REMOVE_MEMBER": return { state, members: state.members.filter((_,i)=> i!==action.index) };
-    case "TOGGLE_ACCEPT": return { state, accept: { state.accept, [action.key]: action.value } };
+    case "UPDATE_COMPANY": return { ...state, company: { ...state.company, [action.field]: action.value } };
+    case "UPDATE_US_ADDRESS": return { ...state, company: { ...state.company, usAddress: { ...state.company.usAddress, [action.field]: action.value } } };
+    case "UPDATE_MEMBER": return { ...state, members: state.members.map((m,i)=> i===action.index ? { ...m, [action.field]: action.value } : m) };
+    case "ADD_MEMBER": return { ...state, members: [...state.members, { fullName:"", role:"", idOrPassport:"", issuer:"", docExpiry:"", birthdate:"", percent:"", email:"", address:"", phone:"" }] };
+    case "REMOVE_MEMBER": return { ...state, members: state.members.filter((_,i)=> i!==action.index) };
+    case "TOGGLE_ACCEPT": return { ...state, accept: { ...state.accept, [action.key]: action.value } };
     default: return state;
   }
 }
@@ -898,7 +879,7 @@ function AdminPanel() {
       const now = new Date();
       const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
       const upd = { ts, status, note };
-      data.updates = Array.isArray(data.updates) ? [data.updates, upd] : [upd];
+      data.updates = Array.isArray(data.updates) ? [...data.updates, upd] : [upd];
       localStorage.setItem(selected, JSON.stringify(data));
       setStatus(""); setNote("");
       alert("Atualização adicionada.");
@@ -1032,32 +1013,7 @@ function FormWizard({ open, onClose }) {
 
     try {
       // Salva localmente
-      
-    // === KASH: robust upsert to Google Sheets ===
-    try {
-      const snap = getFormSnapshot?.() || {};
-      const companyNamePlain = (snap.company && snap.company.companyName) || (form?.company?.companyName) || "";
-      const payloadFull = {
-        kashId: code,
-        dateISO,
-        companyName: companyNamePlain,
-        company: form.company,
-        members: form.members,
-        accepts: form.accept,
-        contractEN: (typeof buildContractEN==="function") ? buildContractEN(companyNamePlain).join("\n") : "",
-        contractPT: (typeof buildContractPT==="function") ? buildContractPT(companyNamePlain).join("\n") : "",
-        faseAtual: "Recebido",
-        subFase: "Formulário",
-        statusNota: "Envio inicial pelo formulário",
-        source: "kashsolutions.us",
-        updates: [{ ts: dateISO, status: "Formulário recebido", note: "Dados enviados e contrato disponível.", faseAtual:"Recebido", subFase:"Formulário" }]
-      };
-      await apiUpsertFull(payloadFull);
-    } catch(err) {
-      console.warn("API upsert falhou:", err);
-    }
-    // === /KASH robust upsert ===
-localStorage.setItem(code, JSON.stringify(payload));
+      localStorage.setItem(code, JSON.stringify(payload));
 
       // index de trackings (últimos 50)
       try {
@@ -1210,7 +1166,7 @@ localStorage.setItem(code, JSON.stringify(payload));
 
                 <div className="mt-6 flex justify-end gap-3">
                   <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
-                  <CTAButton onClick={handleSubmit}>{loading ? "Enviando" : "Enviar"}</CTAButton>
+                  <CTAButton onClick={handleSubmit}>{loading ? "Enviando..." : "Enviar"}</CTAButton>
                 </div>
               </div>
             )}
@@ -1256,10 +1212,10 @@ localStorage.setItem(code, JSON.stringify(payload));
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
-    <CTAButton disabled title="Temporariamente indisponível (testes)">
+ <CTAButton onClick={() => (window.location.href = CONFIG.checkout.stripeUrl)}>
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"cors"}); } catch(_err) {} }}>
+    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
@@ -1530,27 +1486,6 @@ function _scanDocumentForms(){
   return out;
 }
 
-
-function getFormSnapshot(){
-  try {
-    const st = (typeof window!=="undefined" && window.__KASH_FORM__) ? window.__KASH_FORM__ : null;
-    const out = { company:{}, members:[], accepts:{} };
-    if (st && typeof st==="object"){
-      if (st.company) out.company = { st.company };
-      if (Array.isArray(st.members)) out.members = st.members.slice();
-      if (st.accept) out.accepts = { st.accept };
-      if (!out.company.companyName){
-        const nameEl = document.querySelector('input[name="companyName"], input[name="company_name"], input#companyName');
-        if (nameEl && nameEl.value) out.company.companyName = nameEl.value.trim();
-      }
-      return out;
-    }
-  } catch(e){}
-  const out = { company:{}, members:[], accepts:{} };
-  const nameEl = document.querySelector('input[name="companyName"], input[name="company_name"], input#companyName');
-  if (nameEl && nameEl.value) out.company.companyName = nameEl.value.trim();
-  return out;
-}
 export default function App() {
   const [open, setOpen] = useState(false);
   return (
