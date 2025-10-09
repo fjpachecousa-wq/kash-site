@@ -1,6 +1,5 @@
 import React, { useEffect, useReducer, useState } from 'react';
 
-/* === KASH WIREFIX (Google Sheets) === */
 if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   window.__KASH_WIRE__ = true;
 
@@ -95,7 +94,6 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   document.addEventListener("DOMContentLoaded", () => { mirrorCompany(); captureKash(); wireForms(); reinforceConcluir(); });
   new MutationObserver(() => { captureKash(); wireForms(); }).observe(document.documentElement, { childList: true, subtree: true });
 }
-/* === /KASH WIREFIX === */
 
 // ===== KASH INLINE SHIM (injeta companyName + kashId nos envios ao Apps Script) =====
 (function(){
@@ -282,7 +280,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
                 if (!Object.prototype.hasOwnProperty.call(obj, "empresaNome")) obj.empresaNome = name;
                 init.body = JSON.stringify(obj);
               }
-            }catch(_){ /* corpo não-json, ignora */ }
+            }catch(_){  }
           }
         }
       }catch(_){}
@@ -294,7 +292,6 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
-/* ================== CONFIG ================== */
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
@@ -303,8 +300,6 @@ const CONFIG = {
 };
 // === KASH Process API (Google Apps Script) ===
 const PROCESSO_API = (typeof window!=="undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) ? window.CONFIG.appsScriptUrl : "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
-
-
 
 async function apiUpsertFull(payload){
   const clean = (x) => (x == null ? "" : x);
@@ -317,8 +312,6 @@ async function apiUpsertFull(payload){
     company: payload.company || {},
     members: Array.isArray(payload.members) ? payload.members : [],
     accepts: payload.accepts || {},
-    contractEN: "", contractPT: "",
-    contracEN: "", contracPT: "",
     consentAccepted: !!payload.consentAccepted,
     consentVersion: clean(payload.consentVersion || "1.0"),
     consentTs: clean(payload.consentTs || payload.dateISO || ""),
@@ -353,8 +346,6 @@ async function apiUpsertFull(payload){
     company_json: JSON.stringify(enriched.company),
     members_json: JSON.stringify(enriched.members),
     accepts_json: JSON.stringify(enriched.accepts),
-    contractEN: "", contractPT: "",
-    contracEN: "", contracPT: "",
     consentAccepted: enriched.consentAccepted ? "true" : "false",
     consentVersion: enriched.consentVersion,
     consentTs: enriched.consentTs,
@@ -390,10 +381,6 @@ async function kashSafeUpsert(payload){
   if (id) window.__kash_posted.add(id);
   return res;
 }
-
-
-
-
 
 async function apiGetProcesso(kashId){
   const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
@@ -452,7 +439,6 @@ function todayISO() {
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 }
 
-/* ================== HELPERS ================== */
 function calcAgeFullDate(dateStr) {
   if (!dateStr) return 0;
   const d = new Date(dateStr);
@@ -467,7 +453,6 @@ function isPercentTotalValid(members) {
   return Math.abs(sum - 100) < 0.001;
 }
 
-/* ================== UI ================== */
 function KLogo({ size = 40 }) {
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
@@ -499,7 +484,6 @@ function SectionTitle({ title, subtitle }) {
   );
 }
 
-/* ================== HERO/SERVICES/PRICING ================== */
 function DemoCalculator() {
   const [monthly, setMonthly] = useState(4000);
   const yearly = monthly * 12;
@@ -624,41 +608,6 @@ function HowItWorks() {
   );
 }
 
-/* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
-function buildContractEN(companyName) {
-  return [
-    "SERVICE AGREEMENT – KASH Corporate Solutions",
-    `CLIENT: ${companyName}, identified by the information provided in the electronic form, hereinafter referred to as CLIENT. CONTRACTOR: KASH CORPORATE SOLUTIONS LLC, a limited liability company registered in the State of Florida, United States of America, hereinafter referred to as KASH CORPORATE.`,
-    "SECTION 1 – PURPOSE: This Agreement covers the registration of a limited liability company (LLC) in Florida, followed by the application with the IRS for issuance of the Employer Identification Number (EIN), upon approval of the company formation.",
-    "SECTION 2 – REGISTERED AGENT AND ADDRESS: KASH CORPORATE will provide: (a) a virtual business address in Florida for twelve (12) months; (b) a registered agent in Florida for twelve (12) months. After this period, services may be renewed with additional fees.",
-    "SECTION 3 – INFORMATION RESPONSIBILITY: All information provided by CLIENT is of his/her sole responsibility, including legal and civil liability for inaccuracies or false statements.",
-    "SECTION 4 – LIMITATIONS: This Agreement does not include: licenses/permits, tax filings, bookkeeping, or banking services.",
-    "SECTION 5 – COMPENSATION: CLIENT shall pay KASH CORPORATE the amount of US$ 1,360.00, in one single installment, at the time of hiring, through the official payment methods available on KASH CORPORATE’s website.",
-    "SECTION 6 – TERMINATION: KASH CORPORATE's obligations end after issuance of the EIN and delivery of digital documents to CLIENT.",
-    "SECTION 7 – TERM: This Agreement is effective on the signing date and remains valid until completion of services described herein.",
-    "SECTION 8 – VALIDITY CONDITION: This Agreement only becomes valid after full payment as per Section 5.",
-    "SECTION 9 – CASE TRACKING: After payment, CLIENT will receive a unique Tracking Number to monitor the process progress via KASH CORPORATE’s platform.",
-    "SECTION 10 – PUBLIC AGENCIES: Approval of company formation and EIN issuance depends exclusively on the respective government agencies (State of Florida and IRS). KASH CORPORATE does not guarantee timelines or approvals.",
-    "SECTION 11 – JURISDICTION: For disputes, the forum elected is Rio de Janeiro, Brazil, with optional jurisdiction in Orlando, Florida, USA, at CLIENT’s discretion."
-  ];
-}
-function buildContractPT(companyName) {
-  return [
-    `CONTRATANTE: ${companyName}, identificado(a) pelas informações fornecidas no formulário eletrônico, doravante denominado(a) CLIENTE. CONTRATADA: KASH CORPORATE SOLUTIONS LLC, sociedade de responsabilidade limitada, registrada no Estado da Flórida, Estados Unidos da América, doravante denominada KASH CORPORATE SOLUTIONS LLC.`,
-    "CLÁUSULA 1ª – OBJETO: O presente contrato tem por objeto o registro de empresa (LLC) no Estado da Flórida, seguido da aplicação junto ao IRS para emissão do EIN, após a aprovação da constituição da empresa.",
-    "CLÁUSULA 2ª – AGENTE REGISTRADO E ENDEREÇO: A KASH CORPORATE fornecerá: (a) endereço comercial virtual por 12 (doze) meses; (b) agente registrado na Flórida por 12 (doze) meses. Após esse período, os serviços poderão ser renovados mediante cobrança.",
-    "CLÁUSULA 3ª – RESPONSABILIDADE DAS INFORMAÇÕES: Todas as informações prestadas pelo CLIENTE são de sua exclusiva responsabilidade, incluindo responsabilidade civil e criminal por eventuais incorreções.",
-    "CLÁUSULA 4ª – LIMITAÇÕES: Não estão incluídos: licenças/alvarás, serviços contábeis/fiscais ou serviços bancários.",
-    "CLÁUSULA 5ª – REMUNERAÇÃO: O CLIENTE pagará à KASH CORPORATE o valor de US$ 1.360,00, em parcela única e imediata, por meio dos canais oficiais no site da KASH CORPORATE.",
-    "CLÁUSULA 6ª – ENCERRAMENTO: As obrigações da KASH CORPORATE encerram-se após a emissão do EIN e a entrega dos documentos digitais ao CLIENTE.",
-    "CLÁUSULA 7ª – VIGÊNCIA: Este contrato entra em vigor na data da assinatura e permanece válido até a conclusão dos serviços aqui descritos.",
-    "CLÁUSULA 8ª – CONDIÇÃO DE VALIDADE: Este contrato somente terá validade após o pagamento integral previsto na Cláusula 5ª.",
-    "CLÁUSULA 9ª – ACOMPANHAMENTO: Após o pagamento, o CLIENTE receberá um Número de Rastreamento (Tracking Number) para acompanhar o progresso do processo na plataforma da KASH CORPORATE.",
-    "CLÁUSULA 10ª – ÓRGÃOS PÚBLICOS: A aprovação da constituição da empresa e a emissão do EIN dependem exclusivamente dos órgãos públicos competentes (Estado da Flórida e IRS). A KASH CORPORATE não garante prazos ou aprovações.",
-    "CLÁUSULA 11ª – FORO: Fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, com opção pelo foro de Orlando, Flórida – EUA, a critério do CLIENTE."
-  ];
-}
-/* ===== Acceptance (PT/EN) + Signatures (helpers) ===== */
 function _acceptanceClausePT(fullNameList, dateISO) {
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
@@ -698,8 +647,6 @@ function _signatureBlockEN(names) {
   // blank line before the first name; names only
   return "\n" + names.map((n) => `${n}`).join("\n\n");
 }
-
-/* ================== PDF (US Letter, Times 10/9) ================== */
 
 function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], company, members = [] }) {
   // Prefer provided objects; fallback to global state if available
@@ -859,7 +806,6 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
 
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 
-/* ======= Tracking Search (inline) ======= */
 function TrackingSearch() {
   const [code, setCode] = useState("");
   const [result, setResult] = useState(null);
@@ -902,7 +848,7 @@ function TrackingSearch() {
               </div>
             </div>
             <div className="mt-4">
-              
+
             </div>
           </div>
         )}
@@ -911,7 +857,6 @@ function TrackingSearch() {
   );
 }
 
-/* ======= Admin + My Trackings ======= */
 function MyTrackings() {
   const [list, setList] = useState([]);
   useEffect(() => {
@@ -930,7 +875,7 @@ function MyTrackings() {
                 <div className="text-slate-400 text-xs">Tracking: {e.code} · {e.dateISO}</div>
               </div>
               <div className="flex gap-2">
-                
+
                 <CTAButton onClick={() => {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
@@ -1024,7 +969,6 @@ function AdminPanel() {
   );
 }
 
-/* ======= Form Wizard ======= */
 const initialErrors = { company: {}, members: [], accept: {} };
 function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
@@ -1103,7 +1047,7 @@ function FormWizard({ open, onClose }) {
 
     try {
       // Salva localmente
-      
+
     // === KASH: envio oficial para a planilha (Apps Script) ===
     try {
       const formState = (typeof state !== "undefined") ? state
@@ -1131,7 +1075,6 @@ localStorage.setItem(code, JSON.stringify(payload));
 
       try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
 
-      
     } catch {}
 
     setLoading(false);
@@ -1152,7 +1095,7 @@ localStorage.setItem(code, JSON.stringify(payload));
               <button className="text-slate-400 hover:text-slate-200" onClick={onClose}>Fechar</button>
             </div>
 
-            {/* Step 1 */}
+            {}
             {step === 1 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">1/2 — Dados iniciais da LLC</h4>
@@ -1225,7 +1168,7 @@ localStorage.setItem(code, JSON.stringify(payload));
               </div>
             )}
 
-            {/* Step 2 — Revisão */}
+            {}
             {step === 2 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">2/2 — Revisão</h4>
@@ -1275,7 +1218,7 @@ localStorage.setItem(code, JSON.stringify(payload));
               </div>
             )}
 
-            {/* Step 3 — Tracking + Contrato (EN + PT na mesma tela) */}
+            {}
             {step === 3 && (
               <div className="p-6">
                 <div className="text-center">
@@ -1286,11 +1229,10 @@ localStorage.setItem(code, JSON.stringify(payload));
 
                 <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="flex items-center justify-between">
-                    
-                    
+
                   </div>
 
-                  {/* EN + PT in the same view */}
+                  {}
                   <div className="mt-4 text-[13px] leading-6 text-slate-200 space-y-6 max-h-[55vh] overflow-auto pr-2">
                     <div>
                       <div className="font-semibold text-slate-100">SERVICE AGREEMENT – KASH Corporate Solutions</div>
@@ -1299,7 +1241,7 @@ localStorage.setItem(code, JSON.stringify(payload));
                       </div>
                     </div>
                     <div className="text-slate-400">— Portuguese Version Below —</div>
-                    
+
                     <div className="text-xs text-slate-400 border-t border-slate-700 pt-2">
                       Tracking: {tracking} · Date: {dateISO}
                     </div>
@@ -1335,7 +1277,6 @@ localStorage.setItem(code, JSON.stringify(payload));
   );
 }
 
-/* ================== FOOTER & APP ================== */
 function Footer() {
   return (
     <footer className="py-10 border-t border-slate-800">
@@ -1360,7 +1301,6 @@ function _localDateFromISO(dateISO){
   return dt;
 }
 
-/* ===== STRONG DOM SCRAPER (labels, aria, data-*, context text) ===== */
 function _scrapeFormDataStrong(){
   const out = { company: {}, members: [] };
   if (typeof document === "undefined") return out;
@@ -1569,7 +1509,7 @@ function _harvestFromFlat(flat){
   const members = Array.from(membersMap.keys()).sort((a,b)=>a-b).map(k=>membersMap.get(k)).filter(m=>m.fullName);
   return { company, members };
 }
-/* ===== FORMDATA SCANNER from <form> elements ===== */
+
 function _scanDocumentForms(){
   const out = {};
   if (typeof document==="undefined" || !document.forms) return out;
@@ -1584,7 +1524,6 @@ function _scanDocumentForms(){
   } catch(_){}
   return out;
 }
-
 
 function buildPayloadFromState(formState, code) {
   const companyNameDOM = document.querySelector('input[name="companyName"], #companyName, input[name="company_name"]')?.value?.trim() || '';
@@ -1635,7 +1574,8 @@ function ConsentRow({checked,onChange}){
   );
 }
 export default function App() {
-  const [consent,setConsent] = useState(false);
+  const [consent,setConsent]=useState(false);
+const [consent,setConsent] = useState(false);
 // === Consentimento: Li e Concordo ===
   useEffect(()=>{
     try{
@@ -1688,7 +1628,6 @@ export default function App() {
   );
 }
 
-/* ===== Application Data content (for unified PDF) ===== */
 function _applicationDataLines({ company = {}, members = [], tracking, dateISO, flags = {}, source = '', updates = [] }) {
   const safe = v => (v == null ? "" : String(v));
   let dt = new Date();
