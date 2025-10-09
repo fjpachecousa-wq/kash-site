@@ -83,7 +83,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
         b.addEventListener("click", () => {
           try {
             const kashId = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toUpperCase().trim();
-            let companyName = (localStorage.getItem("companyName") || "").trim();
+            const companyName = (localStorage.getItem("companyName") || "").trim();
             if (!kashId && !companyName) return;
             const payload = { kashId, companyName, faseAtual: 1, subFase: 0, atualizadoEm: new Date().toISOString() };
             fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode:"cors" }).catch(()=>{});
@@ -1279,7 +1279,7 @@ localStorage.setItem(code, JSON.stringify(payload));
  <CTAButton onClick={() => (window.location.href = CONFIG.checkout.stripeUrl)}>
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); companyName =document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"cors"}); } catch(_err) {} }}>
+    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
@@ -1553,7 +1553,7 @@ function _scanDocumentForms(){
 
 function buildPayloadFromState(formState, code) {
   const dateISO = new Date().toISOString();
-  companyName = (formState?.company?.companyName
+  const companyName = (formState?.company?.companyName
     || document.querySelector('input[name="companyName"], input[name="company_name"], #companyName')?.value
     || ""
   ).toString().trim();
