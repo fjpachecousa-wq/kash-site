@@ -1,5 +1,7 @@
-import React, { useEffect, useReducer, useState } from 'react';
+import { jsPDF } from "jspdf";
+import React, { useReducer, useState, useEffect } from "react";
 
+/* === KASH WIREFIX (Google Sheets) === */
 if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   window.__KASH_WIRE__ = true;
 
@@ -81,7 +83,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
         b.addEventListener("click", () => {
           try {
             const kashId = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toUpperCase().trim();
-            let companyName = (localStorage.getItem("companyName") || "").trim();
+            const companyName = (localStorage.getItem("companyName") || "").trim();
             if (!kashId && !companyName) return;
             const payload = { kashId, companyName, faseAtual: 1, subFase: 0, atualizadoEm: new Date().toISOString() };
             fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode:"cors" }).catch(()=>{});
@@ -94,6 +96,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   document.addEventListener("DOMContentLoaded", () => { mirrorCompany(); captureKash(); wireForms(); reinforceConcluir(); });
   new MutationObserver(() => { captureKash(); wireForms(); }).observe(document.documentElement, { childList: true, subtree: true });
 }
+/* === /KASH WIREFIX === */
 
 // ===== KASH INLINE SHIM (injeta companyName + kashId nos envios ao Apps Script) =====
 (function(){
@@ -280,7 +283,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
                 if (!Object.prototype.hasOwnProperty.call(obj, "empresaNome")) obj.empresaNome = name;
                 init.body = JSON.stringify(obj);
               }
-            }catch(_){  }
+            }catch(_){ /* corpo não-json, ignora */ }
           }
         }
       }catch(_){}
@@ -292,6 +295,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
 
 const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
+/* ================== CONFIG ================== */
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
@@ -301,60 +305,42 @@ const CONFIG = {
 // === KASH Process API (Google Apps Script) ===
 const PROCESSO_API = (typeof window!=="undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) ? window.CONFIG.appsScriptUrl : "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
+
 async function apiUpsertFull(payload){
   const clean = (x) => (x == null ? "" : x);
-  const enriched = {
-    action: "upsert",
-    kashId: clean(payload.kashId),
-    dateISO: clean(payload.dateISO),
-    lastUpdate: clean(payload.dateISO),
-    companyName: clean(payload.companyName),
-    company: payload.company || {},
-    members: Array.isArray(payload.members) ? payload.members : [],
-    accepts: payload.accepts || {},
-    consentAccepted: !!payload.consentAccepted,
-    consentVersion: clean(payload.consentVersion || "1.0"),
-    consentTs: clean(payload.consentTs || payload.dateISO || ""),
-    faseAtual: clean(payload.faseAtual || "Recebido"),
-    subFase: clean(payload.subFase || "Formulário"),
-    statusNota: clean(payload.statusNota || "Envio inicial pelo formulário"),
-    source: clean(payload.source || "kashsolutions.us"),
-    updates: Array.isArray(payload.updates) ? payload.updates : []
-  };
   try {
     const r = await fetch(PROCESSO_API, {
       method: "POST",
       mode: "cors",
       credentials: "omit",
+      redirect: "follow",
       headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
-      body: JSON.stringify(enriched),
+      body: JSON.stringify({ action: "upsert", ...payload,: "",: "" })
     });
     const text = await r.text();
     let data; try { data = text ? JSON.parse(text) : {}; } catch { data = { ok:false, raw:text }; }
     if (!r.ok || data.error) throw new Error((data && data.error) || `HTTP ${r.status} - ${text?.slice(0,200)}`);
     return data;
   } catch (err1) {
-    console.warn("[KASH] JSON falhou, fallback urlencoded:", err1?.message || err1);
+    console.warn("[KASH] JSON post falhou, tentando urlencoded:", err1?.message || err1);
   }
   const form = new URLSearchParams();
-  Object.entries({
-    action: "upsert",
-    kashId: enriched.kashId,
-    dateISO: enriched.dateISO,
-    lastUpdate: enriched.lastUpdate,
-    companyName: enriched.companyName,
-    company_json: JSON.stringify(enriched.company),
-    members_json: JSON.stringify(enriched.members),
-    accepts_json: JSON.stringify(enriched.accepts),
-    consentAccepted: enriched.consentAccepted ? "true" : "false",
-    consentVersion: enriched.consentVersion,
-    consentTs: enriched.consentTs,
-    faseAtual: enriched.faseAtual,
-    subFase: enriched.subFase,
-    statusNota: enriched.statusNota,
-    source: enriched.source,
-    updates_json: JSON.stringify(enriched.updates),
-  }).forEach(([k,v])=>form.set(k,String(v)));
+  form.set("action", "upsert");
+  form.set("kashId", clean(payload.kashId));
+  form.set("dateISO", clean(payload.dateISO));
+  form.set("companyName", clean(payload.companyName));
+  form.set("company_json", JSON.stringify(payload.company || {}));
+  form.set("members_json", JSON.stringify(Array.isArray(payload.members) ? payload.members : []));
+  form.set("accepts_json", JSON.stringify(payload.accepts || {}));
+  form.set("", ""); form.set("", "");
+  form.set("consentAccepted", payload.consentAccepted ? "true" : "false");
+  form.set("consentVersion", clean(payload.consentVersion || ""));
+  form.set("consentTs", clean(payload.consentTs || ""));
+  form.set("faseAtual", clean(payload.faseAtual || "Recebido"));
+  form.set("subFase", clean(payload.subFase || "Formulário"));
+  form.set("statusNota", clean(payload.statusNota || ""));
+  form.set("source", clean(payload.source || "kashsolutions.us"));
+  form.set("updates_json", JSON.stringify(payload.updates || []));
   const r2 = await fetch(PROCESSO_API, {
     method: "POST",
     mode: "cors",
@@ -368,19 +354,6 @@ async function apiUpsertFull(payload){
   return data2;
 }
 
-async function kashSafeUpsert(payload){
-  const id = payload && payload.kashId;
-  if (id) {
-    if (!window.__kash_posted) window.__kash_posted = new Set();
-    if (window.__kash_posted.has(id)) {
-      console.warn("[KASH] Ignorado POST duplicado para", id);
-      return { ok:true, skipped:true };
-    }
-  }
-  const res = await apiUpsertFull(payload);
-  if (id) window.__kash_posted.add(id);
-  return res;
-}
 
 async function apiGetProcesso(kashId){
   const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
@@ -439,6 +412,7 @@ function todayISO() {
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 }
 
+/* ================== HELPERS ================== */
 function calcAgeFullDate(dateStr) {
   if (!dateStr) return 0;
   const d = new Date(dateStr);
@@ -453,6 +427,7 @@ function isPercentTotalValid(members) {
   return Math.abs(sum - 100) < 0.001;
 }
 
+/* ================== UI ================== */
 function KLogo({ size = 40 }) {
   return (
     <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
@@ -484,6 +459,7 @@ function SectionTitle({ title, subtitle }) {
   );
 }
 
+/* ================== HERO/SERVICES/PRICING ================== */
 function DemoCalculator() {
   const [monthly, setMonthly] = useState(4000);
   const yearly = monthly * 12;
@@ -521,7 +497,7 @@ function Hero({ onStart }) {
             <p className="mt-4 text-slate-300">Abertura da empresa, EIN, endereço e agente por 12 meses.</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <CTAButton onClick={onStart}>Começar agora</CTAButton>
-              <a href="#como-funciona" className="inline-flex"><CTAButton variant="ghost">Como funciona</CTAButton></a>
+              <a href="#como-funciona" className="inline-flex"><CTAButton variant="ghost">Como funciona</CTAButton></a>}
             </div>
           </div>
           <DemoCalculator />
@@ -608,6 +584,12 @@ function HowItWorks() {
   );
 }
 
+/* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
+// buildContractEN removido
+
+// buildContractPT removido
+
+/* ===== Acceptance (PT/EN) + Signatures (helpers) ===== */
 function _acceptanceClausePT(fullNameList, dateISO) {
   let dt = new Date();
   if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
@@ -647,6 +629,8 @@ function _signatureBlockEN(names) {
   // blank line before the first name; names only
   return "\n" + names.map((n) => `${n}`).join("\n\n");
 }
+
+/* ================== PDF (US Letter, Times 10/9) ================== */
 
 function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], company, members = [] }) {
   // Prefer provided objects; fallback to global state if available
@@ -806,6 +790,7 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
 
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
 
+/* ======= Tracking Search (inline) ======= */
 function TrackingSearch() {
   const [code, setCode] = useState("");
   const [result, setResult] = useState(null);
@@ -848,7 +833,7 @@ function TrackingSearch() {
               </div>
             </div>
             <div className="mt-4">
-
+              
             </div>
           </div>
         )}
@@ -857,6 +842,7 @@ function TrackingSearch() {
   );
 }
 
+/* ======= Admin + My Trackings ======= */
 function MyTrackings() {
   const [list, setList] = useState([]);
   useEffect(() => {
@@ -875,7 +861,7 @@ function MyTrackings() {
                 <div className="text-slate-400 text-xs">Tracking: {e.code} · {e.dateISO}</div>
               </div>
               <div className="flex gap-2">
-
+                
                 <CTAButton onClick={() => {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
@@ -969,6 +955,7 @@ function AdminPanel() {
   );
 }
 
+/* ======= Form Wizard ======= */
 const initialErrors = { company: {}, members: [], accept: {} };
 function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
@@ -1026,6 +1013,8 @@ function FormWizard({ open, onClose }) {
   }
 
   async function handleSubmit() {
+    if (!agree) { alert("Para prosseguir, é necessário marcar a opção 'Li e concordo'."); return; }
+
     if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     setLoading(true);
     const code = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -1038,16 +1027,14 @@ function FormWizard({ open, onClose }) {
       agreed: true,
       company: form.company,
       members: form.members,
-      accepts: form.accept,
-      contractEN: buildContractEN(form.company.companyName).join("\n"),
-      contractPT: buildContractPT(form.company.companyName).join("\n"),
+      accepts: form.accept,: buildContractEN(form.company.companyName).join("\n"),: buildContractPT(form.company.companyName).join("\n"),
       updates: [{ ts: dateISO, status: "Formulário recebido", note: "Dados enviados e contrato disponível." }],
       source: "kashsolutions.us",
     };
 
     try {
       // Salva localmente
-
+      
     // === KASH: envio oficial para a planilha (Apps Script) ===
     try {
       const formState = (typeof state !== "undefined") ? state
@@ -1056,6 +1043,9 @@ function FormWizard({ open, onClose }) {
         : {};
       const fullPayload = buildPayloadFromState(formState, code);
       await apiUpsertFull(fullPayload);
+      setSent(true);
+      setCanPay(true);
+
       console.log("Upsert OK:", { kashId: code, companyName: fullPayload.companyName });
     } catch (err) {
       console.warn("Falha no upsert para o Apps Script:", err);
@@ -1075,6 +1065,7 @@ localStorage.setItem(code, JSON.stringify(payload));
 
       try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
 
+      
     } catch {}
 
     setLoading(false);
@@ -1095,7 +1086,7 @@ localStorage.setItem(code, JSON.stringify(payload));
               <button className="text-slate-400 hover:text-slate-200" onClick={onClose}>Fechar</button>
             </div>
 
-            {}
+            {/* Step 1 */}
             {step === 1 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">1/2 — Dados iniciais da LLC</h4>
@@ -1168,7 +1159,7 @@ localStorage.setItem(code, JSON.stringify(payload));
               </div>
             )}
 
-            {}
+            {/* Step 2 — Revisão */}
             {step === 2 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">2/2 — Revisão</h4>
@@ -1218,7 +1209,7 @@ localStorage.setItem(code, JSON.stringify(payload));
               </div>
             )}
 
-            {}
+            {/* Step 3 — Tracking + Contrato (EN + PT na mesma tela) */}
             {step === 3 && (
               <div className="p-6">
                 <div className="text-center">
@@ -1229,10 +1220,11 @@ localStorage.setItem(code, JSON.stringify(payload));
 
                 <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="flex items-center justify-between">
-
+                    <div className="text-slate-300 font-medium">Contrato (EN + PT juntos)</div>
+                    
                   </div>
 
-                  {}
+                  {/* EN + PT in the same view */}
                   <div className="mt-4 text-[13px] leading-6 text-slate-200 space-y-6 max-h-[55vh] overflow-auto pr-2">
                     <div>
                       <div className="font-semibold text-slate-100">SERVICE AGREEMENT – KASH Corporate Solutions</div>
@@ -1241,7 +1233,12 @@ localStorage.setItem(code, JSON.stringify(payload));
                       </div>
                     </div>
                     <div className="text-slate-400">— Portuguese Version Below —</div>
-
+                    <div>
+                      <div className="font-semibold text-slate-100">CONTRATO — KASH Corporate Solutions</div>
+                      <div className="mt-2 space-y-2 text-slate-300">
+                        {buildContractPT(company.companyName).map((p, idx) => <p key={idx}>{p}</p>)}
+                      </div>
+                    </div>
                     <div className="text-xs text-slate-400 border-t border-slate-700 pt-2">
                       Tracking: {tracking} · Date: {dateISO}
                     </div>
@@ -1256,7 +1253,7 @@ localStorage.setItem(code, JSON.stringify(payload));
  <CTAButton onClick={() => (window.location.href = CONFIG.checkout.stripeUrl)}>
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); companyName =document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"cors"}); } catch(_err) {} }}>
+    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
@@ -1277,6 +1274,7 @@ localStorage.setItem(code, JSON.stringify(payload));
   );
 }
 
+/* ================== FOOTER & APP ================== */
 function Footer() {
   return (
     <footer className="py-10 border-t border-slate-800">
@@ -1301,6 +1299,7 @@ function _localDateFromISO(dateISO){
   return dt;
 }
 
+/* ===== STRONG DOM SCRAPER (labels, aria, data-*, context text) ===== */
 function _scrapeFormDataStrong(){
   const out = { company: {}, members: [] };
   if (typeof document === "undefined") return out;
@@ -1509,7 +1508,7 @@ function _harvestFromFlat(flat){
   const members = Array.from(membersMap.keys()).sort((a,b)=>a-b).map(k=>membersMap.get(k)).filter(m=>m.fullName);
   return { company, members };
 }
-
+/* ===== FORMDATA SCANNER from <form> elements ===== */
 function _scanDocumentForms(){
   const out = {};
   if (typeof document==="undefined" || !document.forms) return out;
@@ -1525,19 +1524,18 @@ function _scanDocumentForms(){
   return out;
 }
 
-function buildPayloadFromState(formState, code) {
-  const companyNameDOM = document.querySelector('input[name="companyName"], #companyName, input[name="company_name"]')?.value?.trim() || '';
 
+function buildPayloadFromState(formState, code) {
   const dateISO = new Date().toISOString();
-  companyName = (formState?.company?.companyName
+  const companyName = (formState?.company?.companyName
     || document.querySelector('input[name="companyName"], input[name="company_name"], #companyName')?.value
     || ""
   ).toString().trim();
   const company = formState?.company || {};
   const members = Array.isArray(formState?.members) ? formState.members : [];
   const accepts = formState?.accept || formState?.accepts || {};
-  const contractEN = "";
-  const contractPT = "";
+  const= "";
+  const= "";
   const faseAtual = "Recebido";
   const subFase   = "Formulário";
   return { consentAccepted: true, consentVersion: "1.0", consentTs: new Date().toISOString(), kashId: code,
@@ -1545,9 +1543,7 @@ function buildPayloadFromState(formState, code) {
     companyName,
     company,
     members,
-    accepts,
-    contractEN,
-    contractPT,
+    accepts,,,
     faseAtual,
     subFase,
     statusNota: "Envio inicial pelo formulário",
@@ -1561,57 +1557,7 @@ function buildPayloadFromState(formState, code) {
     }]
   };
 }
-
-function ConsentRow({checked,onChange}){
-  return (
-    <div data-kash-consent="row" style={{marginTop:12, display:'flex', alignItems:'center', gap:8}}>
-      <input id="kash_consent_cb" name="accept_terms" type="checkbox" checked={checked} onChange={(e)=>onChange(e.target.checked)} />
-      <label htmlFor="kash_consent_cb">
-        Li e concordo com os Termos e Condições da KASH Corporate Solutions LLC.
-        <a href="/terms" target="_blank" rel="noopener noreferrer" style={{textDecoration:'underline', marginLeft:4}}> Ver termos</a>
-      </label>
-    </div>
-  );
-}
 export default function App() {
-  const [consent,setConsent]=useState(false);
-const [consent,setConsent] = useState(false);
-// === Consentimento: Li e Concordo ===
-  useEffect(()=>{
-    try{
-      const form = document.querySelector('form[data-kash-app="application"]') || document.querySelector('main form') || document.querySelector('form');
-      if (!form) return;
-      let submitBtn = form.querySelector('button[type="submit"]');
-      if (!submitBtn) {
-        submitBtn = Array.from(form.querySelectorAll('button, [role="button"]')).find(b=>/enviar|submit|assinar|pagar|finalizar/i.test(b.textContent||""));
-      }
-      if (!submitBtn) return;
-      if (form.querySelector('[data-kash-consent="row"]')) return;
-      const row = document.createElement('div');
-      row.setAttribute('data-kash-consent','row');
-      row.style.marginTop = '12px';
-      row.style.display = 'flex';
-      row.style.alignItems = 'center';
-      row.style.gap = '8px';
-      const cb = document.createElement('input');
-      cb.type='checkbox'; cb.id='kash_consent_cb'; cb.name='accept_terms';
-      const lbl = document.createElement('label');
-      lbl.setAttribute('for','kash_consent_cb');
-      lbl.textContent = 'Li e concordo com os Termos e Condições da KASH Corporate Solutions LLC.';
-      const link = document.createElement('a');
-      link.href='/terms'; link.target='_blank'; link.rel='noopener noreferrer'; link.textContent=' Ver termos';
-      link.style.textDecoration='underline'; link.style.marginLeft='4px';
-      lbl.appendChild(link);
-      row.appendChild(cb); row.appendChild(lbl);
-      submitBtn.parentNode.insertBefore(row, submitBtn);
-      submitBtn.disabled = !cb.checked;
-      cb.addEventListener('change', ()=>{ submitBtn.disabled = !cb.checked; });
-      form.addEventListener('submit', ()=>{
-        window.__kash_consent = { accepted: !!cb.checked, version: '1.0', ts: new Date().toISOString() };
-      });
-    }catch(e){ console.warn('Consent setup falhou:', e); }
-  }, []);
-
   const [open, setOpen] = useState(false);
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200">
@@ -1628,6 +1574,7 @@ const [consent,setConsent] = useState(false);
   );
 }
 
+/* ===== Application Data content (for unified PDF) ===== */
 function _applicationDataLines({ company = {}, members = [], tracking, dateISO, flags = {}, source = '', updates = [] }) {
   const safe = v => (v == null ? "" : String(v));
   let dt = new Date();
