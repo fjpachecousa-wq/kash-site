@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useReducer } from 'react';
+import React, { useEffect, useReducer, useState } from 'react';
 
 /* === KASH WIREFIX (Google Sheets) === */
 if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
@@ -82,7 +82,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
         b.addEventListener("click", () => {
           try {
             const kashId = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toUpperCase().trim();
-            const companyName = (localStorage.getItem("companyName") || "").trim();
+            let companyName = (localStorage.getItem("companyName") || "").trim();
             if (!kashId && !companyName) return;
             const payload = { kashId, companyName, faseAtual: 1, subFase: 0, atualizadoEm: new Date().toISOString() };
             fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode:"cors" }).catch(()=>{});
@@ -305,41 +305,65 @@ const CONFIG = {
 const PROCESSO_API = (typeof window!=="undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) ? window.CONFIG.appsScriptUrl : "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 
+
 async function apiUpsertFull(payload){
   const clean = (x) => (x == null ? "" : x);
+  const enriched = {
+    action: "upsert",
+    kashId: clean(payload.kashId),
+    dateISO: clean(payload.dateISO),
+    lastUpdate: clean(payload.dateISO),
+    companyName: clean(payload.companyName),
+    company: payload.company || {},
+    members: Array.isArray(payload.members) ? payload.members : [],
+    accepts: payload.accepts || {},
+    contractEN: "", contractPT: "",
+    contracEN: "", contracPT: "",
+    consentAccepted: !!payload.consentAccepted,
+    consentVersion: clean(payload.consentVersion || "1.0"),
+    consentTs: clean(payload.consentTs || payload.dateISO || ""),
+    faseAtual: clean(payload.faseAtual || "Recebido"),
+    subFase: clean(payload.subFase || "Formulário"),
+    statusNota: clean(payload.statusNota || "Envio inicial pelo formulário"),
+    source: clean(payload.source || "kashsolutions.us"),
+    updates: Array.isArray(payload.updates) ? payload.updates : []
+  };
   try {
     const r = await fetch(PROCESSO_API, {
       method: "POST",
       mode: "cors",
       credentials: "omit",
-      redirect: "follow",
       headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
-      body: JSON.stringify({ action: "upsert", ...payload, contractEN: "", contractPT: "" })
+      body: JSON.stringify(enriched),
     });
     const text = await r.text();
     let data; try { data = text ? JSON.parse(text) : {}; } catch { data = { ok:false, raw:text }; }
     if (!r.ok || data.error) throw new Error((data && data.error) || `HTTP ${r.status} - ${text?.slice(0,200)}`);
     return data;
   } catch (err1) {
-    console.warn("[KASH] JSON post falhou, tentando urlencoded:", err1?.message || err1);
+    console.warn("[KASH] JSON falhou, fallback urlencoded:", err1?.message || err1);
   }
   const form = new URLSearchParams();
-  form.set("action", "upsert");
-  form.set("kashId", clean(payload.kashId));
-  form.set("dateISO", clean(payload.dateISO));
-  form.set("companyName", clean(payload.companyName));
-  form.set("company_json", JSON.stringify(payload.company || {}));
-  form.set("members_json", JSON.stringify(Array.isArray(payload.members) ? payload.members : []));
-  form.set("accepts_json", JSON.stringify(payload.accepts || {}));
-  form.set("contractEN", ""); form.set("contractPT", "");
-  form.set("consentAccepted", payload.consentAccepted ? "true" : "false");
-  form.set("consentVersion", clean(payload.consentVersion || ""));
-  form.set("consentTs", clean(payload.consentTs || ""));
-  form.set("faseAtual", clean(payload.faseAtual || "Recebido"));
-  form.set("subFase", clean(payload.subFase || "Formulário"));
-  form.set("statusNota", clean(payload.statusNota || ""));
-  form.set("source", clean(payload.source || "kashsolutions.us"));
-  form.set("updates_json", JSON.stringify(payload.updates || []));
+  Object.entries({
+    action: "upsert",
+    kashId: enriched.kashId,
+    dateISO: enriched.dateISO,
+    lastUpdate: enriched.lastUpdate,
+    companyName: enriched.companyName,
+    company_json: JSON.stringify(enriched.company),
+    members_json: JSON.stringify(enriched.members),
+    accepts_json: JSON.stringify(enriched.accepts),
+    contractEN: "", contractPT: "",
+    contracEN: "", contracPT: "",
+    consentAccepted: enriched.consentAccepted ? "true" : "false",
+    consentVersion: enriched.consentVersion,
+    consentTs: enriched.consentTs,
+    faseAtual: enriched.faseAtual,
+    subFase: enriched.subFase,
+    statusNota: enriched.statusNota,
+    source: enriched.source,
+    updates_json: JSON.stringify(enriched.updates),
+  }).forEach(([k,v])=>form.set(k,String(v)));
   const r2 = await fetch(PROCESSO_API, {
     method: "POST",
     mode: "cors",
@@ -352,6 +376,23 @@ async function apiUpsertFull(payload){
   if (!r2.ok || data2.error) throw new Error((data2 && data2.error) || `HTTP ${r2.status} - ${text2?.slice(0,200)}`);
   return data2;
 }
+
+async function kashSafeUpsert(payload){
+  const id = payload && payload.kashId;
+  if (id) {
+    if (!window.__kash_posted) window.__kash_posted = new Set();
+    if (window.__kash_posted.has(id)) {
+      console.warn("[KASH] Ignorado POST duplicado para", id);
+      return { ok:true, skipped:true };
+    }
+  }
+  const res = await apiUpsertFull(payload);
+  if (id) window.__kash_posted.add(id);
+  return res;
+}
+
+
+
 
 
 async function apiGetProcesso(kashId){
@@ -1245,7 +1286,7 @@ localStorage.setItem(code, JSON.stringify(payload));
 
                 <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="flex items-center justify-between">
-                    <div className="text-slate-300 font-medium">Contrato (EN + PT juntos)</div>
+                    
                     
                   </div>
 
@@ -1273,7 +1314,7 @@ localStorage.setItem(code, JSON.stringify(payload));
  <CTAButton onClick={() => (window.location.href = CONFIG.checkout.stripeUrl)}>
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"cors"}); } catch(_err) {} }}>
+    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); companyName =document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
@@ -1546,8 +1587,10 @@ function _scanDocumentForms(){
 
 
 function buildPayloadFromState(formState, code) {
+  const companyNameDOM = document.querySelector('input[name="companyName"], #companyName, input[name="company_name"]')?.value?.trim() || '';
+
   const dateISO = new Date().toISOString();
-  const companyName = (formState?.company?.companyName
+  companyName = (formState?.company?.companyName
     || document.querySelector('input[name="companyName"], input[name="company_name"], #companyName')?.value
     || ""
   ).toString().trim();
@@ -1579,8 +1622,21 @@ function buildPayloadFromState(formState, code) {
     }]
   };
 }
+
+function ConsentRow({checked,onChange}){
+  return (
+    <div data-kash-consent="row" style={{marginTop:12, display:'flex', alignItems:'center', gap:8}}>
+      <input id="kash_consent_cb" name="accept_terms" type="checkbox" checked={checked} onChange={(e)=>onChange(e.target.checked)} />
+      <label htmlFor="kash_consent_cb">
+        Li e concordo com os Termos e Condições da KASH Corporate Solutions LLC.
+        <a href="/terms" target="_blank" rel="noopener noreferrer" style={{textDecoration:'underline', marginLeft:4}}> Ver termos</a>
+      </label>
+    </div>
+  );
+}
 export default function App() {
-  // === Consentimento: Li e Concordo ===
+  const [consent,setConsent] = useState(false);
+// === Consentimento: Li e Concordo ===
   useEffect(()=>{
     try{
       const form = document.querySelector('form[data-kash-app="application"]') || document.querySelector('main form') || document.querySelector('form');
