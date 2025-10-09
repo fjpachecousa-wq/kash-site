@@ -313,10 +313,7 @@ async function apiUpsertFull(payload) {
     mode: "cors",
     redirect: "follow",
     credentials: "omit",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Requested-With": "fetch",
-    },
+    headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
     body: JSON.stringify({
       action: "upsert",
       ...payload,
@@ -324,16 +321,11 @@ async function apiUpsertFull(payload) {
       contractPT: "",
     }),
   });
-
   const text = await r.text();
   let data;
-  try {
-    data = text ? JSON.parse(text) : {};
-  } catch {
-    data = { ok: false, raw: text };
-  }
+  try { data = text ? JSON.parse(text) : {}; } catch { data = { ok:false, raw:text }; }
   if (!r.ok || (data && data.error)) {
-    const msg = (data && data.error) || `HTTP ${r.status} - ${text?.slice(0, 200)}`;
+    const msg = (data && data.error) || `HTTP ${r.status} - ${text?.slice(0,200)}`;
     throw new Error(msg);
   }
   return data;
@@ -1012,7 +1004,7 @@ function FormWizard({ open, onClose }) {
       agreed: true,
       company: form.company,
       members: form.members,
-      accepts: form.accept,: buildContractEN(form.company.companyName).join("\n"),: buildContractPT(form.company.companyName).join("\n"),
+      accepts: form.accept, contractEN: "", contractPT: "", 
       updates: [{ ts: dateISO, status: "Formulário recebido", note: "Dados enviados e contrato disponível." }],
       source: "kashsolutions.us",
     };
