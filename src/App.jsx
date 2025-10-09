@@ -1,5 +1,5 @@
 import { jsPDF } from "jspdf";
-import React, { useEffect, useState, useReducer } from 'react';
+import React, { useReducer, useState, useEffect } from "react";
 
 /* === KASH WIREFIX (Google Sheets) === */
 if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
@@ -306,65 +306,41 @@ const CONFIG = {
 const PROCESSO_API = (typeof window!=="undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) ? window.CONFIG.appsScriptUrl : "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 
-
-async function kashSafeUpsert(payload){
+async function apiUpsertFull(payload){
   const clean = (x) => (x == null ? "" : x);
-  const enriched = {
-    action: "upsert",
-    kashId: clean(payload.kashId),
-    dateISO: clean(payload.dateISO),
-    lastUpdate: clean(payload.dateISO),
-    companyName: clean(payload.companyName),
-    company: payload.company || {},
-    members: Array.isArray(payload.members) ? payload.members : [],
-    accepts: payload.accepts || {},
-    contractEN: "", contractPT: "",
-    contracEN: "", contracPT: "",
-    consentAccepted: !!payload.consentAccepted,
-    consentVersion: clean(payload.consentVersion || "1.0"),
-    consentTs: clean(payload.consentTs || payload.dateISO || ""),
-    faseAtual: clean(payload.faseAtual || "Recebido"),
-    subFase: clean(payload.subFase || "Formulário"),
-    statusNota: clean(payload.statusNota || "Envio inicial pelo formulário"),
-    source: clean(payload.source || "kashsolutions.us"),
-    updates: Array.isArray(payload.updates) ? payload.updates : []
-  };
   try {
     const r = await fetch(PROCESSO_API, {
       method: "POST",
       mode: "cors",
       credentials: "omit",
+      redirect: "follow",
       headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
-      body: JSON.stringify(enriched),
+      body: JSON.stringify({ action: "upsert", ...payload, contractEN: "", contractPT: "" })
     });
     const text = await r.text();
     let data; try { data = text ? JSON.parse(text) : {}; } catch { data = { ok:false, raw:text }; }
     if (!r.ok || data.error) throw new Error((data && data.error) || `HTTP ${r.status} - ${text?.slice(0,200)}`);
     return data;
   } catch (err1) {
-    console.warn("[KASH] JSON falhou, fallback urlencoded:", err1?.message || err1);
+    console.warn("[KASH] JSON post falhou, tentando urlencoded:", err1?.message || err1);
   }
   const form = new URLSearchParams();
-  Object.entries({
-    action: "upsert",
-    kashId: enriched.kashId,
-    dateISO: enriched.dateISO,
-    lastUpdate: enriched.lastUpdate,
-    companyName: enriched.companyName,
-    company_json: JSON.stringify(enriched.company),
-    members_json: JSON.stringify(enriched.members),
-    accepts_json: JSON.stringify(enriched.accepts),
-    contractEN: "", contractPT: "",
-    contracEN: "", contracPT: "",
-    consentAccepted: enriched.consentAccepted ? "true" : "false",
-    consentVersion: enriched.consentVersion,
-    consentTs: enriched.consentTs,
-    faseAtual: enriched.faseAtual,
-    subFase: enriched.subFase,
-    statusNota: enriched.statusNota,
-    source: enriched.source,
-    updates_json: JSON.stringify(enriched.updates),
-  }).forEach(([k,v])=> form.set(k, String(v)));
+  form.set("action", "upsert");
+  form.set("kashId", clean(payload.kashId));
+  form.set("dateISO", clean(payload.dateISO));
+  form.set("companyName", clean(payload.companyName));
+  form.set("company_json", JSON.stringify(payload.company || {}));
+  form.set("members_json", JSON.stringify(Array.isArray(payload.members) ? payload.members : []));
+  form.set("accepts_json", JSON.stringify(payload.accepts || {}));
+  form.set("contractEN", ""); form.set("contractPT", "");
+  form.set("consentAccepted", payload.consentAccepted ? "true" : "false");
+  form.set("consentVersion", clean(payload.consentVersion || ""));
+  form.set("consentTs", clean(payload.consentTs || ""));
+  form.set("faseAtual", clean(payload.faseAtual || "Recebido"));
+  form.set("subFase", clean(payload.subFase || "Formulário"));
+  form.set("statusNota", clean(payload.statusNota || ""));
+  form.set("source", clean(payload.source || "kashsolutions.us"));
+  form.set("updates_json", JSON.stringify(payload.updates || []));
   const r2 = await fetch(PROCESSO_API, {
     method: "POST",
     mode: "cors",
@@ -377,21 +353,6 @@ async function kashSafeUpsert(payload){
   if (!r2.ok || data2.error) throw new Error((data2 && data2.error) || `HTTP ${r2.status} - ${text2?.slice(0,200)}`);
   return data2;
 }
-async function kashSafeUpsert(payload){
-  const id = payload && payload.kashId;
-  if (id) {
-    if (!window.__kash_posted) window.__kash_posted = new Set();
-    if (window.__kash_posted.has(id)) {
-      console.warn("[KASH] Ignorado POST duplicado para", id);
-      return { ok:true, skipped:true };
-    }
-  }
-  const res = await kashSafeUpsert(payload);
-  if (id) window.__kash_posted.add(id);
-  return res;
-}
-
-
 
 
 async function apiGetProcesso(kashId){
@@ -624,8 +585,39 @@ function HowItWorks() {
 }
 
 /* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
-// buildContractEN removido
-// buildContractPT removido
+function buildContractEN(companyName) {
+  return [
+    "SERVICE AGREEMENT – KASH Corporate Solutions",
+    `CLIENT: ${companyName}, identified by the information provided in the electronic form, hereinafter referred to as CLIENT. CONTRACTOR: KASH CORPORATE SOLUTIONS LLC, a limited liability company registered in the State of Florida, United States of America, hereinafter referred to as KASH CORPORATE.`,
+    "SECTION 1 – PURPOSE: This Agreement covers the registration of a limited liability company (LLC) in Florida, followed by the application with the IRS for issuance of the Employer Identification Number (EIN), upon approval of the company formation.",
+    "SECTION 2 – REGISTERED AGENT AND ADDRESS: KASH CORPORATE will provide: (a) a virtual business address in Florida for twelve (12) months; (b) a registered agent in Florida for twelve (12) months. After this period, services may be renewed with additional fees.",
+    "SECTION 3 – INFORMATION RESPONSIBILITY: All information provided by CLIENT is of his/her sole responsibility, including legal and civil liability for inaccuracies or false statements.",
+    "SECTION 4 – LIMITATIONS: This Agreement does not include: licenses/permits, tax filings, bookkeeping, or banking services.",
+    "SECTION 5 – COMPENSATION: CLIENT shall pay KASH CORPORATE the amount of US$ 1,360.00, in one single installment, at the time of hiring, through the official payment methods available on KASH CORPORATE’s website.",
+    "SECTION 6 – TERMINATION: KASH CORPORATE's obligations end after issuance of the EIN and delivery of digital documents to CLIENT.",
+    "SECTION 7 – TERM: This Agreement is effective on the signing date and remains valid until completion of services described herein.",
+    "SECTION 8 – VALIDITY CONDITION: This Agreement only becomes valid after full payment as per Section 5.",
+    "SECTION 9 – CASE TRACKING: After payment, CLIENT will receive a unique Tracking Number to monitor the process progress via KASH CORPORATE’s platform.",
+    "SECTION 10 – PUBLIC AGENCIES: Approval of company formation and EIN issuance depends exclusively on the respective government agencies (State of Florida and IRS). KASH CORPORATE does not guarantee timelines or approvals.",
+    "SECTION 11 – JURISDICTION: For disputes, the forum elected is Rio de Janeiro, Brazil, with optional jurisdiction in Orlando, Florida, USA, at CLIENT’s discretion."
+  ];
+}
+function buildContractPT(companyName) {
+  return [
+    `CONTRATANTE: ${companyName}, identificado(a) pelas informações fornecidas no formulário eletrônico, doravante denominado(a) CLIENTE. CONTRATADA: KASH CORPORATE SOLUTIONS LLC, sociedade de responsabilidade limitada, registrada no Estado da Flórida, Estados Unidos da América, doravante denominada KASH CORPORATE SOLUTIONS LLC.`,
+    "CLÁUSULA 1ª – OBJETO: O presente contrato tem por objeto o registro de empresa (LLC) no Estado da Flórida, seguido da aplicação junto ao IRS para emissão do EIN, após a aprovação da constituição da empresa.",
+    "CLÁUSULA 2ª – AGENTE REGISTRADO E ENDEREÇO: A KASH CORPORATE fornecerá: (a) endereço comercial virtual por 12 (doze) meses; (b) agente registrado na Flórida por 12 (doze) meses. Após esse período, os serviços poderão ser renovados mediante cobrança.",
+    "CLÁUSULA 3ª – RESPONSABILIDADE DAS INFORMAÇÕES: Todas as informações prestadas pelo CLIENTE são de sua exclusiva responsabilidade, incluindo responsabilidade civil e criminal por eventuais incorreções.",
+    "CLÁUSULA 4ª – LIMITAÇÕES: Não estão incluídos: licenças/alvarás, serviços contábeis/fiscais ou serviços bancários.",
+    "CLÁUSULA 5ª – REMUNERAÇÃO: O CLIENTE pagará à KASH CORPORATE o valor de US$ 1.360,00, em parcela única e imediata, por meio dos canais oficiais no site da KASH CORPORATE.",
+    "CLÁUSULA 6ª – ENCERRAMENTO: As obrigações da KASH CORPORATE encerram-se após a emissão do EIN e a entrega dos documentos digitais ao CLIENTE.",
+    "CLÁUSULA 7ª – VIGÊNCIA: Este contrato entra em vigor na data da assinatura e permanece válido até a conclusão dos serviços aqui descritos.",
+    "CLÁUSULA 8ª – CONDIÇÃO DE VALIDADE: Este contrato somente terá validade após o pagamento integral previsto na Cláusula 5ª.",
+    "CLÁUSULA 9ª – ACOMPANHAMENTO: Após o pagamento, o CLIENTE receberá um Número de Rastreamento (Tracking Number) para acompanhar o progresso do processo na plataforma da KASH CORPORATE.",
+    "CLÁUSULA 10ª – ÓRGÃOS PÚBLICOS: A aprovação da constituição da empresa e a emissão do EIN dependem exclusivamente dos órgãos públicos competentes (Estado da Flórida e IRS). A KASH CORPORATE não garante prazos ou aprovações.",
+    "CLÁUSULA 11ª – FORO: Fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, com opção pelo foro de Orlando, Flórida – EUA, a critério do CLIENTE."
+  ];
+}
 /* ===== Acceptance (PT/EN) + Signatures (helpers) ===== */
 function _acceptanceClausePT(fullNameList, dateISO) {
   let dt = new Date();
@@ -1063,8 +1055,8 @@ function FormWizard({ open, onClose }) {
       company: form.company,
       members: form.members,
       accepts: form.accept,
-      contractEN: "",
-      contractPT: "",
+      contractEN: buildContractEN(form.company.companyName).join("\n"),
+      contractPT: buildContractPT(form.company.companyName).join("\n"),
       updates: [{ ts: dateISO, status: "Formulário recebido", note: "Dados enviados e contrato disponível." }],
       source: "kashsolutions.us",
     };
@@ -1079,7 +1071,7 @@ function FormWizard({ open, onClose }) {
         : (typeof formData !== "undefined") ? formData
         : {};
       const fullPayload = buildPayloadFromState(formState, code);
-      await kashSafeUpsert(fullPayload);
+      await apiUpsertFull(fullPayload);
       console.log("Upsert OK:", { kashId: code, companyName: fullPayload.companyName });
     } catch (err) {
       console.warn("Falha no upsert para o Apps Script:", err);
