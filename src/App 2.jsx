@@ -32,7 +32,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   // Capturar KASH real no DOM (ignora KASH-XXXXXX)
   const captureKash = () => {
     try {
-      const m = (document.body.innerText||"").match(/KASH-(?!X{6})[A-Z0-9-]{4}/i);
+      const m = (document.body.innerText||"").match(/KASH-(?!X{6})[A-Z0-9-]{4,}/i);
       if (m && m[0]) localStorage.setItem("last_tracking", String(m[0]).toUpperCase());
     } catch {}
   };
@@ -41,7 +41,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   window.__setKashTracking = function(code){
     try {
       const real = String(code||"").toUpperCase();
-      if (/^KASH-(?!X{6})[A-Z0-9-]{4}$/.test(real)) localStorage.setItem("last_tracking", real);
+      if (/^KASH-(?!X{6})[A-Z0-9-]{4,}$/.test(real)) localStorage.setItem("last_tracking", real);
     } catch {}
   };
 
@@ -300,7 +300,8 @@ const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
   checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
-  brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" }};
+  brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
+};
 // === KASH Process API (Google Apps Script) ===
 const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
@@ -353,7 +354,7 @@ function clearAnySensitiveLocalData() {
 clearAnySensitiveLocalData();
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const phoneRe = /^[0-9+()\-\s]{8}$/;
+const phoneRe = /^[0-9+()\-\s]{8,}$/;
 function classNames(...cls) { return cls.filter(Boolean).join(" "); }
 function todayISO() {
   const d = new Date();
@@ -460,7 +461,8 @@ function Services() {
     { t: "Abertura LLC Partnership", d: "Registro oficial na Flórida (Sunbiz)." },
     { t: "EIN (IRS)", d: "Obtenção do Employer Identification Number." },
     { t: "Operating Agreement", d: "Documento societário digital." },
-    { t: "Endereço + Agente (12 meses)", d: "Inclusos no pacote de abertura." }];
+    { t: "Endereço + Agente (12 meses)", d: "Inclusos no pacote de abertura." },
+  ];
   return (
     <section className="py-14 border-t border-slate-800">
       <div className="max-w-6xl mx-auto px-4">
@@ -481,7 +483,8 @@ function Pricing({ onStart }) {
   const plans = [
     { name: "Abertura LLC", price: CONFIG.prices.llc, features: ["Endereço + Agente 12 meses", "EIN", "Operating Agreement"], cta: "Contratar", disabled: false },
     { name: "KASH FLOW 30 (Mensal)", price: CONFIG.prices.flow30, features: ["Classificação contábil", "Relatórios mensais"], cta: "Assinar", disabled: true },
-    { name: "KASH SCALE 5 (Mensal)", price: CONFIG.prices.scale5, features: ["Até 5 contratos", "Suporte prioritário", "W-8BEN-E (emitido no onboarding contábil)"], cta: "Assinar", disabled: true }];
+    { name: "KASH SCALE 5 (Mensal)", price: CONFIG.prices.scale5, features: ["Até 5 contratos", "Suporte prioritário", "W-8BEN-E (emitido no onboarding contábil)"], cta: "Assinar", disabled: true },
+  ];
   return (
     <section className="py-14 border-t border-slate-800">
       <div className="max-w-6xl mx-auto px-4">
@@ -511,7 +514,8 @@ function HowItWorks() {
     { t: "Contrato e pagamento", d: "Assinatura eletrônica e checkout." },
     { t: "Formulário de abertura", d: "Dados da empresa, sócios, KYC/AML." },
     { t: "Pagamento", d: "Fee e taxa estadual — checkout online." },
-    { t: "Tracking do processo", d: "Número de protocolo e notificações por e-mail." }];
+    { t: "Tracking do processo", d: "Número de protocolo e notificações por e-mail." },
+  ];
   return (
     <section className="py-16 border-t border-slate-800" id="como-funciona">
       <div className="max-w-6xl mx-auto px-4">
@@ -668,8 +672,10 @@ const initialForm = {
   company: { companyName: "", email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
   members: [
     { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
-    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" }],
-  accept: { responsibility: false, limitations: false }};
+    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
+  ],
+  accept: { responsibility: false, limitations: false },
+};
 function formReducer(state, action) {
   switch (action.type) {
     case "UPDATE_COMPANY": return { ...state, company: { ...state.company, [action.field]: action.value } };
@@ -973,7 +979,8 @@ function FormWizard({ open, onClose }) {
       contractEN: "",
       contractPT: "",
       updates: [{ ts: dateISO, status: "Formulário recebido", note: "Dados enviados e contrato disponível." }],
-      source: "kashsolutions.us"};
+      source: "kashsolutions.us",
+    };
 
     try {
       // Salva localmente

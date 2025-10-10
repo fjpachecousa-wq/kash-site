@@ -16,8 +16,7 @@ export default async function handler(req, res) {
     const nameMap = {
       llc: "Abertura LLC",
       flow30: "Kash Flow 30 (Mensal)",
-      scale5: "Kash Scale 5 (Mensal)",
-    };
+      scale5: "Kash Scale 5 (Mensal)"};
     const price = catalog[product] ?? catalog.llc;
     const name = nameMap[product] ?? nameMap.llc;
 
@@ -33,8 +32,7 @@ export default async function handler(req, res) {
       metadata: { protocol, product },
       success_url: `${req.headers.origin}/?paid=1&protocol=${encodeURIComponent(protocol)}`,
       cancel_url: `${req.headers.origin}/?cancelled=1&protocol=${encodeURIComponent(protocol)}`,
-      automatic_tax: { enabled: false },
-    });
+      automatic_tax: { enabled: false }});
 
     return res.status(200).json({ url: session.url });
   } catch (e) {
