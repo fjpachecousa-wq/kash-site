@@ -609,7 +609,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
 
   // --- EN Contract ---
   doc.addPage(); y = 60;
-  const enBody = buildContractEN(companyName);
+  const enBody = "";
   const enText = (Array.isArray(enBody) ? enBody.join("\n") : String(enBody));
   const en = [
     `SERVICE AGREEMENT – ${companyName}`,
@@ -630,7 +630,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
 
   // --- PT Contract ---
   doc.addPage(); y = 60;
-  const ptBody = buildContractPT(companyName);
+  const ptBody = "";
   const ptText = (Array.isArray(ptBody) ? ptBody.join("\n") : String(ptBody));
   const pt = [
     `CONTRATO DE PRESTAÇÃO DE SERVIÇOS – ${companyName}`,
@@ -1160,14 +1160,14 @@ function FormWizard({ open, onClose }) {
                     <div>
                       <div className="font-semibold text-slate-100">SERVICE AGREEMENT – KASH Corporate Solutions</div>
                       <div className="mt-2 space-y-2 text-slate-300">
-                        {buildContractEN(company.companyName).slice(1).map((p, idx) => <p key={idx}>{p}</p>)}
+                        {""slice(1).map((p, idx) => <p key={idx}>{p}</p>)}
                       </div>
                     </div>
                     <div className="text-slate-400">— Portuguese Version Below —</div>
                     <div>
                       <div className="font-semibold text-slate-100">CONTRATO — KASH Corporate Solutions</div>
                       <div className="mt-2 space-y-2 text-slate-300">
-                        {buildContractPT(company.companyName).map((p, idx) => <p key={idx}>{p}</p>)}
+                        {""map((p, idx) => <p key={idx}>{p}</p>)}
                       </div>
                     </div>
                     <div className="text-xs text-slate-400 border-t border-slate-700 pt-2">
@@ -1456,6 +1456,8 @@ function _scanDocumentForms(){
 }
 
 export default function App() {
+  const [showConfirmModal, setShowConfirmModal] = React.useState(false);
+
   const [open, setOpen] = useState(false);
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200">
