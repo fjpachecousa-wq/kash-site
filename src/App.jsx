@@ -306,37 +306,52 @@ const CONFIG = {
 const PROCESSO_API = (typeof window!=="undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) ? window.CONFIG.appsScriptUrl : "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 
-// === KASH: cliente Apps Script (corrigido) ===
-async function apiUpsertFull(payload) {
-  const r = await fetch(PROCESSO_API, {
+async function apiUpsertFull(payload){
+  const clean = (x) => (x == null ? "" : x);
+  try {
+    const r = await fetch(PROCESSO_API, {
+      method: "POST",
+      mode: "cors",
+      credentials: "omit",
+      redirect: "follow",
+      headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
+      body: JSON.stringify({ action: "upsert", ...payload, contractEN: "", contractPT: "" })
+    });
+    const text = await r.text();
+    let data; try { data = text ? JSON.parse(text) : {}; } catch { data = { ok:false, raw:text }; }
+    if (!r.ok || data.error) throw new Error((data && data.error) || `HTTP ${r.status} - ${text?.slice(0,200)}`);
+    return data;
+  } catch (err1) {
+    console.warn("[KASH] JSON post falhou, tentando urlencoded:", err1?.message || err1);
+  }
+  const form = new URLSearchParams();
+  form.set("action", "upsert");
+  form.set("kashId", clean(payload.kashId));
+  form.set("dateISO", clean(payload.dateISO));
+  form.set("companyName", clean(payload.companyName));
+  form.set("company_json", JSON.stringify(payload.company || {}));
+  form.set("members_json", JSON.stringify(Array.isArray(payload.members) ? payload.members : []));
+  form.set("accepts_json", JSON.stringify(payload.accepts || {}));
+  form.set("contractEN", ""); form.set("contractPT", "");
+  form.set("consentAccepted", payload.consentAccepted ? "true" : "false");
+  form.set("consentVersion", clean(payload.consentVersion || ""));
+  form.set("consentTs", clean(payload.consentTs || ""));
+  form.set("faseAtual", clean(payload.faseAtual || "Recebido"));
+  form.set("subFase", clean(payload.subFase || "Formulário"));
+  form.set("statusNota", clean(payload.statusNota || ""));
+  form.set("source", clean(payload.source || "kashsolutions.us"));
+  form.set("updates_json", JSON.stringify(payload.updates || []));
+  const r2 = await fetch(PROCESSO_API, {
     method: "POST",
     mode: "cors",
-    redirect: "follow",
     credentials: "omit",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Requested-With": "fetch",
-    },
-    body: JSON.stringify({
-      action: "upsert",
-      ...payload,
-      contractEN: "",
-      contractPT: "",
-    }),
+    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+    body: form.toString(),
   });
-
-  const text = await r.text();
-  let data;
-  try {
-    data = text ? JSON.parse(text) : {};
-  } catch {
-    data = { ok: false, raw: text };
-  }
-  if (!r.ok || (data && data.error)) {
-    const msg = (data && data.error) || `HTTP ${r.status} - ${text?.slice(0, 200)}`;
-    throw new Error(msg);
-  }
-  return data;
+  const text2 = await r2.text();
+  let data2; try { data2 = text2 ? JSON.parse(text2) : {}; } catch { data2 = { ok:false, raw:text2 }; }
+  if (!r2.ok || data2.error) throw new Error((data2 && data2.error) || `HTTP ${r2.status} - ${text2?.slice(0,200)}`);
+  return data2;
 }
 
 
@@ -482,7 +497,7 @@ function Hero({ onStart }) {
             <p className="mt-4 text-slate-300">Abertura da empresa, EIN, endereço e agente por 12 meses.</p>
             <div className="mt-8 flex flex-wrap gap-3">
               <CTAButton onClick={onStart}>Começar agora</CTAButton>
-              <a href="#como-funciona" className="inline-flex"><CTAButton variant="ghost">Como funciona</CTAButton></a>}
+              <a href="#como-funciona" className="inline-flex"><CTAButton variant="ghost">Como funciona</CTAButton></a>
             </div>
           </div>
           <DemoCalculator />
@@ -570,10 +585,39 @@ function HowItWorks() {
 }
 
 /* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
-// buildContractEN removido
-
-// buildContractPT removido
-
+function buildContractEN(companyName) {
+  return [
+    "SERVICE AGREEMENT – KASH Corporate Solutions",
+    `CLIENT: ${companyName}, identified by the information provided in the electronic form, hereinafter referred to as CLIENT. CONTRACTOR: KASH CORPORATE SOLUTIONS LLC, a limited liability company registered in the State of Florida, United States of America, hereinafter referred to as KASH CORPORATE.`,
+    "SECTION 1 – PURPOSE: This Agreement covers the registration of a limited liability company (LLC) in Florida, followed by the application with the IRS for issuance of the Employer Identification Number (EIN), upon approval of the company formation.",
+    "SECTION 2 – REGISTERED AGENT AND ADDRESS: KASH CORPORATE will provide: (a) a virtual business address in Florida for twelve (12) months; (b) a registered agent in Florida for twelve (12) months. After this period, services may be renewed with additional fees.",
+    "SECTION 3 – INFORMATION RESPONSIBILITY: All information provided by CLIENT is of his/her sole responsibility, including legal and civil liability for inaccuracies or false statements.",
+    "SECTION 4 – LIMITATIONS: This Agreement does not include: licenses/permits, tax filings, bookkeeping, or banking services.",
+    "SECTION 5 – COMPENSATION: CLIENT shall pay KASH CORPORATE the amount of US$ 1,360.00, in one single installment, at the time of hiring, through the official payment methods available on KASH CORPORATE’s website.",
+    "SECTION 6 – TERMINATION: KASH CORPORATE's obligations end after issuance of the EIN and delivery of digital documents to CLIENT.",
+    "SECTION 7 – TERM: This Agreement is effective on the signing date and remains valid until completion of services described herein.",
+    "SECTION 8 – VALIDITY CONDITION: This Agreement only becomes valid after full payment as per Section 5.",
+    "SECTION 9 – CASE TRACKING: After payment, CLIENT will receive a unique Tracking Number to monitor the process progress via KASH CORPORATE’s platform.",
+    "SECTION 10 – PUBLIC AGENCIES: Approval of company formation and EIN issuance depends exclusively on the respective government agencies (State of Florida and IRS). KASH CORPORATE does not guarantee timelines or approvals.",
+    "SECTION 11 – JURISDICTION: For disputes, the forum elected is Rio de Janeiro, Brazil, with optional jurisdiction in Orlando, Florida, USA, at CLIENT’s discretion."
+  ];
+}
+function buildContractPT(companyName) {
+  return [
+    `CONTRATANTE: ${companyName}, identificado(a) pelas informações fornecidas no formulário eletrônico, doravante denominado(a) CLIENTE. CONTRATADA: KASH CORPORATE SOLUTIONS LLC, sociedade de responsabilidade limitada, registrada no Estado da Flórida, Estados Unidos da América, doravante denominada KASH CORPORATE SOLUTIONS LLC.`,
+    "CLÁUSULA 1ª – OBJETO: O presente contrato tem por objeto o registro de empresa (LLC) no Estado da Flórida, seguido da aplicação junto ao IRS para emissão do EIN, após a aprovação da constituição da empresa.",
+    "CLÁUSULA 2ª – AGENTE REGISTRADO E ENDEREÇO: A KASH CORPORATE fornecerá: (a) endereço comercial virtual por 12 (doze) meses; (b) agente registrado na Flórida por 12 (doze) meses. Após esse período, os serviços poderão ser renovados mediante cobrança.",
+    "CLÁUSULA 3ª – RESPONSABILIDADE DAS INFORMAÇÕES: Todas as informações prestadas pelo CLIENTE são de sua exclusiva responsabilidade, incluindo responsabilidade civil e criminal por eventuais incorreções.",
+    "CLÁUSULA 4ª – LIMITAÇÕES: Não estão incluídos: licenças/alvarás, serviços contábeis/fiscais ou serviços bancários.",
+    "CLÁUSULA 5ª – REMUNERAÇÃO: O CLIENTE pagará à KASH CORPORATE o valor de US$ 1.360,00, em parcela única e imediata, por meio dos canais oficiais no site da KASH CORPORATE.",
+    "CLÁUSULA 6ª – ENCERRAMENTO: As obrigações da KASH CORPORATE encerram-se após a emissão do EIN e a entrega dos documentos digitais ao CLIENTE.",
+    "CLÁUSULA 7ª – VIGÊNCIA: Este contrato entra em vigor na data da assinatura e permanece válido até a conclusão dos serviços aqui descritos.",
+    "CLÁUSULA 8ª – CONDIÇÃO DE VALIDADE: Este contrato somente terá validade após o pagamento integral previsto na Cláusula 5ª.",
+    "CLÁUSULA 9ª – ACOMPANHAMENTO: Após o pagamento, o CLIENTE receberá um Número de Rastreamento (Tracking Number) para acompanhar o progresso do processo na plataforma da KASH CORPORATE.",
+    "CLÁUSULA 10ª – ÓRGÃOS PÚBLICOS: A aprovação da constituição da empresa e a emissão do EIN dependem exclusivamente dos órgãos públicos competentes (Estado da Flórida e IRS). A KASH CORPORATE não garante prazos ou aprovações.",
+    "CLÁUSULA 11ª – FORO: Fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, com opção pelo foro de Orlando, Flórida – EUA, a critério do CLIENTE."
+  ];
+}
 /* ===== Acceptance (PT/EN) + Signatures (helpers) ===== */
 function _acceptanceClausePT(fullNameList, dateISO) {
   let dt = new Date();
@@ -998,8 +1042,6 @@ function FormWizard({ open, onClose }) {
   }
 
   async function handleSubmit() {
-    if (!agree) { alert("Para prosseguir, é necessário marcar a opção 'Li e concordo'."); return; }
-
     if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     setLoading(true);
     const code = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -1013,6 +1055,8 @@ function FormWizard({ open, onClose }) {
       company: form.company,
       members: form.members,
       accepts: form.accept,
+      contractEN: buildContractEN(form.company.companyName).join("\n"),
+      contractPT: buildContractPT(form.company.companyName).join("\n"),
       updates: [{ ts: dateISO, status: "Formulário recebido", note: "Dados enviados e contrato disponível." }],
       source: "kashsolutions.us",
     };
@@ -1028,12 +1072,6 @@ function FormWizard({ open, onClose }) {
         : {};
       const fullPayload = buildPayloadFromState(formState, code);
       await apiUpsertFull(fullPayload);
-      setConfirmTracking(_readTrackingCode());
-      setShowConfirmModal(true);
-
-      setSent(true);
-      setCanPay(true);
-
       console.log("Upsert OK:", { kashId: code, companyName: fullPayload.companyName });
     } catch (err) {
       console.warn("Falha no upsert para o Apps Script:", err);
@@ -1522,8 +1560,8 @@ function buildPayloadFromState(formState, code) {
   const company = formState?.company || {};
   const members = Array.isArray(formState?.members) ? formState.members : [];
   const accepts = formState?.accept || formState?.accepts || {};
-
-
+  const contractEN = "";
+  const contractPT = "";
   const faseAtual = "Recebido";
   const subFase   = "Formulário";
   return { consentAccepted: true, consentVersion: "1.0", consentTs: new Date().toISOString(), kashId: code,
@@ -1531,7 +1569,9 @@ function buildPayloadFromState(formState, code) {
     companyName,
     company,
     members,
-    accepts,,,
+    accepts,
+    contractEN,
+    contractPT,
     faseAtual,
     subFase,
     statusNota: "Envio inicial pelo formulário",
@@ -1545,16 +1585,7 @@ function buildPayloadFromState(formState, code) {
     }]
   };
 }
-
-function _readTrackingCode(){
-  try { if (window.last_tracking && window.last_tracking.code) return window.last_tracking.code; } catch {}
-  try { const obj = JSON.parse(localStorage.getItem("last_tracking")||"{}"); if (obj && obj.code) return obj.code; } catch {}
-  return "";
-}
 export default function App() {
-  const [showConfirmModal, setShowConfirmModal] = React.useState(false);
-  const [confirmTracking, setConfirmTracking] = React.useState("");
-
   const [open, setOpen] = useState(false);
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200">
@@ -1567,24 +1598,7 @@ export default function App() {
       <TrackingSearch />
       <Footer />
       <FormWizard open={open} onClose={() => setOpen(false)} />
-    
-{/* === Modal de Confirmação (Tracking) === */}
-{showConfirmModal && (
-  <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-    <div className="bg-white rounded-lg shadow-lg p-6 max-w-md w-[90%]">
-      <h3 className="text-lg font-semibold mb-2">Processo registrado</h3>
-      <p className="text-sm text-gray-700">Seu código de acompanhamento é:</p>
-      <div className="mt-2 mb-4 p-2 bg-gray-100 rounded border text-center font-mono text-base">
-        {confirmTracking || _readTrackingCode() || "KASH-XXXXXX"}
-      </div>
-      <div className="flex justify-end gap-2">
-        <button type="button" className="px-4 py-2 rounded border" onClick={()=>setShowConfirmModal(false)}>Fechar</button>
-      </div>
     </div>
-  </div>
-)}
-
-</div>
   );
 }
 
