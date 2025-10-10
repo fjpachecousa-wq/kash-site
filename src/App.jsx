@@ -86,7 +86,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
             const companyName = (localStorage.getItem("companyName") || "").trim();
             if (!kashId && !companyName) return;
             const payload = { kashId, companyName, faseAtual: 1, subFase: 0, atualizadoEm: new Date().toISOString() };
-            fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode:"cors" }).catch(()=>{});
+            fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode: "no-cors" }).catch(()=>{});
           } catch {}
         }, { passive: true });
         b.__kash_click_wired = true;
@@ -303,26 +303,7 @@ const CONFIG = {
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
 };
 // === KASH Process API (Google Apps Script) ===
-const PROCESSO_API = (typeof window!=="undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) ? window.CONFIG.appsScriptUrl : "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
-
-async function apiUpsertFull(payload){
-  const r = await fetch(PROCESSO_API, {
-    method: "POST",
-    mode: "cors",
-    redirect: "follow",
-    credentials: "omit",
-    headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
-    body: JSON.stringify({ action: "upsert", ...payload })
-  });
-  const text = await r.text();
-  let data;
-  try { data = text ? JSON.parse(text) : {}; } catch { data = { ok:false, raw:text }; }
-  if (!r.ok || (data && data.error)) {
-    const msg = (data && data.error) || `HTTP ${r.status} - ${text?.slice(0,200)}`;
-    throw new Error(msg);
-  }
-  return data;
-}
+const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 async function apiGetProcesso(kashId){
   const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
@@ -554,8 +535,39 @@ function HowItWorks() {
 }
 
 /* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
-
-
+function buildContractEN(companyName) {
+  return [
+    "SERVICE AGREEMENT – KASH Corporate Solutions",
+    `CLIENT: ${companyName}, identified by the information provided in the electronic form, hereinafter referred to as CLIENT. CONTRACTOR: KASH CORPORATE SOLUTIONS LLC, a limited liability company registered in the State of Florida, United States of America, hereinafter referred to as KASH CORPORATE.`,
+    "SECTION 1 – PURPOSE: This Agreement covers the registration of a limited liability company (LLC) in Florida, followed by the application with the IRS for issuance of the Employer Identification Number (EIN), upon approval of the company formation.",
+    "SECTION 2 – REGISTERED AGENT AND ADDRESS: KASH CORPORATE will provide: (a) a virtual business address in Florida for twelve (12) months; (b) a registered agent in Florida for twelve (12) months. After this period, services may be renewed with additional fees.",
+    "SECTION 3 – INFORMATION RESPONSIBILITY: All information provided by CLIENT is of his/her sole responsibility, including legal and civil liability for inaccuracies or false statements.",
+    "SECTION 4 – LIMITATIONS: This Agreement does not include: licenses/permits, tax filings, bookkeeping, or banking services.",
+    "SECTION 5 – COMPENSATION: CLIENT shall pay KASH CORPORATE the amount of US$ 1,360.00, in one single installment, at the time of hiring, through the official payment methods available on KASH CORPORATE’s website.",
+    "SECTION 6 – TERMINATION: KASH CORPORATE's obligations end after issuance of the EIN and delivery of digital documents to CLIENT.",
+    "SECTION 7 – TERM: This Agreement is effective on the signing date and remains valid until completion of services described herein.",
+    "SECTION 8 – VALIDITY CONDITION: This Agreement only becomes valid after full payment as per Section 5.",
+    "SECTION 9 – CASE TRACKING: After payment, CLIENT will receive a unique Tracking Number to monitor the process progress via KASH CORPORATE’s platform.",
+    "SECTION 10 – PUBLIC AGENCIES: Approval of company formation and EIN issuance depends exclusively on the respective government agencies (State of Florida and IRS). KASH CORPORATE does not guarantee timelines or approvals.",
+    "SECTION 11 – JURISDICTION: For disputes, the forum elected is Rio de Janeiro, Brazil, with optional jurisdiction in Orlando, Florida, USA, at CLIENT’s discretion."
+  ];
+}
+function buildContractPT(companyName) {
+  return [
+    `CONTRATANTE: ${companyName}, identificado(a) pelas informações fornecidas no formulário eletrônico, doravante denominado(a) CLIENTE. CONTRATADA: KASH CORPORATE SOLUTIONS LLC, sociedade de responsabilidade limitada, registrada no Estado da Flórida, Estados Unidos da América, doravante denominada KASH CORPORATE SOLUTIONS LLC.`,
+    "CLÁUSULA 1ª – OBJETO: O presente contrato tem por objeto o registro de empresa (LLC) no Estado da Flórida, seguido da aplicação junto ao IRS para emissão do EIN, após a aprovação da constituição da empresa.",
+    "CLÁUSULA 2ª – AGENTE REGISTRADO E ENDEREÇO: A KASH CORPORATE fornecerá: (a) endereço comercial virtual por 12 (doze) meses; (b) agente registrado na Flórida por 12 (doze) meses. Após esse período, os serviços poderão ser renovados mediante cobrança.",
+    "CLÁUSULA 3ª – RESPONSABILIDADE DAS INFORMAÇÕES: Todas as informações prestadas pelo CLIENTE são de sua exclusiva responsabilidade, incluindo responsabilidade civil e criminal por eventuais incorreções.",
+    "CLÁUSULA 4ª – LIMITAÇÕES: Não estão incluídos: licenças/alvarás, serviços contábeis/fiscais ou serviços bancários.",
+    "CLÁUSULA 5ª – REMUNERAÇÃO: O CLIENTE pagará à KASH CORPORATE o valor de US$ 1.360,00, em parcela única e imediata, por meio dos canais oficiais no site da KASH CORPORATE.",
+    "CLÁUSULA 6ª – ENCERRAMENTO: As obrigações da KASH CORPORATE encerram-se após a emissão do EIN e a entrega dos documentos digitais ao CLIENTE.",
+    "CLÁUSULA 7ª – VIGÊNCIA: Este contrato entra em vigor na data da assinatura e permanece válido até a conclusão dos serviços aqui descritos.",
+    "CLÁUSULA 8ª – CONDIÇÃO DE VALIDADE: Este contrato somente terá validade após o pagamento integral previsto na Cláusula 5ª.",
+    "CLÁUSULA 9ª – ACOMPANHAMENTO: Após o pagamento, o CLIENTE receberá um Número de Rastreamento (Tracking Number) para acompanhar o progresso do processo na plataforma da KASH CORPORATE.",
+    "CLÁUSULA 10ª – ÓRGÃOS PÚBLICOS: A aprovação da constituição da empresa e a emissão do EIN dependem exclusivamente dos órgãos públicos competentes (Estado da Flórida e IRS). A KASH CORPORATE não garante prazos ou aprovações.",
+    "CLÁUSULA 11ª – FORO: Fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, com opção pelo foro de Orlando, Flórida – EUA, a critério do CLIENTE."
+  ];
+}
 /* ===== Acceptance (PT/EN) + Signatures (helpers) ===== */
 function _acceptanceClausePT(fullNameList, dateISO) {
   let dt = new Date();
@@ -993,29 +1005,15 @@ function FormWizard({ open, onClose }) {
       company: form.company,
       members: form.members,
       accepts: form.accept,
-      contractEN: "",
-      contractPT: "",
+      contractEN: buildContractEN(form.company.companyName).join("\n"),
+      contractPT: buildContractPT(form.company.companyName).join("\n"),
       updates: [{ ts: dateISO, status: "Formulário recebido", note: "Dados enviados e contrato disponível." }],
       source: "kashsolutions.us",
     };
 
     try {
       // Salva localmente
-      
-    // === KASH: envio oficial para a planilha (Apps Script) ===
-    try {
-      const formState = (typeof state !== "undefined") ? state
-        : (typeof form !== "undefined") ? form
-        : (typeof formData !== "undefined") ? formData
-        : {};
-      const fullPayload = buildPayloadFromState(formState, code);
-      await apiUpsertFull(fullPayload);
-      console.log("Upsert OK:", { kashId: code, companyName: fullPayload.companyName });
-    } catch (err) {
-      console.warn("Falha no upsert para o Apps Script:", err);
-    }
-    // === /KASH: envio oficial ===
-localStorage.setItem(code, JSON.stringify(payload));
+      localStorage.setItem(code, JSON.stringify(payload));
 
       // index de trackings (últimos 50)
       try {
@@ -1217,7 +1215,7 @@ localStorage.setItem(code, JSON.stringify(payload));
  <CTAButton onClick={() => (window.location.href = CONFIG.checkout.stripeUrl)}>
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"cors"}); } catch(_err) {} }}>
+    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
@@ -1488,75 +1486,7 @@ function _scanDocumentForms(){
   return out;
 }
 
-
-function buildPayloadFromState(formState, code) {
-  const dateISO = new Date().toISOString();
-  const companyName = (formState?.company?.companyName
-    || document.querySelector('input[name="companyName"], input[name="company_name"], #companyName')?.value
-    || ""
-  ).toString().trim();
-  const company = formState?.company || {};
-  const members = Array.isArray(formState?.members) ? formState.members : [];
-  const accepts = formState?.accept || formState?.accepts || {};
-  const contractEN = "";
-const contractPT = "";
-const faseAtual = "Recebido";
-  const subFase   = "Formulário";
-  return {
-    kashId: code,
-    dateISO,
-    companyName,
-    company,
-    members,
-    accepts,
-    contractEN,
-    contractPT,
-    faseAtual,
-    subFase,
-    statusNota: "Envio inicial pelo formulário",
-    source: "kashsolutions.us",
-    updates: [{
-      ts: dateISO,
-      status: "Formulário recebido",
-      note: "Dados enviados e contrato disponível.",
-      faseAtual,
-      subFase
-    }]
-  };
-}
-
-function _readTrackingCode(){
-
-async function confirmAndSend(e){
-  e?.preventDefault?.();
-  if (!agree) { alert("Para prosseguir, é necessário marcar a opção 'Li e concordo'."); return; }
-  if (sending) return;
-  setSending(true);
-  try {
-    if (typeof handleSubmit === "function") {
-      await handleSubmit(e);
-    }
-    setConfirmTracking(_readTrackingCode());
-    setShowConfirmModal(false);
-    setCanPay(true);
-  } catch (err) {
-    console.error(err);
-    alert("Não foi possível concluir o envio. Tente novamente.");
-  } finally {
-    setSending(false);
-  }
-}
-  try { if (window.last_tracking && window.last_tracking.code) return window.last_tracking.code; } catch {}
-  try { const obj = JSON.parse(localStorage.getItem("last_tracking")||"{}"); if (obj && obj.code) return obj.code; } catch {}
-  return "";
-}
 export default function App() {
-  const [agree, setAgree] = React.useState(false);
-  const [sending, setSending] = React.useState(false);
-  const [showConfirmModal, setShowConfirmModal] = React.useState(false);
-  const [confirmTracking, setConfirmTracking] = React.useState("");
-  const [canPay, setCanPay] = React.useState(false);
-
   const [open, setOpen] = useState(false);
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200">
@@ -1649,22 +1579,3 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
   lines.push("");
   return lines;
 }
-
-<div className="mt-4 flex flex-wrap gap-2 justify-end">
-  {canPay && (
-    <a className="px-4 py-2 rounded bg-green-600 text-white hover:bg-green-700"
-       href={CONFIG?.checkout?.stripeUrl} target="_blank" rel="noreferrer">
-      Prosseguir para pagamento
-    </a>
-  )}
-  <button type="button" className="px-4 py-2 rounded border" onClick={()=>setShowConfirmModal(false)}>
-    Cancelar
-  </button>
-  <button type="button"
-          className={`px-4 py-2 rounded ${agree ? 'bg-green-600 text-white hover:bg-green-700' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}`}
-          onClick={confirmAndSend}
-          disabled={!agree || sending}>
-    {sending ? 'Enviando...' : 'Confirmar envio'}
-  </button>
-</div>
-
