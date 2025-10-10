@@ -535,39 +535,8 @@ function HowItWorks() {
 }
 
 /* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
-function buildContractEN(companyName) {
-  return [
-    "SERVICE AGREEMENT – KASH Corporate Solutions",
-    `CLIENT: ${companyName}, identified by the information provided in the electronic form, hereinafter referred to as CLIENT. CONTRACTOR: KASH CORPORATE SOLUTIONS LLC, a limited liability company registered in the State of Florida, United States of America, hereinafter referred to as KASH CORPORATE.`,
-    "SECTION 1 – PURPOSE: This Agreement covers the registration of a limited liability company (LLC) in Florida, followed by the application with the IRS for issuance of the Employer Identification Number (EIN), upon approval of the company formation.",
-    "SECTION 2 – REGISTERED AGENT AND ADDRESS: KASH CORPORATE will provide: (a) a virtual business address in Florida for twelve (12) months; (b) a registered agent in Florida for twelve (12) months. After this period, services may be renewed with additional fees.",
-    "SECTION 3 – INFORMATION RESPONSIBILITY: All information provided by CLIENT is of his/her sole responsibility, including legal and civil liability for inaccuracies or false statements.",
-    "SECTION 4 – LIMITATIONS: This Agreement does not include: licenses/permits, tax filings, bookkeeping, or banking services.",
-    "SECTION 5 – COMPENSATION: CLIENT shall pay KASH CORPORATE the amount of US$ 1,360.00, in one single installment, at the time of hiring, through the official payment methods available on KASH CORPORATE’s website.",
-    "SECTION 6 – TERMINATION: KASH CORPORATE's obligations end after issuance of the EIN and delivery of digital documents to CLIENT.",
-    "SECTION 7 – TERM: This Agreement is effective on the signing date and remains valid until completion of services described herein.",
-    "SECTION 8 – VALIDITY CONDITION: This Agreement only becomes valid after full payment as per Section 5.",
-    "SECTION 9 – CASE TRACKING: After payment, CLIENT will receive a unique Tracking Number to monitor the process progress via KASH CORPORATE’s platform.",
-    "SECTION 10 – PUBLIC AGENCIES: Approval of company formation and EIN issuance depends exclusively on the respective government agencies (State of Florida and IRS). KASH CORPORATE does not guarantee timelines or approvals.",
-    "SECTION 11 – JURISDICTION: For disputes, the forum elected is Rio de Janeiro, Brazil, with optional jurisdiction in Orlando, Florida, USA, at CLIENT’s discretion."
-  ];
-}
-function buildContractPT(companyName) {
-  return [
-    `CONTRATANTE: ${companyName}, identificado(a) pelas informações fornecidas no formulário eletrônico, doravante denominado(a) CLIENTE. CONTRATADA: KASH CORPORATE SOLUTIONS LLC, sociedade de responsabilidade limitada, registrada no Estado da Flórida, Estados Unidos da América, doravante denominada KASH CORPORATE SOLUTIONS LLC.`,
-    "CLÁUSULA 1ª – OBJETO: O presente contrato tem por objeto o registro de empresa (LLC) no Estado da Flórida, seguido da aplicação junto ao IRS para emissão do EIN, após a aprovação da constituição da empresa.",
-    "CLÁUSULA 2ª – AGENTE REGISTRADO E ENDEREÇO: A KASH CORPORATE fornecerá: (a) endereço comercial virtual por 12 (doze) meses; (b) agente registrado na Flórida por 12 (doze) meses. Após esse período, os serviços poderão ser renovados mediante cobrança.",
-    "CLÁUSULA 3ª – RESPONSABILIDADE DAS INFORMAÇÕES: Todas as informações prestadas pelo CLIENTE são de sua exclusiva responsabilidade, incluindo responsabilidade civil e criminal por eventuais incorreções.",
-    "CLÁUSULA 4ª – LIMITAÇÕES: Não estão incluídos: licenças/alvarás, serviços contábeis/fiscais ou serviços bancários.",
-    "CLÁUSULA 5ª – REMUNERAÇÃO: O CLIENTE pagará à KASH CORPORATE o valor de US$ 1.360,00, em parcela única e imediata, por meio dos canais oficiais no site da KASH CORPORATE.",
-    "CLÁUSULA 6ª – ENCERRAMENTO: As obrigações da KASH CORPORATE encerram-se após a emissão do EIN e a entrega dos documentos digitais ao CLIENTE.",
-    "CLÁUSULA 7ª – VIGÊNCIA: Este contrato entra em vigor na data da assinatura e permanece válido até a conclusão dos serviços aqui descritos.",
-    "CLÁUSULA 8ª – CONDIÇÃO DE VALIDADE: Este contrato somente terá validade após o pagamento integral previsto na Cláusula 5ª.",
-    "CLÁUSULA 9ª – ACOMPANHAMENTO: Após o pagamento, o CLIENTE receberá um Número de Rastreamento (Tracking Number) para acompanhar o progresso do processo na plataforma da KASH CORPORATE.",
-    "CLÁUSULA 10ª – ÓRGÃOS PÚBLICOS: A aprovação da constituição da empresa e a emissão do EIN dependem exclusivamente dos órgãos públicos competentes (Estado da Flórida e IRS). A KASH CORPORATE não garante prazos ou aprovações.",
-    "CLÁUSULA 11ª – FORO: Fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, com opção pelo foro de Orlando, Flórida – EUA, a critério do CLIENTE."
-  ];
-}
+
+
 /* ===== Acceptance (PT/EN) + Signatures (helpers) ===== */
 function _acceptanceClausePT(fullNameList, dateISO) {
   let dt = new Date();
@@ -1005,8 +974,8 @@ function FormWizard({ open, onClose }) {
       company: form.company,
       members: form.members,
       accepts: form.accept,
-      contractEN: buildContractEN(form.company.companyName).join("\n"),
-      contractPT: buildContractPT(form.company.companyName).join("\n"),
+      contractEN: "",
+      contractPT: "",
       updates: [{ ts: dateISO, status: "Formulário recebido", note: "Dados enviados e contrato disponível." }],
       source: "kashsolutions.us",
     };
