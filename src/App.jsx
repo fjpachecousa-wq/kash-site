@@ -32,7 +32,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   // Capturar KASH real no DOM (ignora KASH-XXXXXX)
   const captureKash = () => {
     try {
-      const m = (document.body.innerText||"").match(/KASH-(?!X{6})[A-Z0-9-]{4}/i);
+      const m = (document.body.innerText||"").match(/KASH-(?!X{6})[A-Z0-9-]{4,}/i);
       if (m && m[0]) localStorage.setItem("last_tracking", String(m[0]).toUpperCase());
     } catch {}
   };
@@ -41,7 +41,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   window.__setKashTracking = function(code){
     try {
       const real = String(code||"").toUpperCase();
-      if (/^KASH-(?!X{6})[A-Z0-9-]{4}$/.test(real)) localStorage.setItem("last_tracking", real);
+      if (/^KASH-(?!X{6})[A-Z0-9-]{4,}$/.test(real)) localStorage.setItem("last_tracking", real);
     } catch {}
   };
 
@@ -86,7 +86,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
             const companyName = (localStorage.getItem("companyName") || "").trim();
             if (!kashId && !companyName) return;
             const payload = { kashId, companyName, faseAtual: 1, subFase: 0, atualizadoEm: new Date().toISOString() };
-            fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode: "no-cors" }).catch(()=>{});
+            fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode:"cors" }).catch(()=>{});
           } catch {}
         }, { passive: true });
         b.__kash_click_wired = true;
@@ -300,9 +300,60 @@ const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
   checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
-  brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" }};
+  brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
+};
 // === KASH Process API (Google Apps Script) ===
-const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
+const PROCESSO_API = (typeof window!=="undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) ? window.CONFIG.appsScriptUrl : "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
+
+
+async function apiUpsertFull(payload){
+  const clean = (x) => (x == null ? "" : x);
+  try {
+    const r = await fetch(PROCESSO_API, {
+      method: "POST",
+      mode: "cors",
+      credentials: "omit",
+      redirect: "follow",
+      headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
+      body: JSON.stringify({ action: "upsert", ...payload, contractEN: "", contractPT: "" })
+    });
+    const text = await r.text();
+    let data; try { data = text ? JSON.parse(text) : {}; } catch { data = { ok:false, raw:text }; }
+    if (!r.ok || data.error) throw new Error((data && data.error) || `HTTP ${r.status} - ${text?.slice(0,200)}`);
+    return data;
+  } catch (err1) {
+    console.warn("[KASH] JSON post falhou, tentando urlencoded:", err1?.message || err1);
+  }
+  const form = new URLSearchParams();
+  form.set("action", "upsert");
+  form.set("kashId", clean(payload.kashId));
+  form.set("dateISO", clean(payload.dateISO));
+  form.set("companyName", clean(payload.companyName));
+  form.set("company_json", JSON.stringify(payload.company || {}));
+  form.set("members_json", JSON.stringify(Array.isArray(payload.members) ? payload.members : []));
+  form.set("accepts_json", JSON.stringify(payload.accepts || {}));
+  form.set("contractEN", ""); form.set("contractPT", "");
+  form.set("consentAccepted", payload.consentAccepted ? "true" : "false");
+  form.set("consentVersion", clean(payload.consentVersion || ""));
+  form.set("consentTs", clean(payload.consentTs || ""));
+  form.set("faseAtual", clean(payload.faseAtual || "Recebido"));
+  form.set("subFase", clean(payload.subFase || "Formulário"));
+  form.set("statusNota", clean(payload.statusNota || ""));
+  form.set("source", clean(payload.source || "kashsolutions.us"));
+  form.set("updates_json", JSON.stringify(payload.updates || []));
+  const r2 = await fetch(PROCESSO_API, {
+    method: "POST",
+    mode: "cors",
+    credentials: "omit",
+    headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
+    body: form.toString(),
+  });
+  const text2 = await r2.text();
+  let data2; try { data2 = text2 ? JSON.parse(text2) : {}; } catch { data2 = { ok:false, raw:text2 }; }
+  if (!r2.ok || data2.error) throw new Error((data2 && data2.error) || `HTTP ${r2.status} - ${text2?.slice(0,200)}`);
+  return data2;
+}
+
 
 async function apiGetProcesso(kashId){
   const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
@@ -353,7 +404,7 @@ function clearAnySensitiveLocalData() {
 clearAnySensitiveLocalData();
 
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const phoneRe = /^[0-9+()\-\s]{8}$/;
+const phoneRe = /^[0-9+()\-\s]{8,}$/;
 function classNames(...cls) { return cls.filter(Boolean).join(" "); }
 function todayISO() {
   const d = new Date();
@@ -460,7 +511,8 @@ function Services() {
     { t: "Abertura LLC Partnership", d: "Registro oficial na Flórida (Sunbiz)." },
     { t: "EIN (IRS)", d: "Obtenção do Employer Identification Number." },
     { t: "Operating Agreement", d: "Documento societário digital." },
-    { t: "Endereço + Agente (12 meses)", d: "Inclusos no pacote de abertura." }];
+    { t: "Endereço + Agente (12 meses)", d: "Inclusos no pacote de abertura." },
+  ];
   return (
     <section className="py-14 border-t border-slate-800">
       <div className="max-w-6xl mx-auto px-4">
@@ -481,7 +533,8 @@ function Pricing({ onStart }) {
   const plans = [
     { name: "Abertura LLC", price: CONFIG.prices.llc, features: ["Endereço + Agente 12 meses", "EIN", "Operating Agreement"], cta: "Contratar", disabled: false },
     { name: "KASH FLOW 30 (Mensal)", price: CONFIG.prices.flow30, features: ["Classificação contábil", "Relatórios mensais"], cta: "Assinar", disabled: true },
-    { name: "KASH SCALE 5 (Mensal)", price: CONFIG.prices.scale5, features: ["Até 5 contratos", "Suporte prioritário", "W-8BEN-E (emitido no onboarding contábil)"], cta: "Assinar", disabled: true }];
+    { name: "KASH SCALE 5 (Mensal)", price: CONFIG.prices.scale5, features: ["Até 5 contratos", "Suporte prioritário", "W-8BEN-E (emitido no onboarding contábil)"], cta: "Assinar", disabled: true },
+  ];
   return (
     <section className="py-14 border-t border-slate-800">
       <div className="max-w-6xl mx-auto px-4">
@@ -511,7 +564,8 @@ function HowItWorks() {
     { t: "Contrato e pagamento", d: "Assinatura eletrônica e checkout." },
     { t: "Formulário de abertura", d: "Dados da empresa, sócios, KYC/AML." },
     { t: "Pagamento", d: "Fee e taxa estadual — checkout online." },
-    { t: "Tracking do processo", d: "Número de protocolo e notificações por e-mail." }];
+    { t: "Tracking do processo", d: "Número de protocolo e notificações por e-mail." },
+  ];
   return (
     <section className="py-16 border-t border-slate-800" id="como-funciona">
       <div className="max-w-6xl mx-auto px-4">
@@ -531,10 +585,39 @@ function HowItWorks() {
 }
 
 /* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
-// buildContractEN removido
-
-// buildContractPT removido
-
+function buildContractEN(companyName) {
+  return [
+    "SERVICE AGREEMENT – KASH Corporate Solutions",
+    `CLIENT: ${companyName}, identified by the information provided in the electronic form, hereinafter referred to as CLIENT. CONTRACTOR: KASH CORPORATE SOLUTIONS LLC, a limited liability company registered in the State of Florida, United States of America, hereinafter referred to as KASH CORPORATE.`,
+    "SECTION 1 – PURPOSE: This Agreement covers the registration of a limited liability company (LLC) in Florida, followed by the application with the IRS for issuance of the Employer Identification Number (EIN), upon approval of the company formation.",
+    "SECTION 2 – REGISTERED AGENT AND ADDRESS: KASH CORPORATE will provide: (a) a virtual business address in Florida for twelve (12) months; (b) a registered agent in Florida for twelve (12) months. After this period, services may be renewed with additional fees.",
+    "SECTION 3 – INFORMATION RESPONSIBILITY: All information provided by CLIENT is of his/her sole responsibility, including legal and civil liability for inaccuracies or false statements.",
+    "SECTION 4 – LIMITATIONS: This Agreement does not include: licenses/permits, tax filings, bookkeeping, or banking services.",
+    "SECTION 5 – COMPENSATION: CLIENT shall pay KASH CORPORATE the amount of US$ 1,360.00, in one single installment, at the time of hiring, through the official payment methods available on KASH CORPORATE’s website.",
+    "SECTION 6 – TERMINATION: KASH CORPORATE's obligations end after issuance of the EIN and delivery of digital documents to CLIENT.",
+    "SECTION 7 – TERM: This Agreement is effective on the signing date and remains valid until completion of services described herein.",
+    "SECTION 8 – VALIDITY CONDITION: This Agreement only becomes valid after full payment as per Section 5.",
+    "SECTION 9 – CASE TRACKING: After payment, CLIENT will receive a unique Tracking Number to monitor the process progress via KASH CORPORATE’s platform.",
+    "SECTION 10 – PUBLIC AGENCIES: Approval of company formation and EIN issuance depends exclusively on the respective government agencies (State of Florida and IRS). KASH CORPORATE does not guarantee timelines or approvals.",
+    "SECTION 11 – JURISDICTION: For disputes, the forum elected is Rio de Janeiro, Brazil, with optional jurisdiction in Orlando, Florida, USA, at CLIENT’s discretion."
+  ];
+}
+function buildContractPT(companyName) {
+  return [
+    `CONTRATANTE: ${companyName}, identificado(a) pelas informações fornecidas no formulário eletrônico, doravante denominado(a) CLIENTE. CONTRATADA: KASH CORPORATE SOLUTIONS LLC, sociedade de responsabilidade limitada, registrada no Estado da Flórida, Estados Unidos da América, doravante denominada KASH CORPORATE SOLUTIONS LLC.`,
+    "CLÁUSULA 1ª – OBJETO: O presente contrato tem por objeto o registro de empresa (LLC) no Estado da Flórida, seguido da aplicação junto ao IRS para emissão do EIN, após a aprovação da constituição da empresa.",
+    "CLÁUSULA 2ª – AGENTE REGISTRADO E ENDEREÇO: A KASH CORPORATE fornecerá: (a) endereço comercial virtual por 12 (doze) meses; (b) agente registrado na Flórida por 12 (doze) meses. Após esse período, os serviços poderão ser renovados mediante cobrança.",
+    "CLÁUSULA 3ª – RESPONSABILIDADE DAS INFORMAÇÕES: Todas as informações prestadas pelo CLIENTE são de sua exclusiva responsabilidade, incluindo responsabilidade civil e criminal por eventuais incorreções.",
+    "CLÁUSULA 4ª – LIMITAÇÕES: Não estão incluídos: licenças/alvarás, serviços contábeis/fiscais ou serviços bancários.",
+    "CLÁUSULA 5ª – REMUNERAÇÃO: O CLIENTE pagará à KASH CORPORATE o valor de US$ 1.360,00, em parcela única e imediata, por meio dos canais oficiais no site da KASH CORPORATE.",
+    "CLÁUSULA 6ª – ENCERRAMENTO: As obrigações da KASH CORPORATE encerram-se após a emissão do EIN e a entrega dos documentos digitais ao CLIENTE.",
+    "CLÁUSULA 7ª – VIGÊNCIA: Este contrato entra em vigor na data da assinatura e permanece válido até a conclusão dos serviços aqui descritos.",
+    "CLÁUSULA 8ª – CONDIÇÃO DE VALIDADE: Este contrato somente terá validade após o pagamento integral previsto na Cláusula 5ª.",
+    "CLÁUSULA 9ª – ACOMPANHAMENTO: Após o pagamento, o CLIENTE receberá um Número de Rastreamento (Tracking Number) para acompanhar o progresso do processo na plataforma da KASH CORPORATE.",
+    "CLÁUSULA 10ª – ÓRGÃOS PÚBLICOS: A aprovação da constituição da empresa e a emissão do EIN dependem exclusivamente dos órgãos públicos competentes (Estado da Flórida e IRS). A KASH CORPORATE não garante prazos ou aprovações.",
+    "CLÁUSULA 11ª – FORO: Fica eleito o foro da Comarca da Capital do Estado do Rio de Janeiro – Brasil, com opção pelo foro de Orlando, Flórida – EUA, a critério do CLIENTE."
+  ];
+}
 /* ===== Acceptance (PT/EN) + Signatures (helpers) ===== */
 function _acceptanceClausePT(fullNameList, dateISO) {
   let dt = new Date();
@@ -668,8 +751,10 @@ const initialForm = {
   company: { companyName: "", email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
   members: [
     { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
-    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" }],
-  accept: { responsibility: false, limitations: false }};
+    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
+  ],
+  accept: { responsibility: false, limitations: false },
+};
 function formReducer(state, action) {
   switch (action.type) {
     case "UPDATE_COMPANY": return { ...state, company: { ...state.company, [action.field]: action.value } };
@@ -970,14 +1055,29 @@ function FormWizard({ open, onClose }) {
       company: form.company,
       members: form.members,
       accepts: form.accept,
-      contractEN: "",
-      contractPT: "",
+      contractEN: buildContractEN(form.company.companyName).join("\n"),
+      contractPT: buildContractPT(form.company.companyName).join("\n"),
       updates: [{ ts: dateISO, status: "Formulário recebido", note: "Dados enviados e contrato disponível." }],
-      source: "kashsolutions.us"};
+      source: "kashsolutions.us",
+    };
 
     try {
       // Salva localmente
-      localStorage.setItem(code, JSON.stringify(payload));
+      
+    // === KASH: envio oficial para a planilha (Apps Script) ===
+    try {
+      const formState = (typeof state !== "undefined") ? state
+        : (typeof form !== "undefined") ? form
+        : (typeof formData !== "undefined") ? formData
+        : {};
+      const fullPayload = buildPayloadFromState(formState, code);
+      await apiUpsertFull(fullPayload);
+      console.log("Upsert OK:", { kashId: code, companyName: fullPayload.companyName });
+    } catch (err) {
+      console.warn("Falha no upsert para o Apps Script:", err);
+    }
+    // === /KASH: envio oficial ===
+localStorage.setItem(code, JSON.stringify(payload));
 
       // index de trackings (últimos 50)
       try {
@@ -1179,7 +1279,7 @@ function FormWizard({ open, onClose }) {
  <CTAButton onClick={() => (window.location.href = CONFIG.checkout.stripeUrl)}>
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
-    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
+    <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"cors"}); } catch(_err) {} }}>
       Concluir (teste)
     </CTAButton>
 
@@ -1450,6 +1550,41 @@ function _scanDocumentForms(){
   return out;
 }
 
+
+function buildPayloadFromState(formState, code) {
+  const dateISO = new Date().toISOString();
+  const companyName = (formState?.company?.companyName
+    || document.querySelector('input[name="companyName"], input[name="company_name"], #companyName')?.value
+    || ""
+  ).toString().trim();
+  const company = formState?.company || {};
+  const members = Array.isArray(formState?.members) ? formState.members : [];
+  const accepts = formState?.accept || formState?.accepts || {};
+  const contractEN = "";
+  const contractPT = "";
+  const faseAtual = "Recebido";
+  const subFase   = "Formulário";
+  return { consentAccepted: true, consentVersion: "1.0", consentTs: new Date().toISOString(), kashId: code,
+    dateISO,
+    companyName,
+    company,
+    members,
+    accepts,
+    contractEN,
+    contractPT,
+    faseAtual,
+    subFase,
+    statusNota: "Envio inicial pelo formulário",
+    source: "kashsolutions.us",
+    updates: [{
+      ts: dateISO,
+      status: "Formulário recebido",
+      note: "Dados enviados e contrato disponível.",
+      faseAtual,
+      subFase
+    }]
+  };
+}
 export default function App() {
   const [open, setOpen] = useState(false);
   return (
