@@ -612,152 +612,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   const enBody = "";
   const enText = (Array.isArray(enBody) ? enBody.join("\n") : String(enBody));
   const en = [
-    `SERVICE AGREEMENT – ${companyName}`,
-    "",
-    enText,
-    "",
-    _acceptanceClauseEN(names, dateISO),
-    "",
-    "SIGNATURES",
-    _signatureBlockEN(names)
-  ].join("\n");
-  const enLines = doc.splitTextToSize(en, maxW);
-  for (const line of enLines) {
-    if (y > pageH - 60) { doc.addPage(); y = 60; }
-    doc.text(line, marginX, y);
-    y += 16;
-  }
-
-  // --- PT Contract ---
-  doc.addPage(); y = 60;
-  const ptBody = "";
-  const ptText = (Array.isArray(ptBody) ? ptBody.join("\n") : String(ptBody));
-  const pt = [
-    `CONTRATO DE PRESTAÇÃO DE SERVIÇOS – ${companyName}`,
-    "",
-    ptText,
-    "",
-    _acceptanceClausePT(names, dateISO),
-    "",
-    "ASSINATURAS",
-    _signatureBlockPT(names)
-  ].join("\n");
-  const ptLines = doc.splitTextToSize(pt, maxW);
-  for (const line of ptLines) {
-    if (y > pageH - 60) { doc.addPage(); y = 60; }
-    doc.text(line, marginX, y);
-    y += 16;
-  }
-
-  // Footer (local date/time + tracking + page numbers)
-  const dt = _localDateFromISO(dateISO);
-  const pageCount = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    const pw = doc.internal.pageSize.getWidth();
-    const ph = doc.internal.pageSize.getHeight();
-    doc.setFontSize(8);
-    doc.text(`${dt.toLocaleDateString()} ${dt.toLocaleTimeString()} · TN: ${tracking}`, 40, ph - 20);
-    doc.text(`Page ${i} of ${pageCount}`, pw - 40, ph - 20, { align: "right" });
-  }
-
-  const fileName = `KASH_Contract_${tracking}.pdf`;
-  doc.save(fileName);
-  return { doc, fileName };
-}
-
-const initialForm = {
-  company: { companyName: "", email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
-  members: [
-    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
-    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
-  ],
-  accept: { responsibility: false, limitations: false },
-};
-function formReducer(state, action) {
-  switch (action.type) {
-    case "UPDATE_COMPANY": return { ...state, company: { ...state.company, [action.field]: action.value } };
-    case "UPDATE_US_ADDRESS": return { ...state, company: { ...state.company, usAddress: { ...state.company.usAddress, [action.field]: action.value } } };
-    case "UPDATE_MEMBER": return { ...state, members: state.members.map((m,i)=> i===action.index ? { ...m, [action.field]: action.value } : m) };
-    case "ADD_MEMBER": return { ...state, members: [...state.members, { fullName:"", role:"", idOrPassport:"", issuer:"", docExpiry:"", birthdate:"", percent:"", email:"", address:"", phone:"" }] };
-    case "REMOVE_MEMBER": return { ...state, members: state.members.filter((_,i)=> i!==action.index) };
-    case "TOGGLE_ACCEPT": return { ...state, accept: { ...state.accept, [action.key]: action.value } };
-    default: return state;
-  }
-}
-
-function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
-  return (
-    <div className="p-4 border border-slate-700 rounded-xl bg-slate-800 space-y-2">
-      <div className="flex items-center justify-between mb-1">
-        <div className="text-slate-300 font-medium">Sócio {index + 1}</div>
-        {canRemove && <button className="text-slate-400 hover:text-slate-200 text-xs" onClick={onRemove}>Remover</button>}
-      </div>
-      <div className="grid md:grid-cols-2 gap-2">
-        <div>
-          <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.fullName && "border-red-500")} placeholder="Nome completo" value={data.fullName} onChange={(e) => onChange("fullName", e.target.value)} />
-          <div className="text-red-400 text-xs">{errors.fullName || ""}</div>
-        </div>
-        <div>
-          <input type="email" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.email && "border-red-500")} placeholder="E-mail do sócio" value={data.email} onChange={(e) => onChange("email", e.target.value)} />
-          <div className="text-red-400 text-xs">{errors.email || ""}</div>
-        </div>
-      </div>
-      <div className="grid md:grid-cols-2 gap-2">
-        <div>
-          <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.phone && "border-red-500")} placeholder="Telefone do sócio" value={data.phone} onChange={(e) => onChange("phone", e.target.value)} />
-          <div className="text-red-400 text-xs">{errors.phone || ""}</div>
-        </div>
-        <div>
-          <input className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.passport && "border-red-500")} placeholder="Passaporte (ou RG)" value={data.passport} onChange={(e) => onChange("passport", e.target.value)} />
-          <div className="text-red-400 text-xs">{errors.passport || ""}</div>
-        </div>
-      </div>
-      <div className="grid md:grid-cols-3 gap-2">
-        <div>
-          <input className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Órgão emissor" value={data.issuer} onChange={(e) => onChange("issuer", e.target.value)} />
-        </div>
-        <div>
-          <input type="date" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.docExpiry && "border-red-500")} value={data.docExpiry} onChange={(e) => onChange("docExpiry", e.target.value)} />
-          <div className="text-[11px] text-slate-400 mt-1">Validade do documento</div>
-          <div className="text-red-400 text-xs">{errors.docExpiry || ""}</div>
-        </div>
-        <div>
-          <input type="date" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.birthdate && "border-red-500")} value={data.birthdate} onChange={(e) => onChange("birthdate", e.target.value)} />
-          <div className="text-[11px] text-slate-400 mt-1">Data de nascimento</div>
-          <div className="text-red-400 text-xs">{errors.birthdate || ""}</div>
-        </div>
-      </div>
-      <div>
-        <input type="number" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.percent && "border-red-500")} placeholder="% de participação" value={data.percent} onChange={(e) => onChange("percent", e.target.value)} />
-        <div className="text-red-400 text-xs">{errors.percent || ""}</div>
-      </div>
-    </div>
-  );
-}
-
-const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
-
-/* ======= Tracking Search (inline) ======= */
-function TrackingSearch() {
-  const [code, setCode] = useState("");
-  const [result, setResult] = useState(null);
-  const [notFound, setNotFound] = useState(false);
-  const handleLookup = async () => {
-    try {
-      try { const obj = await apiGetProcesso(code.trim()); setResult({ tracking: obj.kashId, dateISO: obj.atualizadoEm, company: { companyName: obj.companyName || '—' }, updates: obj.updates || [], faseAtual: obj.faseAtual || 1, subFase: obj.subFase || null }); saveTrackingShortcut(code.trim()); setNotFound(false); return; } catch(e) { setResult(null); setNotFound(true); return; }
-      setResult(data);
-      setNotFound(false);
-    } catch { setResult(null); setNotFound(true); }
-  };
-  return (
-    <section className="py-12 border-t border-slate-800">
-      <div className="max-w-4xl mx-auto px-4">
-        <SectionTitle title="Consultar processo por Tracking" subtitle="Insira seu código (ex.: KASH-XXXXXX) para verificar os dados enviados e baixar o contrato." />
-        <div className="mt-4 flex gap-2">
-          <input className="flex-1 rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="KASH-ABC123" value={code} onChange={(e)=>setCode(e.target.value)} />
-          <CTAButton onClick={handleLookup}>Consultar</CTAButton>
-        </div>
+    `</div>
         {notFound && <div className="text-sm text-red-400 mt-2">Tracking não encontrado neste dispositivo.</div>}
         {result && (
           <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-4">
@@ -1091,11 +946,7 @@ function FormWizard({ open, onClose }) {
             )}
 
             {/* Step 2 — Revisão
-{/* Consentimento na conferência */}
-<div className="mt-3 p-3 border rounded bg-gray-50 text-sm">
-  <p>Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.</p>
-  <label className="mt-2 flex items-center gap-2">
-    <input type="checkbox" checked={typeof consent!=='undefined' ? consent : false} onChange={(e)=> (typeof setConsent==='function' ? setConsent(e.target.checked) : void 0)} />
+ />
     <span>Estou ciente e autorizo</span>
   </label>
 </div>
@@ -1160,19 +1011,14 @@ function FormWizard({ open, onClose }) {
 
                 <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="flex items-center justify-between">
-                    <div className="text-slate-300 font-medium">Contrato (EN + PT juntos)</div>
+                    
                     
                   </div>
 
                   {/* EN + PT in the same view */}
                   <div className="mt-4 text-[13px] leading-6 text-slate-200 space-y-6 max-h-[55vh] overflow-auto pr-2">
                     <div>
-                      <div className="font-semibold text-slate-100">SERVICE AGREEMENT – KASH Corporate Solutions</div>
-                      <div className="mt-2 space-y-2 text-slate-300">
-                        {null}
-                      </div>
-                    </div>
-                    <div className="text-slate-400">— Portuguese Version Below —</div>
+                      <div className="font-semibold text-slate-100"></div>
                     <div>
                       <div className="font-semibold text-slate-100">CONTRATO — KASH Corporate Solutions</div>
                       <div className="mt-2 space-y-2 text-slate-300">
@@ -1186,7 +1032,7 @@ function FormWizard({ open, onClose }) {
 
                   <label className="mt-4 flex items-center gap-2 text-sm text-slate-300">
                     <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-                    <span> com os termos acima.</span>
+                    <span> </span>
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
@@ -1194,7 +1040,7 @@ function FormWizard({ open, onClose }) {
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
     <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
-      Concluir (teste)
+      
     </CTAButton>
 
     <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
