@@ -406,7 +406,7 @@ function SectionTitle({ title, subtitle }) {
       <h3 className="text-2xl text-slate-100 font-semibold">{title}</h3>
       {subtitle && <p className="text-slate-400 text-sm mt-1">{subtitle}</p>}
     </div>
-/* removido fechamento IIFE inconsistente */
+  );
 }
 
 /* ================== HERO/SERVICES/PRICING ================== */
@@ -428,7 +428,7 @@ function DemoCalculator() {
         <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Economia potencial</div><div className="text-lg text-emerald-400">US$ {saved.toLocaleString()}</div></div>
       </div>
     </div>
-/* removido fechamento IIFE inconsistente */
+  );
 }
 function Hero({ onStart }) {
   return (
@@ -454,7 +454,7 @@ function Hero({ onStart }) {
         </div>
       </div>
     </section>
-/* removido fechamento IIFE inconsistente */
+  );
 }
 function Services() {
   const items = [
@@ -477,7 +477,7 @@ function Services() {
         </div>
       </div>
     </section>
-/* removido fechamento IIFE inconsistente */
+  );
 }
 function Pricing({ onStart }) {
   const plans = [
@@ -506,7 +506,7 @@ function Pricing({ onStart }) {
         </div>
       </div>
     </section>
-/* removido fechamento IIFE inconsistente */
+  );
 }
 function HowItWorks() {
   const steps = [
@@ -531,7 +531,7 @@ function HowItWorks() {
         </ol>
       </div>
     </section>
-/* removido fechamento IIFE inconsistente */
+  );
 }
 
 /* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
@@ -550,7 +550,7 @@ function _acceptanceClausePT(fullNameList, dateISO) {
   }
   const d = dt.toLocaleDateString();
   const t = dt.toLocaleTimeString();
-  return `ACEITE E DECLARAÇÃO: Declaro que LI E CONCORDO com todos os termos deste contrato em ${d} e ${t}.`;
+  return `ACEITE E DECLARAÇÃO: Declaro que  com todos os termos deste contrato em ${d} e ${t}.`;
 }
 function _acceptanceClauseEN(fullNameList, dateISO) {
   let dt = new Date();
@@ -733,7 +733,7 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
         <div className="text-red-400 text-xs">{errors.percent || ""}</div>
       </div>
     </div>
-/* removido fechamento IIFE inconsistente */
+  );
 }
 
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
@@ -909,7 +909,7 @@ function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
-  const [agreed, setAgreed] = useState(true); // "Li e concordo"
+  const [agreed, setAgreed] = useState(true); // ""
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState(initialErrors);
 
@@ -1090,7 +1090,16 @@ function FormWizard({ open, onClose }) {
               </div>
             )}
 
-            {/* Step 2 — Revisão */}
+            {/* Step 2 — Revisão
+{/* Consentimento na conferência */}
+<div className="mt-3 p-3 border rounded bg-gray-50 text-sm">
+  <p>Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.</p>
+  <label className="mt-2 flex items-center gap-2">
+    <input type="checkbox" checked={consent} onChange={(e)=>setConsent(e.target.checked)} />
+    <span>Estou ciente e autorizo</span>
+  </label>
+</div>
+ */}
             {step === 2 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">2/2 — Revisão</h4>
@@ -1177,7 +1186,7 @@ function FormWizard({ open, onClose }) {
 
                   <label className="mt-4 flex items-center gap-2 text-sm text-slate-300">
                     <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-                    <span>Li e concordo com os termos acima.</span>
+                    <span> com os termos acima.</span>
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
@@ -1339,7 +1348,7 @@ function _scrapeFormDataStrong(){
     else if (key==="member_id"){ curr.idOrPassport = val; }
     else if (key==="member_email"){ curr.email = val; }
     else if (key==="member_address"){ curr.address = val; }
-/* removido fechamento IIFE inconsistente */
+  });
   if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.push(curr); }
   const obj = {};
   const setDeep = (path, value) => {
@@ -1374,13 +1383,13 @@ function _scrapeFormDataStrong(){
       if (seg === '') return;
       if (/^\d+$/.test(seg)) parts.push(Number(seg));
       else parts.push(seg);
-/* removido fechamento IIFE inconsistente */
+    });
     return parts;
   };
   Object.keys(flat).forEach(k => {
     const path = parseKey(k);
     setDeep(path, flat[k]);
-/* removido fechamento IIFE inconsistente */
+  });
   return obj;
 }
 
@@ -1450,12 +1459,48 @@ function _scanDocumentForms(){
       for (const [k, v] of fd.entries()){
         if (!out[k]) out[k] = v;
       }
-/* removido fechamento IIFE inconsistente */
+    });
   } catch(_){}
   return out;
 }
 
+function _readTrackingCode(){
+  try { if (window.last_tracking && window.last_tracking.code) return window.last_tracking.code; } catch {}
+  try { const obj = JSON.parse(localStorage.getItem('last_tracking')||'{}'); if (obj && obj.code) return obj.code; } catch {}
+  return '';
+}
+
+function _collectFormSnapshot(){
+  const src = (typeof form !== 'undefined' && form) ? form : (typeof formState !== 'undefined' ? formState : {});
+  const company = src.company || {};
+  const members = Array.isArray(src.members) ? src.members : [];
+  const accepts = { consent: !!(src.accept || src.accepts || {}).consent || !!(typeof consent!=='undefined' && consent) };
+  const faseAtual = 'Recebido';
+  const subFase = 'Dados coletados';
+  const dateISO = new Date().toISOString();
+  const code = (window.last_tracking && window.last_tracking.code) ? window.last_tracking.code : (function(){ try{ const x=JSON.parse(localStorage.getItem('last_tracking')||'{}'); return x.code||'';}catch(_){return ''} })();
+  return { dateISO, kashId: code, company, members, accepts, faseAtual, subFase, source: 'kashsolutions.us', consentAt: dateISO, consentTextVersion: 'v2025-10-11' };
+}
+
+async function apiUpsertFull(){
+  const payload = _collectFormSnapshot();
+  const r = await fetch(PROCESSO_API, {
+    method: 'POST',
+    mode: 'cors',
+    redirect: 'follow',
+    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+    body: JSON.stringify({ action: 'upsert', ...payload })
+  });
+  const text = await r.text();
+  try { return JSON.parse(text); } catch { return { ok: r.ok, status: r.status, raw: text }; }
+}
+
 export default function App() {
+  const [consent, setConsent] = React.useState(false);
+  const [sending, setSending] = React.useState(false);
+  const [confirmTracking, setConfirmTracking] = React.useState("");
+  const [canPay, setCanPay] = React.useState(false);
+
   const [showConfirmModal, setShowConfirmModal] = React.useState(false);
 
   const [open, setOpen] = useState(false);
@@ -1471,7 +1516,7 @@ export default function App() {
       <Footer />
       <FormWizard open={open} onClose={() => setOpen(false)} />
     </div>
-/* removido fechamento IIFE inconsistente */
+  );
 }
 
 /* ===== Application Data content (for unified PDF) ===== */
@@ -1529,7 +1574,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
         const line = [`${idx+1}.`, st, note, ts].filter(Boolean).join(" — ");
         if (line) lines.push(line);
       } catch(_) {}
-/* removido fechamento IIFE inconsistente */
+    });
     lines.push("");
   }
   lines.push("— Members —");
@@ -1543,7 +1588,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
       lines.push(`${i + 1}. ${full}${role ? " – " + role : ""}${idoc ? " – " + idoc : ""}`);
       if (addr) lines.push(`   Address: ${addr}`);
       if (email) lines.push(`   Email: ${email}`);
-/* removido fechamento IIFE inconsistente */
+    });
   } else {
     lines.push("(none)");
   }
