@@ -1160,14 +1160,14 @@ function FormWizard({ open, onClose }) {
                     <div>
                       <div className="font-semibold text-slate-100">SERVICE AGREEMENT – KASH Corporate Solutions</div>
                       <div className="mt-2 space-y-2 text-slate-300">
-                        { [].slice(1).map((p, idx) => <p key={idx}>{p}</p>)}
+                        {null}
                       </div>
                     </div>
                     <div className="text-slate-400">— Portuguese Version Below —</div>
                     <div>
                       <div className="font-semibold text-slate-100">CONTRATO — KASH Corporate Solutions</div>
                       <div className="mt-2 space-y-2 text-slate-300">
-                        {""map((p, idx) => <p key={idx}>{p}</p>)}
+                        {null}
                       </div>
                     </div>
                     <div className="text-xs text-slate-400 border-t border-slate-700 pt-2">
