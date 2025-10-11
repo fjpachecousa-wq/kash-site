@@ -550,7 +550,7 @@ function _acceptanceClausePT(fullNameList, dateISO) {
   }
   const d = dt.toLocaleDateString();
   const t = dt.toLocaleTimeString();
-  return `ACEITE E DECLARAÇÃO: Declaro que LI E CONCORDO com todos os termos deste contrato em ${d} e ${t}.`;
+  return `ACEITE E DECLARAÇÃO: Declaro que  com todos os termos deste contrato em ${d} e ${t}.`;
 }
 function _acceptanceClauseEN(fullNameList, dateISO) {
   let dt = new Date();
@@ -909,7 +909,7 @@ function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
-  const [agreed, setAgreed] = useState(true); // "Li e concordo"
+  const [agreed, setAgreed] = useState(true); // ""
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState(initialErrors);
 
@@ -1090,7 +1090,16 @@ function FormWizard({ open, onClose }) {
               </div>
             )}
 
-            {/* Step 2 — Revisão */}
+            {/* Step 2 — Revisão
+{/* Consentimento na conferência */}
+<div className="mt-3 p-3 border rounded bg-gray-50 text-sm">
+  <p>Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.</p>
+  <label className="mt-2 flex items-center gap-2">
+    <input type="checkbox" checked={consent} onChange={(e)=>setConsent(e.target.checked)} />
+    <span>Estou ciente e autorizo</span>
+  </label>
+</div>
+ */}
             {step === 2 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">2/2 — Revisão</h4>
@@ -1177,7 +1186,7 @@ function FormWizard({ open, onClose }) {
 
                   <label className="mt-4 flex items-center gap-2 text-sm text-slate-300">
                     <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-                    <span>Li e concordo com os termos acima.</span>
+                    <span> com os termos acima.</span>
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
@@ -1455,7 +1464,43 @@ function _scanDocumentForms(){
   return out;
 }
 
+function _readTrackingCode(){
+  try { if (window.last_tracking && window.last_tracking.code) return window.last_tracking.code; } catch {}
+  try { const obj = JSON.parse(localStorage.getItem('last_tracking')||'{}'); if (obj && obj.code) return obj.code; } catch {}
+  return '';
+}
+
+function _collectFormSnapshot(){
+  const src = (typeof form !== 'undefined' && form) ? form : (typeof formState !== 'undefined' ? formState : {});
+  const company = src.company || {};
+  const members = Array.isArray(src.members) ? src.members : [];
+  const accepts = { consent: !!(src.accept || src.accepts || {}).consent || !!(typeof consent!=='undefined' && consent) };
+  const faseAtual = 'Recebido';
+  const subFase = 'Dados coletados';
+  const dateISO = new Date().toISOString();
+  const code = (window.last_tracking && window.last_tracking.code) ? window.last_tracking.code : (function(){ try{ const x=JSON.parse(localStorage.getItem('last_tracking')||'{}'); return x.code||'';}catch(_){return ''} })();
+  return { dateISO, kashId: code, company, members, accepts, faseAtual, subFase, source: 'kashsolutions.us', consentAt: dateISO, consentTextVersion: 'v2025-10-11' };
+}
+
+async function apiUpsertFull(){
+  const payload = _collectFormSnapshot();
+  const r = await fetch(PROCESSO_API, {
+    method: 'POST',
+    mode: 'cors',
+    redirect: 'follow',
+    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+    body: JSON.stringify({ action: 'upsert', ...payload })
+  });
+  const text = await r.text();
+  try { return JSON.parse(text); } catch { return { ok: r.ok, status: r.status, raw: text }; }
+}
+
 export default function App() {
+  const [consent, setConsent] = React.useState(false);
+  const [sending, setSending] = React.useState(false);
+  const [confirmTracking, setConfirmTracking] = React.useState("");
+  const [canPay, setCanPay] = React.useState(false);
+
   const [showConfirmModal, setShowConfirmModal] = React.useState(false);
 
   const [open, setOpen] = useState(false);
