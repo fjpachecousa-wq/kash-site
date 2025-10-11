@@ -109,7 +109,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
         (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
         (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
         ""
-      );
+
     }catch(_){ return ""; }
   }
   function getKashId(){
@@ -200,7 +200,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
         (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
         (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
         ""
-      );
+
     }catch(_){ return ""; }
   }
   // Lê kashId do localStorage
@@ -389,7 +389,7 @@ function KLogo({ size = 40 }) {
         <path d="M26 32l22-24h10L42 32l16 24H48L26 32z" fill="url(#g)" />
       </svg>
     </div>
-  );
+
 }
 function CTAButton({ children, variant = "primary", onClick, type = "button", disabled = false }) {
   const base = "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed";
@@ -406,7 +406,7 @@ function SectionTitle({ title, subtitle }) {
       <h3 className="text-2xl text-slate-100 font-semibold">{title}</h3>
       {subtitle && <p className="text-slate-400 text-sm mt-1">{subtitle}</p>}
     </div>
-/* removido fechamento IIFE inconsistente */
+
 }
 
 /* ================== HERO/SERVICES/PRICING ================== */
@@ -428,7 +428,7 @@ function DemoCalculator() {
         <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Economia potencial</div><div className="text-lg text-emerald-400">US$ {saved.toLocaleString()}</div></div>
       </div>
     </div>
-/* removido fechamento IIFE inconsistente */
+
 }
 function Hero({ onStart }) {
   return (
@@ -454,7 +454,7 @@ function Hero({ onStart }) {
         </div>
       </div>
     </section>
-/* removido fechamento IIFE inconsistente */
+
 }
 function Services() {
   const items = [
@@ -477,7 +477,7 @@ function Services() {
         </div>
       </div>
     </section>
-/* removido fechamento IIFE inconsistente */
+
 }
 function Pricing({ onStart }) {
   const plans = [
@@ -506,7 +506,7 @@ function Pricing({ onStart }) {
         </div>
       </div>
     </section>
-/* removido fechamento IIFE inconsistente */
+
 }
 function HowItWorks() {
   const steps = [
@@ -531,7 +531,7 @@ function HowItWorks() {
         </ol>
       </div>
     </section>
-/* removido fechamento IIFE inconsistente */
+
 }
 
 /* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
@@ -733,7 +733,7 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
         <div className="text-red-400 text-xs">{errors.percent || ""}</div>
       </div>
     </div>
-/* removido fechamento IIFE inconsistente */
+
 }
 
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
@@ -787,7 +787,7 @@ function TrackingSearch() {
         )}
       </div>
     </section>
-  );
+
 }
 
 /* ======= Admin + My Trackings ======= */
@@ -822,7 +822,7 @@ function MyTrackings() {
         </div>
       </div>
     </section>
-  );
+
 }
 function AdminPanel() {
   const [open, setOpen] = useState(false);
@@ -900,7 +900,7 @@ function AdminPanel() {
         )}
       </div>
     </section>
-  );
+
 }
 
 /* ======= Form Wizard ======= */
@@ -1202,7 +1202,7 @@ function FormWizard({ open, onClose }) {
         </div>
       </div>
     </div>
-  );
+
 }
 
 /* ================== FOOTER & APP ================== */
@@ -1214,7 +1214,7 @@ function Footer() {
         <div className="text-slate-400 text-sm">Contato: {CONFIG.contact.email}</div>
       </div>
     </footer>
-  );
+
 }
 
 function _localDateFromISO(dateISO){
@@ -1339,7 +1339,7 @@ function _scrapeFormDataStrong(){
     else if (key==="member_id"){ curr.idOrPassport = val; }
     else if (key==="member_email"){ curr.email = val; }
     else if (key==="member_address"){ curr.address = val; }
-/* removido fechamento IIFE inconsistente */
+
   if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.push(curr); }
   const obj = {};
   const setDeep = (path, value) => {
@@ -1374,13 +1374,13 @@ function _scrapeFormDataStrong(){
       if (seg === '') return;
       if (/^\d+$/.test(seg)) parts.push(Number(seg));
       else parts.push(seg);
-/* removido fechamento IIFE inconsistente */
+
     return parts;
   };
   Object.keys(flat).forEach(k => {
     const path = parseKey(k);
     setDeep(path, flat[k]);
-/* removido fechamento IIFE inconsistente */
+
   return obj;
 }
 
@@ -1450,7 +1450,7 @@ function _scanDocumentForms(){
       for (const [k, v] of fd.entries()){
         if (!out[k]) out[k] = v;
       }
-/* removido fechamento IIFE inconsistente */
+
   } catch(_){}
   return out;
 }
@@ -1471,7 +1471,7 @@ export default function App() {
       <Footer />
       <FormWizard open={open} onClose={() => setOpen(false)} />
     </div>
-/* removido fechamento IIFE inconsistente */
+
 }
 
 /* ===== Application Data content (for unified PDF) ===== */
@@ -1529,7 +1529,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
         const line = [`${idx+1}.`, st, note, ts].filter(Boolean).join(" — ");
         if (line) lines.push(line);
       } catch(_) {}
-/* removido fechamento IIFE inconsistente */
+
     lines.push("");
   }
   lines.push("— Members —");
@@ -1543,7 +1543,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
       lines.push(`${i + 1}. ${full}${role ? " – " + role : ""}${idoc ? " – " + idoc : ""}`);
       if (addr) lines.push(`   Address: ${addr}`);
       if (email) lines.push(`   Email: ${email}`);
-/* removido fechamento IIFE inconsistente */
+
   } else {
     lines.push("(none)");
   }
