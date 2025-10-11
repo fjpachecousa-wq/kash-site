@@ -13,7 +13,104 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
 
   // Salvar companyName enquanto digita
   const mirrorCompany = () => {
-    {/* bloco de envio movido para handleSubmit */}
+    try {
+      const $ = (s) => document.querySelector(s);
+      const el =
+        $('input[name="companyName"]') ||
+        $('#companyName') ||
+        $('[data-company-name]') ||
+        $('input[name="empresaNome"]') ||
+        Array.from(document.querySelectorAll('input[type="text"],input:not([type])'))
+          .find(i => (i.placeholder||"").toLowerCase().includes("empresa") || (i.placeholder||"").toLowerCase().includes("company"));
+      if (!el) return;
+      const save = () => { try { localStorage.setItem("companyName", (el.value||"").trim()); } catch {} };
+      el.addEventListener("input", save, { passive: true });
+      save();
+    } catch {}
+  };
+
+  // Capturar KASH real no DOM (ignora KASH-XXXXXX)
+  const captureKash = () => {
+    try {
+      const m = (document.body.innerText||"").match(/KASH-(?!X{6})[A-Z0-9-]{4,}/i);
+      if (m && m[0]) localStorage.setItem("last_tracking", String(m[0]).toUpperCase());
+    } catch {}
+  };
+
+  // Expor função para setar tracking no momento da geração
+  window.__setKashTracking = function(code){
+    try {
+      const real = String(code||"").toUpperCase();
+      if (/^KASH-(?!X{6})[A-Z0-9-]{4,}$/.test(real)) localStorage.setItem("last_tracking", real);
+    } catch {}
+  };
+
+  // Injetar ocultos antes de enviar forms ao Apps Script
+  const ensureHidden = (form, name, val) => {
+    let el = form.querySelector('input[name="'+name+'"]');
+    if (!el) { el = document.createElement("input"); el.type="hidden"; el.name=name; form.appendChild(el); }
+    el.value = val;
+  };
+  const isAppsScriptForm = (f) => {
+    const a = String(f.getAttribute("action")||"");
+    const su = getAPI();
+    return a.includes("script.google.com/macros") || (su && a.startsWith(su));
+  };
+  const prepareForm = (form) => {
+    const kid = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toUpperCase().trim();
+    const cname = (localStorage.getItem("companyName") || "").trim();
+    if (kid)   { ensureHidden(form, "kashId", kid); ensureHidden(form, "hashId", kid); }
+    if (cname) { ensureHidden(form, "companyName", cname); ensureHidden(form, "empresaNome", cname); }
+  };
+  const wireForms = () => {
+    document.querySelectorAll("form").forEach(f => {
+      if (isAppsScriptForm(f) && !f.__kash_wired) {
+        f.addEventListener("submit", () => prepareForm(f), true);
+        f.addEventListener("focusout", () => prepareForm(f), true);
+        prepareForm(f);
+        f.__kash_wired = true;
+      }
+    });
+  };
+
+  // Reforço no clique do "Concluir teste"
+  const reinforceConcluir = () => {
+    const su = getAPI(); if (!su) return;
+    Array.from(document.querySelectorAll("button,a,[role='button']"))
+      .filter(b => /concluir\s*teste/i.test(b.textContent||""))
+      .forEach(b => {
+        if (b.__kash_click_wired) return;
+        b.addEventListener("click", () => {
+          try {
+            const kashId = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toUpperCase().trim();
+            const companyName = (localStorage.getItem("companyName") || "").trim();
+            if (!kashId && !companyName) return;
+            const payload = { kashId, companyName, faseAtual: 1, subFase: 0, atualizadoEm: new Date().toISOString() };
+            fetch(su, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload), mode: "no-cors" }).catch(()=>{});
+          } catch {}
+        }, { passive: true });
+        b.__kash_click_wired = true;
+      });
+  };
+
+  document.addEventListener("DOMContentLoaded", () => { mirrorCompany(); captureKash(); wireForms(); reinforceConcluir(); });
+  new MutationObserver(() => { captureKash(); wireForms(); }).observe(document.documentElement, { childList: true, subtree: true });
+}
+/* === /KASH WIREFIX === */
+
+// ===== KASH INLINE SHIM (injeta companyName + kashId nos envios ao Apps Script) =====
+(function(){
+  function getCompanyName(){
+    try{
+      var q = function(s){ return document.querySelector(s); };
+      return (
+        (q('input[name="companyName"]') && q('input[name="companyName"]').value.trim()) ||
+        (q('#companyName') && q('#companyName').value.trim()) ||
+        (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
+        (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
+        ""
+      );
+    }catch(_){ return ""; }
   }
   function getKashId(){
     try{
@@ -309,7 +406,7 @@ function SectionTitle({ title, subtitle }) {
       <h3 className="text-2xl text-slate-100 font-semibold">{title}</h3>
       {subtitle && <p className="text-slate-400 text-sm mt-1">{subtitle}</p>}
     </div>
-  );
+/* removido fechamento IIFE inconsistente */
 }
 
 /* ================== HERO/SERVICES/PRICING ================== */
@@ -331,7 +428,7 @@ function DemoCalculator() {
         <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Economia potencial</div><div className="text-lg text-emerald-400">US$ {saved.toLocaleString()}</div></div>
       </div>
     </div>
-  );
+/* removido fechamento IIFE inconsistente */
 }
 function Hero({ onStart }) {
   return (
@@ -357,7 +454,7 @@ function Hero({ onStart }) {
         </div>
       </div>
     </section>
-  );
+/* removido fechamento IIFE inconsistente */
 }
 function Services() {
   const items = [
@@ -380,7 +477,7 @@ function Services() {
         </div>
       </div>
     </section>
-  );
+/* removido fechamento IIFE inconsistente */
 }
 function Pricing({ onStart }) {
   const plans = [
@@ -409,7 +506,7 @@ function Pricing({ onStart }) {
         </div>
       </div>
     </section>
-  );
+/* removido fechamento IIFE inconsistente */
 }
 function HowItWorks() {
   const steps = [
@@ -434,7 +531,7 @@ function HowItWorks() {
         </ol>
       </div>
     </section>
-  );
+/* removido fechamento IIFE inconsistente */
 }
 
 /* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
@@ -453,7 +550,7 @@ function _acceptanceClausePT(fullNameList, dateISO) {
   }
   const d = dt.toLocaleDateString();
   const t = dt.toLocaleTimeString();
-  return `ACEITE E DECLARAÇÃO: Declaro que  com todos os termos deste contrato em ${d} e ${t}.`;
+  return `ACEITE E DECLARAÇÃO: Declaro que LI E CONCORDO com todos os termos deste contrato em ${d} e ${t}.`;
 }
 function _acceptanceClauseEN(fullNameList, dateISO) {
   let dt = new Date();
@@ -636,7 +733,7 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
         <div className="text-red-400 text-xs">{errors.percent || ""}</div>
       </div>
     </div>
-  );
+/* removido fechamento IIFE inconsistente */
 }
 
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
@@ -812,7 +909,7 @@ function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
-  const [agreed, setAgreed] = useState(true); // ""
+  const [agreed, setAgreed] = useState(true); // "Li e concordo"
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState(initialErrors);
 
@@ -864,8 +961,6 @@ function FormWizard({ open, onClose }) {
   }
 
   async function handleSubmit() {
-  if (!consent) { alert("Para enviar, marque o consentimento."); return; }
-
     if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     setLoading(true);
     const code = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -995,16 +1090,7 @@ function FormWizard({ open, onClose }) {
               </div>
             )}
 
-            {/* Step 2 — Revisão
-{/* Consentimento na conferência */}
-<div className="mt-3 p-3 border rounded bg-gray-50 text-sm">
-  <p>Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.</p>
-  <label className="mt-2 flex items-center gap-2">
-    <input type="checkbox" checked={consent} onChange={(e)=>setConsent(e.target.checked)} />
-    <span>Estou ciente e autorizo</span>
-  </label>
-</div>
- */}
+            {/* Step 2 — Revisão */}
             {step === 2 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">2/2 — Revisão</h4>
@@ -1091,7 +1177,7 @@ function FormWizard({ open, onClose }) {
 
                   <label className="mt-4 flex items-center gap-2 text-sm text-slate-300">
                     <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-                    <span> com os termos acima.</span>
+                    <span>Li e concordo com os termos acima.</span>
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
@@ -1111,18 +1197,6 @@ function FormWizard({ open, onClose }) {
 </div>
                 </div>
               </div>
-  try {
-    const res = await apiUpsertFull();
-    const tk = _readTrackingCode();
-    if (typeof setConfirmTracking === "function") setConfirmTracking(tk);
-    if (typeof setShowConfirmModal === "function") setShowConfirmModal(false);
-    if (typeof setCanPay === "function") setCanPay(false); // pagamento fora do fluxo
-  } catch (e) {
-    console.error(e);
-    alert("Não foi possível enviar. Tente novamente.");
-    return;
-  }
-
             )}
           </div>
         </div>
@@ -1265,7 +1339,7 @@ function _scrapeFormDataStrong(){
     else if (key==="member_id"){ curr.idOrPassport = val; }
     else if (key==="member_email"){ curr.email = val; }
     else if (key==="member_address"){ curr.address = val; }
-  });
+/* removido fechamento IIFE inconsistente */
   if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.push(curr); }
   const obj = {};
   const setDeep = (path, value) => {
@@ -1300,13 +1374,13 @@ function _scrapeFormDataStrong(){
       if (seg === '') return;
       if (/^\d+$/.test(seg)) parts.push(Number(seg));
       else parts.push(seg);
-    });
+/* removido fechamento IIFE inconsistente */
     return parts;
   };
   Object.keys(flat).forEach(k => {
     const path = parseKey(k);
     setDeep(path, flat[k]);
-  });
+/* removido fechamento IIFE inconsistente */
   return obj;
 }
 
@@ -1376,60 +1450,12 @@ function _scanDocumentForms(){
       for (const [k, v] of fd.entries()){
         if (!out[k]) out[k] = v;
       }
-    });
+/* removido fechamento IIFE inconsistente */
   } catch(_){}
   return out;
 }
 
-
-function _readTrackingCode(){
-  try { if (window.last_tracking && window.last_tracking.code) return window.last_tracking.code; } catch {}
-  try { const obj = JSON.parse(localStorage.getItem("last_tracking")||"{}"); if (obj && obj.code) return obj.code; } catch {}
-  return "";
-}
-
-function _collectFormSnapshot(){
-  const src = (typeof form !== 'undefined' && form) ? form : (typeof formState !== 'undefined' ? formState : {});
-  const company = src.company || {};
-  const members = Array.isArray(src.members) ? src.members : [];
-  const accepts = { consent: !!(src.accept || src.accepts || {}).consent || !!(typeof consent!=='undefined' && consent) };
-  const faseAtual = "Recebido";
-  const subFase = "Dados coletados";
-  const dateISO = new Date().toISOString();
-  const code = (window.last_tracking && window.last_tracking.code) ? window.last_tracking.code : (function(){ try{ const x=JSON.parse(localStorage.getItem("last_tracking")||"{}"); return x.code||"";}catch(_){return ""} })();
-  return {
-    action: "upsert",
-    dateISO,
-    kashId: code,
-    company,
-    members,
-    accepts,
-    faseAtual,
-    subFase,
-    consentAt: dateISO,
-    consentTextVersion: "v2025-10-11",
-    source: "kashsolutions.us"
-  };
-}
-
-async function apiUpsertFull(){
-  const payload = _collectFormSnapshot();
-  const r = await fetch(PROCESSO_API, {
-    method: "POST",
-    mode: "cors",
-    redirect: "follow",
-    headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
-    body: JSON.stringify(payload)
-  });
-  const text = await r.text();
-  try { return JSON.parse(text); } catch { return { ok: r.ok, status: r.status, raw: text }; }
-}
 export default function App() {
-  const [consent, setConsent] = React.useState(false);
-  const [sending, setSending] = React.useState(false);
-  const [confirmTracking, setConfirmTracking] = React.useState("");
-  const [canPay, setCanPay] = React.useState(false);
-
   const [showConfirmModal, setShowConfirmModal] = React.useState(false);
 
   const [open, setOpen] = useState(false);
@@ -1445,7 +1471,7 @@ export default function App() {
       <Footer />
       <FormWizard open={open} onClose={() => setOpen(false)} />
     </div>
-  );
+/* removido fechamento IIFE inconsistente */
 }
 
 /* ===== Application Data content (for unified PDF) ===== */
@@ -1503,7 +1529,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
         const line = [`${idx+1}.`, st, note, ts].filter(Boolean).join(" — ");
         if (line) lines.push(line);
       } catch(_) {}
-    });
+/* removido fechamento IIFE inconsistente */
     lines.push("");
   }
   lines.push("— Members —");
@@ -1517,7 +1543,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
       lines.push(`${i + 1}. ${full}${role ? " – " + role : ""}${idoc ? " – " + idoc : ""}`);
       if (addr) lines.push(`   Address: ${addr}`);
       if (email) lines.push(`   Email: ${email}`);
-    });
+/* removido fechamento IIFE inconsistente */
   } else {
     lines.push("(none)");
   }
