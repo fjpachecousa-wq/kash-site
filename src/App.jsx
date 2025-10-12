@@ -1092,7 +1092,7 @@ function FormWizard({ open, onClose }) {
 <div className="mt-3 p-3 border rounded bg-gray-50 text-sm">
   <p>Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.</p>
   <label className="mt-2 flex items-center gap-2">
-    <input type="checkbox" checked={consent} onChange={(e)=>setConsent(e.target.checked)} />
+    <input type="checkbox" checked={typeof consent!=='undefined' ? consent : false} onChange={(e)=> (typeof setConsent==='function' ? setConsent(e.target.checked) : void 0)} />
     <span>Estou ciente e autorizo</span>
   </label>
 </div>
