@@ -109,14 +109,17 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
         (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
         (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
         ""
-/* removido (movido p/ App): function getKashId( */
-/*){
+
+    } catch (e) { return ""; }
+  }
+  function getKashId(){
     try{
       var v = localStorage.getItem("last_tracking") ||
               localStorage.getItem("kashId") ||
               localStorage.getItem("tracking") || "";
       return String(v).toUpperCase().trim();
-    }}
+    } catch (e) { return ""; }
+  }
   function addMetaObject(obj){
     obj = obj || {};
     var k = getKashId();
@@ -135,7 +138,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       if (k && !fd.has('hashId')) fd.set('hashId', k);
       if (c && !fd.has('companyName')) fd.set('companyName', c);
       if (c && !fd.has('empresaNome')) fd.set('empresaNome', c);
-    }catch(_){}
+    } catch (e) {}
   }
   function addMetaSearchParams(sp){
     try{
@@ -145,7 +148,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       if (k && !sp.has('hashId')) sp.set('hashId', k);
       if (c && !sp.has('companyName')) sp.set('companyName', c);
       if (c && !sp.has('empresaNome')) sp.set('empresaNome', c);
-    }catch(_){}
+    } catch (e) {}
   }
   function isAppsScriptUrl(u){
     try{
@@ -153,7 +156,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
                (typeof SCRIPT_URL!=='undefined' && SCRIPT_URL) || "";
       return (su && String(u||"").indexOf(String(su))===0) ||
              String(u||"").indexOf("script.google.com/macros")>=0;
-    }catch(_){ return false; }
+    } catch (e) { return false; }
   }
   try{
     if (typeof window!=='undefined' && !window.__kash_inline_fetch_patched){
@@ -167,7 +170,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
               try{
                 var obj = JSON.parse(body);
                 init.body = JSON.stringify(addMetaObject(obj));
-              }catch(_){
+              } catch (e) {
                 init.body = JSON.stringify(addMetaObject({ raw: body }));
               }
             } else if (typeof FormData !== "undefined" && body instanceof FormData){
@@ -176,12 +179,12 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
               addMetaSearchParams(body);
             }
           }
-        }catch(_){}
+        } catch (e) {}
         return _fetch.apply(this, arguments);
       };
       window.__kash_inline_fetch_patched = true;
     }
-  }catch(_){}
+  } catch (e) {}
 })();
 // ===== FIM KASH INLINE SHIM =====
 
@@ -198,14 +201,15 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
         (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
         ""
 
-    }}
+    } catch (e) { return ""; }
+  }
   // Lê kashId do localStorage
-/* removido (movido p/ App): function getKashId( */
-/*){
+  function getKashId(){
     try{
       var v = localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "";
       return String(v).toUpperCase().trim();
-    }}
+    } catch (e) { return ""; }
+  }
   // Adiciona metadados ao JSON
   function addMeta(obj){
     obj = obj || {};
@@ -222,7 +226,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
     try{
       var su = (typeof window!=='undefined' && (window.SCRIPT_URL || (window.CONFIG && window.CONFIG.appsScriptUrl))) || (typeof SCRIPT_URL!=='undefined' && SCRIPT_URL) || "";
       return su && String(u||"").indexOf(String(su))===0;
-    }catch(_){ return false; }
+    } catch (e) { return false; }
   }
   // Patch do fetch (uma vez só)
   try{
@@ -235,17 +239,17 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
             try{
               var obj = JSON.parse(init.body);
               init.body = JSON.stringify(addMeta(obj));
-            }catch(_){
+            } catch (e) {
               // se não for JSON, empacota minimamente
               try{ init.body = JSON.stringify(addMeta({raw:init.body})); }catch(__){}
             }
           }
-        }catch(_){}
+        } catch (e) {}
         return _fetch.apply(this, arguments);
       };
       window.__kash_fetch_patched = true;
     }
-  }catch(_){}
+  } catch (e) {}
 })();
 // ====== FIM KASH SHIM ======
 
@@ -259,7 +263,8 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       const c4 = document.querySelector('[data-company-name]')?.getAttribute('data-company-name');
       const c5 = document.querySelector('[name*="company"]')?.value;
       return (c1 || c2 || c3 || c4 || c5 || "").toString().trim();
-    }}
+    } catch(_){ return ""; }
+  }
 
   try{
     const __orig_fetch = window.fetch;
@@ -278,13 +283,13 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
                 if (!Object.prototype.hasOwnProperty.call(obj, "empresaNome")) obj.empresaNome = name;
                 init.body = JSON.stringify(obj);
               }
-            }catch(_){ /* corpo não-json, ignora */ }
+            } catch (e) { /* corpo não-json, ignora */ }
           }
         }
-      }catch(_){}
+      } catch (e) {}
       return __orig_fetch.apply(this, arguments);
     };
-  }catch(_){}
+  } catch (e) {}
 })();
 // ====== FIM KASH COMPANY PATCH ======
 
@@ -545,7 +550,7 @@ function _acceptanceClausePT(fullNameList, dateISO) {
   }
   const d = dt.toLocaleDateString();
   const t = dt.toLocaleTimeString();
-  return `ACEITE E DECLARAÇÃO: Declaro que  com todos os termos deste contrato em ${d} e ${t}.`;
+  return `ACEITE E DECLARAÇÃO: Declaro que LI E CONCORDO com todos os termos deste contrato em ${d} e ${t}.`;
 }
 function _acceptanceClauseEN(fullNameList, dateISO) {
   let dt = new Date();
@@ -766,7 +771,7 @@ function TrackingSearch() {
                     <div className="h-2 w-2 rounded-full bg-emerald-400 mt-1" />
                     <div className="text-sm text-slate-300">
                       <div className="font-medium">{u.status}</div>
-                      <div className="text-xs text-slate-400">{u.ts}{u.note ? ` — ${u.note}` : ""}</div>
+                      <div className="text-xs text-slate-400">{u.ts}{u.note ? " - " + u.note : ""}</div>
                     </div>
                   </div>
                 ))}
@@ -904,7 +909,7 @@ function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
-  const [agreed, setAgreed] = useState(true); // ""
+  const [agreed, setAgreed] = useState(true); // "Li e concordo"
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState(initialErrors);
 
@@ -956,8 +961,6 @@ function FormWizard({ open, onClose }) {
   }
 
   async function handleSubmit() {
-  if (!consent) { alert("Para enviar, marque o consentimento."); return; }
-
     if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     setLoading(true);
     const code = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -1087,16 +1090,7 @@ function FormWizard({ open, onClose }) {
               </div>
             )}
 
-            {/* Step 2 — Revisão
-{/* Consentimento na conferência */}
-<div className="mt-3 p-3 border rounded bg-gray-50 text-sm">
-  <p>Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.</p>
-  <label className="mt-2 flex items-center gap-2">
-    <input type="checkbox" checked={typeof consent!=='undefined' ? consent : false} onChange={(e)=> (typeof setConsent==='function' ? setConsent(e.target.checked) : void 0)} />
-    <span>Estou ciente e autorizo</span>
-  </label>
-</div>
- */}
+            {/* Step 2 — Revisão */}
             {step === 2 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">2/2 — Revisão</h4>
@@ -1183,7 +1177,7 @@ function FormWizard({ open, onClose }) {
 
                   <label className="mt-4 flex items-center gap-2 text-sm text-slate-300">
                     <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-                    <span> com os termos acima.</span>
+                    <span>Li e concordo com os termos acima.</span>
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
@@ -1203,18 +1197,6 @@ function FormWizard({ open, onClose }) {
 </div>
                 </div>
               </div>
-  try {
-    const res = await apiUpsertFull();
-    const tk = _readTrackingCode();
-    if (typeof setConfirmTracking === "function") setConfirmTracking(tk);
-    if (typeof setShowConfirmModal === "function") setShowConfirmModal(false);
-    if (typeof setCanPay === "function") setCanPay(false); // pagamento fora do fluxo
-  } catch (e) {
-    console.error(e);
-    alert("Não foi possível enviar. Tente novamente.");
-    return;
-  }
-
             )}
           </div>
         </div>
@@ -1357,7 +1339,7 @@ function _scrapeFormDataStrong(){
     else if (key==="member_id"){ curr.idOrPassport = val; }
     else if (key==="member_email"){ curr.email = val; }
     else if (key==="member_address"){ curr.address = val; }
-  });
+
   if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.push(curr); }
   const obj = {};
   const setDeep = (path, value) => {
@@ -1392,13 +1374,13 @@ function _scrapeFormDataStrong(){
       if (seg === '') return;
       if (/^\d+$/.test(seg)) parts.push(Number(seg));
       else parts.push(seg);
-    });
+
     return parts;
   };
   Object.keys(flat).forEach(k => {
     const path = parseKey(k);
     setDeep(path, flat[k]);
-  });
+
   return obj;
 }
 
@@ -1468,70 +1450,12 @@ function _scanDocumentForms(){
       for (const [k, v] of fd.entries()){
         if (!out[k]) out[k] = v;
       }
-    });
+
   } catch(_){}
   return out;
 }
-/* removido (movido p/ App): function _readTrackingCode( */
-/*){
-  try { if (window.last_tracking && window.last_tracking.code) return window.last_tracking.code; } catch {}
-  try { const obj = JSON.parse(localStorage.getItem("last_tracking")||"{}"); if (obj && obj.code) return obj.code; } catch {}
-  return "";
-}
-/* removido (movido p/ App): function _collectFormSnapshot( */
-/*){
-  const src = (typeof form !== 'undefined' && form) ? form : (typeof formState !== 'undefined' ? formState : {});
-  const company = src.company || {};
-  const members = Array.isArray(src.members) ? src.members : [];
-  const accepts = { consent: !!(src.accept || src.accepts || {}).consent || !!(typeof consent!=='undefined' && consent) };
-  const faseAtual = "Recebido";
-  const subFase = "Dados coletados";
-  const dateISO = new Date().toISOString();
-  const code = (window.last_tracking && window.last_tracking.code) ? window.last_tracking.code : (function(){ try{ const x=JSON.parse(localStorage.getItem("last_tracking")||"{}"); return x.code||"";}catch(_){return ""} })();
-  return {
-    action: "upsert",
-    dateISO,
-    kashId: code,
-    company,
-    members,
-    accepts,
-    faseAtual,
-    subFase,
-    consentAt: dateISO,
-    consentTextVersion: "v2025-10-11",
-    source: "kashsolutions.us"
-  };
-}
 
-async function apiUpsertFull(){
-  const payload = _collectFormSnapshot();
-  const r = await fetch(PROCESSO_API, {
-    method: "POST",
-    mode: "cors",
-    redirect: "follow",
-    headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
-    body: JSON.stringify(payload)
-  });
-  const text = await r.text();
-  try { return JSON.parse(text); } catch { return { ok: r.ok, status: r.status, raw: text }; }
-}
 export default function App() {
-  function getKashId(){
-    try {
-      if (window.last_tracking && window.last_tracking.code) return window.last_tracking.code;
-    } catch {}
-    try {
-      const obj = JSON.parse(localStorage.getItem("last_tracking")||"{}");
-      if (obj && obj.code) return obj.code;
-    } catch {}
-    return "";
-  }
-
-  const [consent, setConsent] = React.useState(false);
-  const [sending, setSending] = React.useState(false);
-  const [confirmTracking, setConfirmTracking] = React.useState("");
-  const [canPay, setCanPay] = React.useState(false);
-
   const [showConfirmModal, setShowConfirmModal] = React.useState(false);
 
   const [open, setOpen] = useState(false);
@@ -1605,7 +1529,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
         const line = [`${idx+1}.`, st, note, ts].filter(Boolean).join(" — ");
         if (line) lines.push(line);
       } catch(_) {}
-    });
+
     lines.push("");
   }
   lines.push("— Members —");
@@ -1619,7 +1543,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
       lines.push(`${i + 1}. ${full}${role ? " – " + role : ""}${idoc ? " – " + idoc : ""}`);
       if (addr) lines.push(`   Address: ${addr}`);
       if (email) lines.push(`   Email: ${email}`);
-    });
+
   } else {
     lines.push("(none)");
   }
