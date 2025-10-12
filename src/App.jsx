@@ -109,9 +109,8 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
         (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
         (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
         ""
-
-    
-function getKashId(){
+/* removido (movido p/ App): function getKashId( */
+/*){
     try{
       var v = localStorage.getItem("last_tracking") ||
               localStorage.getItem("kashId") ||
@@ -201,7 +200,8 @@ function getKashId(){
 
     }}
   // Lê kashId do localStorage
-  function getKashId(){
+/* removido (movido p/ App): function getKashId( */
+/*){
     try{
       var v = localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "";
       return String(v).toUpperCase().trim();
@@ -1472,15 +1472,14 @@ function _scanDocumentForms(){
   } catch(_){}
   return out;
 }
-
-
-function _readTrackingCode(){
+/* removido (movido p/ App): function _readTrackingCode( */
+/*){
   try { if (window.last_tracking && window.last_tracking.code) return window.last_tracking.code; } catch {}
   try { const obj = JSON.parse(localStorage.getItem("last_tracking")||"{}"); if (obj && obj.code) return obj.code; } catch {}
   return "";
 }
-
-function _collectFormSnapshot(){
+/* removido (movido p/ App): function _collectFormSnapshot( */
+/*){
   const src = (typeof form !== 'undefined' && form) ? form : (typeof formState !== 'undefined' ? formState : {});
   const company = src.company || {};
   const members = Array.isArray(src.members) ? src.members : [];
@@ -1517,6 +1516,17 @@ async function apiUpsertFull(){
   try { return JSON.parse(text); } catch { return { ok: r.ok, status: r.status, raw: text }; }
 }
 export default function App() {
+  function getKashId(){
+    try {
+      if (window.last_tracking && window.last_tracking.code) return window.last_tracking.code;
+    } catch {}
+    try {
+      const obj = JSON.parse(localStorage.getItem("last_tracking")||"{}");
+      if (obj && obj.code) return obj.code;
+    } catch {}
+    return "";
+  }
+
   const [consent, setConsent] = React.useState(false);
   const [sending, setSending] = React.useState(false);
   const [confirmTracking, setConfirmTracking] = React.useState("");
