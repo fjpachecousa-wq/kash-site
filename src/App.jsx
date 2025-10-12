@@ -104,13 +104,12 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
     try{
       var q = function(s){ return document.querySelector(s); };
       return (
-        (q('input[name="companyName"]') && q('input[name="companyName"]').value.trim()) ||
-        (q('#companyName') && q('#companyName').value.trim()) ||
-        (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
-        (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
+        (q('[name="companyName"]') && q('[name="companyName"]').value) ||
+        (q('#companyName') && q('#companyName').value) ||
+        (q('[data-company-name]') && q('[data-company-name]').getAttribute('data-company-name')) ||
         ""
-
-    } catch (e) { return ""; }
+      ).toString().trim();
+    }catch(e){ return ""; }
   }
   function getKashId(){
     try{
@@ -118,7 +117,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
               localStorage.getItem("kashId") ||
               localStorage.getItem("tracking") || "";
       return String(v).toUpperCase().trim();
-    } catch (e) { return ""; }
+    }catch(e){ return ""; }
   }
   function addMetaObject(obj){
     obj = obj || {};
@@ -138,7 +137,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       if (k && !fd.has('hashId')) fd.set('hashId', k);
       if (c && !fd.has('companyName')) fd.set('companyName', c);
       if (c && !fd.has('empresaNome')) fd.set('empresaNome', c);
-    } catch (e) {}
+    }catch(e){}
   }
   function addMetaSearchParams(sp){
     try{
@@ -148,15 +147,13 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       if (k && !sp.has('hashId')) sp.set('hashId', k);
       if (c && !sp.has('companyName')) sp.set('companyName', c);
       if (c && !sp.has('empresaNome')) sp.set('empresaNome', c);
-    } catch (e) {}
+    }catch(e){}
   }
   function isAppsScriptUrl(u){
     try{
-      var su = (typeof window!=='undefined' && (window.SCRIPT_URL || (window.CONFIG && window.CONFIG.appsScriptUrl))) ||
-               (typeof SCRIPT_URL!=='undefined' && SCRIPT_URL) || "";
-      return (su && String(u||"").indexOf(String(su))===0) ||
-             String(u||"").indexOf("script.google.com/macros")>=0;
-    } catch (e) { return false; }
+      var su = (typeof window!=='undefined' && (window.SCRIPT_URL || window.PROCESSO_API)) || "";
+      return su && String(u||"").indexOf(String(su))===0;
+    }catch(e){ return false; }
   }
   try{
     if (typeof window!=='undefined' && !window.__kash_inline_fetch_patched){
@@ -170,7 +167,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
               try{
                 var obj = JSON.parse(body);
                 init.body = JSON.stringify(addMetaObject(obj));
-              } catch (e) {
+              }catch(e){
                 init.body = JSON.stringify(addMetaObject({ raw: body }));
               }
             } else if (typeof FormData !== "undefined" && body instanceof FormData){
@@ -179,12 +176,12 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
               addMetaSearchParams(body);
             }
           }
-        } catch (e) {}
+        }catch(e){}
         return _fetch.apply(this, arguments);
       };
       window.__kash_inline_fetch_patched = true;
     }
-  } catch (e) {}
+  }catch(e){}
 })();
 // ===== FIM KASH INLINE SHIM =====
 
@@ -200,15 +197,15 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
         (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
         (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
         ""
-
-    } catch (e) { return ""; }
+      );
+    }catch(_){ return ""; }
   }
   // Lê kashId do localStorage
   function getKashId(){
     try{
       var v = localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "";
       return String(v).toUpperCase().trim();
-    } catch (e) { return ""; }
+    }catch(_){ return ""; }
   }
   // Adiciona metadados ao JSON
   function addMeta(obj){
@@ -226,7 +223,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
     try{
       var su = (typeof window!=='undefined' && (window.SCRIPT_URL || (window.CONFIG && window.CONFIG.appsScriptUrl))) || (typeof SCRIPT_URL!=='undefined' && SCRIPT_URL) || "";
       return su && String(u||"").indexOf(String(su))===0;
-    } catch (e) { return false; }
+    }catch(_){ return false; }
   }
   // Patch do fetch (uma vez só)
   try{
@@ -239,17 +236,17 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
             try{
               var obj = JSON.parse(init.body);
               init.body = JSON.stringify(addMeta(obj));
-            } catch (e) {
+            }catch(_){
               // se não for JSON, empacota minimamente
               try{ init.body = JSON.stringify(addMeta({raw:init.body})); }catch(__){}
             }
           }
-        } catch (e) {}
+        }catch(_){}
         return _fetch.apply(this, arguments);
       };
       window.__kash_fetch_patched = true;
     }
-  } catch (e) {}
+  }catch(_){}
 })();
 // ====== FIM KASH SHIM ======
 
@@ -283,13 +280,13 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
                 if (!Object.prototype.hasOwnProperty.call(obj, "empresaNome")) obj.empresaNome = name;
                 init.body = JSON.stringify(obj);
               }
-            } catch (e) { /* corpo não-json, ignora */ }
+            }catch(_){ /* corpo não-json, ignora */ }
           }
         }
-      } catch (e) {}
+      }catch(_){}
       return __orig_fetch.apply(this, arguments);
     };
-  } catch (e) {}
+  }catch(_){}
 })();
 // ====== FIM KASH COMPANY PATCH ======
 
@@ -389,7 +386,7 @@ function KLogo({ size = 40 }) {
         <path d="M26 32l22-24h10L42 32l16 24H48L26 32z" fill="url(#g)" />
       </svg>
     </div>
-
+  );
 }
 function CTAButton({ children, variant = "primary", onClick, type = "button", disabled = false }) {
   const base = "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed";
@@ -406,7 +403,7 @@ function SectionTitle({ title, subtitle }) {
       <h3 className="text-2xl text-slate-100 font-semibold">{title}</h3>
       {subtitle && <p className="text-slate-400 text-sm mt-1">{subtitle}</p>}
     </div>
-
+  );
 }
 
 /* ================== HERO/SERVICES/PRICING ================== */
@@ -428,7 +425,7 @@ function DemoCalculator() {
         <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Economia potencial</div><div className="text-lg text-emerald-400">US$ {saved.toLocaleString()}</div></div>
       </div>
     </div>
-
+  );
 }
 function Hero({ onStart }) {
   return (
@@ -454,7 +451,7 @@ function Hero({ onStart }) {
         </div>
       </div>
     </section>
-
+  );
 }
 function Services() {
   const items = [
@@ -477,7 +474,7 @@ function Services() {
         </div>
       </div>
     </section>
-
+  );
 }
 function Pricing({ onStart }) {
   const plans = [
@@ -506,7 +503,7 @@ function Pricing({ onStart }) {
         </div>
       </div>
     </section>
-
+  );
 }
 function HowItWorks() {
   const steps = [
@@ -531,7 +528,7 @@ function HowItWorks() {
         </ol>
       </div>
     </section>
-
+  );
 }
 
 /* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
@@ -550,7 +547,7 @@ function _acceptanceClausePT(fullNameList, dateISO) {
   }
   const d = dt.toLocaleDateString();
   const t = dt.toLocaleTimeString();
-  return `ACEITE E DECLARAÇÃO: Declaro que LI E CONCORDO com todos os termos deste contrato em ${d} e ${t}.`;
+  return `ACEITE E DECLARAÇÃO: Declaro que  com todos os termos deste contrato em ${d} e ${t}.`;
 }
 function _acceptanceClauseEN(fullNameList, dateISO) {
   let dt = new Date();
@@ -733,7 +730,7 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
         <div className="text-red-400 text-xs">{errors.percent || ""}</div>
       </div>
     </div>
-
+  );
 }
 
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
@@ -771,7 +768,7 @@ function TrackingSearch() {
                     <div className="h-2 w-2 rounded-full bg-emerald-400 mt-1" />
                     <div className="text-sm text-slate-300">
                       <div className="font-medium">{u.status}</div>
-                      <div className="text-xs text-slate-400">{u.ts}{u.note ? " - " + u.note : ""}</div>
+                      <div className="text-xs text-slate-400">{u.ts}{u.note ? ` — ${u.note}` : ""}</div>
                     </div>
                   </div>
                 ))}
@@ -787,7 +784,7 @@ function TrackingSearch() {
         )}
       </div>
     </section>
-
+  );
 }
 
 /* ======= Admin + My Trackings ======= */
@@ -822,7 +819,7 @@ function MyTrackings() {
         </div>
       </div>
     </section>
-
+  );
 }
 function AdminPanel() {
   const [open, setOpen] = useState(false);
@@ -900,7 +897,7 @@ function AdminPanel() {
         )}
       </div>
     </section>
-
+  );
 }
 
 /* ======= Form Wizard ======= */
@@ -909,7 +906,7 @@ function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
-  const [agreed, setAgreed] = useState(true); // "Li e concordo"
+  const [agreed, setAgreed] = useState(true); // ""
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState(initialErrors);
 
@@ -1090,7 +1087,16 @@ function FormWizard({ open, onClose }) {
               </div>
             )}
 
-            {/* Step 2 — Revisão */}
+            {/* Step 2 — Revisão
+{/* Consentimento na conferência */}
+<div className="mt-3 p-3 border rounded bg-gray-50 text-sm">
+  <p>Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.</p>
+  <label className="mt-2 flex items-center gap-2">
+    <input type="checkbox" checked={consent} onChange={(e)=>setConsent(e.target.checked)} />
+    <span>Estou ciente e autorizo</span>
+  </label>
+</div>
+ */}
             {step === 2 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">2/2 — Revisão</h4>
@@ -1177,7 +1183,7 @@ function FormWizard({ open, onClose }) {
 
                   <label className="mt-4 flex items-center gap-2 text-sm text-slate-300">
                     <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-                    <span>Li e concordo com os termos acima.</span>
+                    <span> com os termos acima.</span>
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
@@ -1202,7 +1208,7 @@ function FormWizard({ open, onClose }) {
         </div>
       </div>
     </div>
-
+  );
 }
 
 /* ================== FOOTER & APP ================== */
@@ -1214,7 +1220,7 @@ function Footer() {
         <div className="text-slate-400 text-sm">Contato: {CONFIG.contact.email}</div>
       </div>
     </footer>
-
+  );
 }
 
 function _localDateFromISO(dateISO){
@@ -1339,7 +1345,7 @@ function _scrapeFormDataStrong(){
     else if (key==="member_id"){ curr.idOrPassport = val; }
     else if (key==="member_email"){ curr.email = val; }
     else if (key==="member_address"){ curr.address = val; }
-
+  });
   if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.push(curr); }
   const obj = {};
   const setDeep = (path, value) => {
@@ -1374,13 +1380,13 @@ function _scrapeFormDataStrong(){
       if (seg === '') return;
       if (/^\d+$/.test(seg)) parts.push(Number(seg));
       else parts.push(seg);
-
+    });
     return parts;
   };
   Object.keys(flat).forEach(k => {
     const path = parseKey(k);
     setDeep(path, flat[k]);
-
+  });
   return obj;
 }
 
@@ -1450,12 +1456,48 @@ function _scanDocumentForms(){
       for (const [k, v] of fd.entries()){
         if (!out[k]) out[k] = v;
       }
-
+    });
   } catch(_){}
   return out;
 }
 
+function _readTrackingCode(){
+  try { if (window.last_tracking && window.last_tracking.code) return window.last_tracking.code; } catch {}
+  try { const obj = JSON.parse(localStorage.getItem('last_tracking')||'{}'); if (obj && obj.code) return obj.code; } catch {}
+  return '';
+}
+
+function _collectFormSnapshot(){
+  const src = (typeof form !== 'undefined' && form) ? form : (typeof formState !== 'undefined' ? formState : {});
+  const company = src.company || {};
+  const members = Array.isArray(src.members) ? src.members : [];
+  const accepts = { consent: !!(src.accept || src.accepts || {}).consent || !!(typeof consent!=='undefined' && consent) };
+  const faseAtual = 'Recebido';
+  const subFase = 'Dados coletados';
+  const dateISO = new Date().toISOString();
+  const code = (window.last_tracking && window.last_tracking.code) ? window.last_tracking.code : (function(){ try{ const x=JSON.parse(localStorage.getItem('last_tracking')||'{}'); return x.code||'';}catch(_){return ''} })();
+  return { dateISO, kashId: code, company, members, accepts, faseAtual, subFase, source: 'kashsolutions.us', consentAt: dateISO, consentTextVersion: 'v2025-10-11' };
+}
+
+async function apiUpsertFull(){
+  const payload = _collectFormSnapshot();
+  const r = await fetch(PROCESSO_API, {
+    method: 'POST',
+    mode: 'cors',
+    redirect: 'follow',
+    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+    body: JSON.stringify({ action: 'upsert', ...payload })
+  });
+  const text = await r.text();
+  try { return JSON.parse(text); } catch { return { ok: r.ok, status: r.status, raw: text }; }
+}
+
 export default function App() {
+  const [consent, setConsent] = React.useState(false);
+  const [sending, setSending] = React.useState(false);
+  const [confirmTracking, setConfirmTracking] = React.useState("");
+  const [canPay, setCanPay] = React.useState(false);
+
   const [showConfirmModal, setShowConfirmModal] = React.useState(false);
 
   const [open, setOpen] = useState(false);
@@ -1471,7 +1513,7 @@ export default function App() {
       <Footer />
       <FormWizard open={open} onClose={() => setOpen(false)} />
     </div>
-
+  );
 }
 
 /* ===== Application Data content (for unified PDF) ===== */
@@ -1529,7 +1571,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
         const line = [`${idx+1}.`, st, note, ts].filter(Boolean).join(" — ");
         if (line) lines.push(line);
       } catch(_) {}
-
+    });
     lines.push("");
   }
   lines.push("— Members —");
@@ -1543,7 +1585,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
       lines.push(`${i + 1}. ${full}${role ? " – " + role : ""}${idoc ? " – " + idoc : ""}`);
       if (addr) lines.push(`   Address: ${addr}`);
       if (email) lines.push(`   Email: ${email}`);
-
+    });
   } else {
     lines.push("(none)");
   }
