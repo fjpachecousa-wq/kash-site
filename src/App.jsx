@@ -110,7 +110,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
         (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
         ""
 
-    }
+    
 function getKashId(){
     try{
       var v = localStorage.getItem("last_tracking") ||
