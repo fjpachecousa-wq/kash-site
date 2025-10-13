@@ -296,7 +296,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbE
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
-  checkout: { : "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
+  checkout: {}, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
 };
 // === KASH Process API (Google Apps Script) ===
@@ -1061,7 +1061,7 @@ function FormWizard({ open, onClose }) {
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">2/2 - Revisão</h4>
 
-{/* Consentimento (dark) – antes do envio */}
+{/* Consentimento (dark) - antes do envio */}
 {!confirmTracking && (
   <div className="mt-6 p-4 rounded-xl border border-slate-700 bg-slate-900/80 text-slate-200 backdrop-blur supports-[backdrop-filter]:bg-slate-900/60">
     <p className="text-sm leading-relaxed">
