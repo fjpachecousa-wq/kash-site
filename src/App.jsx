@@ -104,12 +104,13 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
     try{
       var q = function(s){ return document.querySelector(s); };
       return (
-        (q('[name="companyName"]') && q('[name="companyName"]').value) ||
-        (q('#companyName') && q('#companyName').value) ||
-        (q('[data-company-name]') && q('[data-company-name]').getAttribute('data-company-name')) ||
+        (q('input[name="companyName"]') && q('input[name="companyName"]').value.trim()) ||
+        (q('#companyName') && q('#companyName').value.trim()) ||
+        (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
+        (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
         ""
-      ).toString().trim();
-    }catch(e){ return ""; }
+
+    }catch(_){ return ""; }
   }
   function getKashId(){
     try{
@@ -117,7 +118,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
               localStorage.getItem("kashId") ||
               localStorage.getItem("tracking") || "";
       return String(v).toUpperCase().trim();
-    }catch(e){ return ""; }
+    }catch(_){ return ""; }
   }
   function addMetaObject(obj){
     obj = obj || {};
@@ -137,7 +138,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       if (k && !fd.has('hashId')) fd.set('hashId', k);
       if (c && !fd.has('companyName')) fd.set('companyName', c);
       if (c && !fd.has('empresaNome')) fd.set('empresaNome', c);
-    }catch(e){}
+    }catch(_){}
   }
   function addMetaSearchParams(sp){
     try{
@@ -147,13 +148,15 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       if (k && !sp.has('hashId')) sp.set('hashId', k);
       if (c && !sp.has('companyName')) sp.set('companyName', c);
       if (c && !sp.has('empresaNome')) sp.set('empresaNome', c);
-    }catch(e){}
+    }catch(_){}
   }
   function isAppsScriptUrl(u){
     try{
-      var su = (typeof window!=='undefined' && (window.SCRIPT_URL || window.PROCESSO_API)) || "";
-      return su && String(u||"").indexOf(String(su))===0;
-    }catch(e){ return false; }
+      var su = (typeof window!=='undefined' && (window.SCRIPT_URL || (window.CONFIG && window.CONFIG.appsScriptUrl))) ||
+               (typeof SCRIPT_URL!=='undefined' && SCRIPT_URL) || "";
+      return (su && String(u||"").indexOf(String(su))===0) ||
+             String(u||"").indexOf("script.google.com/macros")>=0;
+    }catch(_){ return false; }
   }
   try{
     if (typeof window!=='undefined' && !window.__kash_inline_fetch_patched){
@@ -167,7 +170,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
               try{
                 var obj = JSON.parse(body);
                 init.body = JSON.stringify(addMetaObject(obj));
-              }catch(e){
+              }catch(_){
                 init.body = JSON.stringify(addMetaObject({ raw: body }));
               }
             } else if (typeof FormData !== "undefined" && body instanceof FormData){
@@ -176,12 +179,12 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
               addMetaSearchParams(body);
             }
           }
-        }catch(e){}
+        }catch(_){}
         return _fetch.apply(this, arguments);
       };
       window.__kash_inline_fetch_patched = true;
     }
-  }catch(e){}
+  }catch(_){}
 })();
 // ===== FIM KASH INLINE SHIM =====
 
@@ -197,7 +200,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
         (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
         (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
         ""
-      );
+
     }catch(_){ return ""; }
   }
   // Lê kashId do localStorage
@@ -296,6 +299,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbE
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
+  checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
 };
 // === KASH Process API (Google Apps Script) ===
@@ -385,7 +389,7 @@ function KLogo({ size = 40 }) {
         <path d="M26 32l22-24h10L42 32l16 24H48L26 32z" fill="url(#g)" />
       </svg>
     </div>
-  );
+
 }
 function CTAButton({ children, variant = "primary", onClick, type = "button", disabled = false }) {
   const base = "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed";
@@ -402,7 +406,7 @@ function SectionTitle({ title, subtitle }) {
       <h3 className="text-2xl text-slate-100 font-semibold">{title}</h3>
       {subtitle && <p className="text-slate-400 text-sm mt-1">{subtitle}</p>}
     </div>
-  );
+
 }
 
 /* ================== HERO/SERVICES/PRICING ================== */
@@ -424,7 +428,7 @@ function DemoCalculator() {
         <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Economia potencial</div><div className="text-lg text-emerald-400">US$ {saved.toLocaleString()}</div></div>
       </div>
     </div>
-  );
+
 }
 function Hero({ onStart }) {
   return (
@@ -450,7 +454,7 @@ function Hero({ onStart }) {
         </div>
       </div>
     </section>
-  );
+
 }
 function Services() {
   const items = [
@@ -473,7 +477,7 @@ function Services() {
         </div>
       </div>
     </section>
-  );
+
 }
 function Pricing({ onStart }) {
   const plans = [
@@ -502,14 +506,14 @@ function Pricing({ onStart }) {
         </div>
       </div>
     </section>
-  );
+
 }
 function HowItWorks() {
   const steps = [
     { t: "Consulta", d: "Alinhamento de expectativas (opcional)." },
     { t: "Contrato e pagamento", d: "Assinatura eletrônica e checkout." },
     { t: "Formulário de abertura", d: "Dados da empresa, sócios, KYC/AML." },
-    { t: "Pagamento", d: "Fee e taxa estadual - checkout online." },
+    { t: "Pagamento", d: "Fee e taxa estadual — checkout online." },
     { t: "Tracking do processo", d: "Número de protocolo e notificações por e-mail." },
   ];
   return (
@@ -527,7 +531,7 @@ function HowItWorks() {
         </ol>
       </div>
     </section>
-  );
+
 }
 
 /* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
@@ -546,7 +550,7 @@ function _acceptanceClausePT(fullNameList, dateISO) {
   }
   const d = dt.toLocaleDateString();
   const t = dt.toLocaleTimeString();
-  return `ACEITE E DECLARAÇÃO: Declaro que  com todos os termos deste contrato em ${d} e ${t}.`;
+  return `ACEITE E DECLARAÇÃO: Declaro que LI E CONCORDO com todos os termos deste contrato em ${d} e ${t}.`;
 }
 function _acceptanceClauseEN(fullNameList, dateISO) {
   let dt = new Date();
@@ -608,7 +612,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   const enBody = "";
   const enText = (Array.isArray(enBody) ? enBody.join("\n") : String(enBody));
   const en = [
-    `SERVICE AGREEMENT - ${companyName}`,
+    `SERVICE AGREEMENT – ${companyName}`,
     "",
     enText,
     "",
@@ -629,7 +633,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   const ptBody = "";
   const ptText = (Array.isArray(ptBody) ? ptBody.join("\n") : String(ptBody));
   const pt = [
-    `CONTRATO DE PRESTAÇÃO DE SERVIÇOS - ${companyName}`,
+    `CONTRATO DE PRESTAÇÃO DE SERVIÇOS – ${companyName}`,
     "",
     ptText,
     "",
@@ -729,7 +733,7 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
         <div className="text-red-400 text-xs">{errors.percent || ""}</div>
       </div>
     </div>
-  );
+
 }
 
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
@@ -741,7 +745,7 @@ function TrackingSearch() {
   const [notFound, setNotFound] = useState(false);
   const handleLookup = async () => {
     try {
-      try { const obj = await apiGetProcesso(code.trim()); setResult({ tracking: obj.kashId, dateISO: obj.atualizadoEm, company: { companyName: obj.companyName || '-' }, updates: obj.updates || [], faseAtual: obj.faseAtual || 1, subFase: obj.subFase || null }); saveTrackingShortcut(code.trim()); setNotFound(false); return; } catch(e) { setResult(null); setNotFound(true); return; }
+      try { const obj = await apiGetProcesso(code.trim()); setResult({ tracking: obj.kashId, dateISO: obj.atualizadoEm, company: { companyName: obj.companyName || '—' }, updates: obj.updates || [], faseAtual: obj.faseAtual || 1, subFase: obj.subFase || null }); saveTrackingShortcut(code.trim()); setNotFound(false); return; } catch(e) { setResult(null); setNotFound(true); return; }
       setResult(data);
       setNotFound(false);
     } catch { setResult(null); setNotFound(true); }
@@ -758,7 +762,7 @@ function TrackingSearch() {
         {result && (
           <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-4">
             <div className="text-slate-300 font-medium">Status</div>
-            <div className="text-slate-400 text-sm mt-1">Recebido em {result.dateISO}. Empresa: {result.company?.companyName || "-"}</div>
+            <div className="text-slate-400 text-sm mt-1">Recebido em {result.dateISO}. Empresa: {result.company?.companyName || "—"}</div>
             <div className="mt-3">
               <div className="text-slate-400 text-sm mb-1">Linha do tempo:</div>
               <div className="space-y-2">
@@ -767,7 +771,7 @@ function TrackingSearch() {
                     <div className="h-2 w-2 rounded-full bg-emerald-400 mt-1" />
                     <div className="text-sm text-slate-300">
                       <div className="font-medium">{u.status}</div>
-                      <div className="text-xs text-slate-400">{u.ts}{u.note ? ` - ${u.note}` : ""}</div>
+                      <div className="text-xs text-slate-400">{u.ts}{u.note ? " - " + u.note : ""}</div>
                     </div>
                   </div>
                 ))}
@@ -783,7 +787,7 @@ function TrackingSearch() {
         )}
       </div>
     </section>
-  );
+
 }
 
 /* ======= Admin + My Trackings ======= */
@@ -801,7 +805,7 @@ function MyTrackings() {
           {list.map((e) => (
             <div key={e.code} className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 p-3">
               <div className="text-sm text-slate-300">
-                <div className="font-medium">{e.company || "-"}</div>
+                <div className="font-medium">{e.company || "—"}</div>
                 <div className="text-slate-400 text-xs">Tracking: {e.code} · {e.dateISO}</div>
               </div>
               <div className="flex gap-2">
@@ -810,7 +814,7 @@ function MyTrackings() {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
-                  alert(`Empresa: ${data.company?.companyName || "-"}\nTracking: ${data.tracking}\nData: ${data.dateISO}`);
+                  alert(`Empresa: ${data.company?.companyName || "—"}\nTracking: ${data.tracking}\nData: ${data.dateISO}`);
                 }}>Ver</CTAButton>
               </div>
             </div>
@@ -818,7 +822,7 @@ function MyTrackings() {
         </div>
       </div>
     </section>
-  );
+
 }
 function AdminPanel() {
   const [open, setOpen] = useState(false);
@@ -875,7 +879,7 @@ function AdminPanel() {
                     <div className="text-sm text-slate-300">Tracking</div>
                     <select value={selected} onChange={(e)=>setSelected(e.target.value)} className="w-full rounded bg-slate-950 px-3 py-2 text-sm text-slate-100 border border-slate-700">
                       <option value="">Selecione…</option>
-                      {list.map((e)=> <option key={e.code} value={e.code}>{e.code} - {e.company}</option>)}
+                      {list.map((e)=> <option key={e.code} value={e.code}>{e.code} — {e.company}</option>)}
                     </select>
                   </div>
                   <div>
@@ -896,7 +900,7 @@ function AdminPanel() {
         )}
       </div>
     </section>
-  );
+
 }
 
 /* ======= Form Wizard ======= */
@@ -905,7 +909,7 @@ function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
-  const [agreed, setAgreed] = useState(true); // ""
+  const [agreed, setAgreed] = useState(true); // "Li e concordo"
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState(initialErrors);
 
@@ -1016,7 +1020,7 @@ function FormWizard({ open, onClose }) {
             {/* Step 1 */}
             {step === 1 && (
               <div className="p-6">
-                <h4 className="text-slate-100 font-medium">1/2 - Dados iniciais da LLC</h4>
+                <h4 className="text-slate-100 font-medium">1/2 — Dados iniciais da LLC</h4>
                 <div className="mt-4 grid gap-4">
                   <div>
                     <label className="block text-sm text-slate-400">Nome da LLC</label>
@@ -1055,7 +1059,7 @@ function FormWizard({ open, onClose }) {
                     </div>
                   ) : (
                     <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
-                      Não possui endereço na Flórida - usaremos o <b>endereço e agente da KASH por 12 meses</b> incluídos no pacote.
+                      Não possui endereço na Flórida — usaremos o <b>endereço e agente da KASH por 12 meses</b> incluídos no pacote.
                     </div>
                   )}
                 </div>
@@ -1076,19 +1080,6 @@ function FormWizard({ open, onClose }) {
                   <label className={classNames("flex items-start gap-2", company.hasFloridaAddress && "opacity-50")}>
                     <input type="checkbox" checked={accept.limitations} disabled={company.hasFloridaAddress} onChange={(e) => toggleAccept("limitations", e.target.checked)} />
                     <span>Estou ciente de que endereço e agente da KASH são válidos por 12 meses.</span>
-<div className="mt-4 border border-slate-800 rounded-xl p-4 bg-slate-900/60">
-  <label className="flex items-start gap-3 select-none cursor-pointer">
-    <input
-      type="checkbox"
-      className="mt-1 accent-emerald-500"
-      checked={consent}
-      onChange={(e) => setConsent(e.target.checked)}
-    />
-    <span className="text-sm text-slate-300">
-      Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.
-    </span>
-  </label>
-</div>
                   </label>
                   {company.hasFloridaAddress && <div className="text-[12px] text-slate-400 -mt-2">* Indisponível porque você informou endereço próprio na Flórida.</div>}
                 </div>
@@ -1099,26 +1090,17 @@ function FormWizard({ open, onClose }) {
               </div>
             )}
 
-            {/* Step 2 - Revisão
-{/* Consentimento na conferência */}
-<div className="mt-3 p-3 border rounded bg-gray-50 text-sm">
-  <p>Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.</p>
-  <label className="mt-2 flex items-center gap-2">
-    <input type="checkbox" checked={typeof consent!=='undefined' ? consent : false} onChange={(e)=> (typeof setConsent==='function' ? setConsent(e.target.checked) : void 0)} />
-    <span>Estou ciente e autorizo</span>
-  </label>
-</div>
- */}
+            {/* Step 2 — Revisão */}
             {step === 2 && (
               <div className="p-6">
-                <h4 className="text-slate-100 font-medium">2/2 - Revisão</h4>
+                <h4 className="text-slate-100 font-medium">2/2 — Revisão</h4>
                 <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="text-slate-300 font-medium">Empresa</div>
                   <div className="mt-2 text-sm text-slate-400">
-                    <div><span className="text-slate-500">Nome: </span>{company.companyName || "-"}</div>
+                    <div><span className="text-slate-500">Nome: </span>{company.companyName || "—"}</div>
                     <div className="grid md:grid-cols-2 gap-x-6">
-                      <div><span className="text-slate-500">E-mail: </span>{company.email || "-"}</div>
-                      <div><span className="text-slate-500">Telefone: </span>{company.phone || "-"}</div>
+                      <div><span className="text-slate-500">E-mail: </span>{company.email || "—"}</div>
+                      <div><span className="text-slate-500">Telefone: </span>{company.phone || "—"}</div>
                     </div>
                     {company.hasFloridaAddress ? (
                       <div className="mt-1">
@@ -1136,15 +1118,15 @@ function FormWizard({ open, onClose }) {
                   <div className="mt-2 space-y-3 text-sm text-slate-400">
                     {members.map((m, i) => (
                       <div key={i}>
-                        <div className="font-medium text-slate-300">Sócio {i + 1}: {m.fullName || "-"}</div>
+                        <div className="font-medium text-slate-300">Sócio {i + 1}: {m.fullName || "—"}</div>
                         <div className="grid md:grid-cols-2 gap-x-6 gap-y-1">
-                          <div><span className="text-slate-500">E-mail: </span>{m.email || "-"}</div>
-                          <div><span className="text-slate-500">Telefone: </span>{m.phone || "-"}</div>
-                          <div><span className="text-slate-500">Documento: </span>{m.passport || "-"}</div>
-                          <div><span className="text-slate-500">Órgão emissor: </span>{m.issuer || "-"}</div>
-                          <div><span className="text-slate-500">Validade doc.: </span>{m.docExpiry || "-"}</div>
-                          <div><span className="text-slate-500">Nascimento: </span>{m.birthdate || "-"}</div>
-                          <div><span className="text-slate-500">Participação: </span>{m.percent || "-"}%</div>
+                          <div><span className="text-slate-500">E-mail: </span>{m.email || "—"}</div>
+                          <div><span className="text-slate-500">Telefone: </span>{m.phone || "—"}</div>
+                          <div><span className="text-slate-500">Documento: </span>{m.passport || "—"}</div>
+                          <div><span className="text-slate-500">Órgão emissor: </span>{m.issuer || "—"}</div>
+                          <div><span className="text-slate-500">Validade doc.: </span>{m.docExpiry || "—"}</div>
+                          <div><span className="text-slate-500">Nascimento: </span>{m.birthdate || "—"}</div>
+                          <div><span className="text-slate-500">Participação: </span>{m.percent || "—"}%</div>
                         </div>
                       </div>
                     ))}
@@ -1153,12 +1135,12 @@ function FormWizard({ open, onClose }) {
 
                 <div className="mt-6 flex justify-end gap-3">
                   <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
-                  <CTAButton disabled={!consent || sending} onClick={handleSubmit}>
+                  <CTAButton onClick={handleSubmit}>{loading ? "Enviando..." : "Enviar"}</CTAButton>
                 </div>
               </div>
             )}
 
-            {/* Step 3 - Tracking + Contrato (EN + PT na mesma tela) */}
+            {/* Step 3 — Tracking + Contrato (EN + PT na mesma tela) */}
             {step === 3 && (
               <div className="p-6">
                 <div className="text-center">
@@ -1176,14 +1158,14 @@ function FormWizard({ open, onClose }) {
                   {/* EN + PT in the same view */}
                   <div className="mt-4 text-[13px] leading-6 text-slate-200 space-y-6 max-h-[55vh] overflow-auto pr-2">
                     <div>
-                      <div className="font-semibold text-slate-100">SERVICE AGREEMENT - KASH Corporate Solutions</div>
+                      <div className="font-semibold text-slate-100">SERVICE AGREEMENT – KASH Corporate Solutions</div>
                       <div className="mt-2 space-y-2 text-slate-300">
                         {null}
                       </div>
                     </div>
-                    <div className="text-slate-400">- Portuguese Version Below -</div>
+                    <div className="text-slate-400">— Portuguese Version Below —</div>
                     <div>
-                      <div className="font-semibold text-slate-100">CONTRATO - KASH Corporate Solutions</div>
+                      <div className="font-semibold text-slate-100">CONTRATO — KASH Corporate Solutions</div>
                       <div className="mt-2 space-y-2 text-slate-300">
                         {null}
                       </div>
@@ -1195,7 +1177,7 @@ function FormWizard({ open, onClose }) {
 
                   <label className="mt-4 flex items-center gap-2 text-sm text-slate-300">
                     <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-                    <span> com os termos acima.</span>
+                    <span>Li e concordo com os termos acima.</span>
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
@@ -1220,7 +1202,7 @@ function FormWizard({ open, onClose }) {
         </div>
       </div>
     </div>
-  );
+
 }
 
 /* ================== FOOTER & APP ================== */
@@ -1228,11 +1210,11 @@ function Footer() {
   return (
     <footer className="py-10 border-t border-slate-800">
       <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="text-slate-400 text-sm">© {new Date().getFullYear()} KASH Solutions - {CONFIG.brand.legal}</div>
+        <div className="text-slate-400 text-sm">© {new Date().getFullYear()} KASH Solutions — {CONFIG.brand.legal}</div>
         <div className="text-slate-400 text-sm">Contato: {CONFIG.contact.email}</div>
       </div>
     </footer>
-  );
+
 }
 
 function _localDateFromISO(dateISO){
@@ -1357,7 +1339,7 @@ function _scrapeFormDataStrong(){
     else if (key==="member_id"){ curr.idOrPassport = val; }
     else if (key==="member_email"){ curr.email = val; }
     else if (key==="member_address"){ curr.address = val; }
-  });
+
   if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.push(curr); }
   const obj = {};
   const setDeep = (path, value) => {
@@ -1392,13 +1374,13 @@ function _scrapeFormDataStrong(){
       if (seg === '') return;
       if (/^\d+$/.test(seg)) parts.push(Number(seg));
       else parts.push(seg);
-    });
+
     return parts;
   };
   Object.keys(flat).forEach(k => {
     const path = parseKey(k);
     setDeep(path, flat[k]);
-  });
+
   return obj;
 }
 
@@ -1468,48 +1450,12 @@ function _scanDocumentForms(){
       for (const [k, v] of fd.entries()){
         if (!out[k]) out[k] = v;
       }
-    });
+
   } catch(_){}
   return out;
 }
 
-function _readTrackingCode(){
-  try { if (window.last_tracking && window.last_tracking.code) return window.last_tracking.code; } catch {}
-  try { const obj = JSON.parse(localStorage.getItem('last_tracking')||'{}'); if (obj && obj.code) return obj.code; } catch {}
-  return '';
-}
-
-function _collectFormSnapshot(){
-  const src = (typeof form !== 'undefined' && form) ? form : (typeof formState !== 'undefined' ? formState : {});
-  const company = src.company || {};
-  const members = Array.isArray(src.members) ? src.members : [];
-  const accepts = { consent: !!(src.accept || src.accepts || {}).consent || !!(typeof consent!=='undefined' && consent) };
-  const faseAtual = 'Recebido';
-  const subFase = 'Dados coletados';
-  const dateISO = new Date().toISOString();
-  const code = (window.last_tracking && window.last_tracking.code) ? window.last_tracking.code : (function(){ try{ const x=JSON.parse(localStorage.getItem('last_tracking')||'{}'); return x.code||'';}catch(_){return ''} })();
-  return { dateISO, kashId: code, company, members, accepts, faseAtual, subFase, source: 'kashsolutions.us', consentAt: dateISO, consentTextVersion: 'v2025-10-11' };
-}
-
-async function apiUpsertFull(){
-  const payload = _collectFormSnapshot();
-  const r = await fetch(PROCESSO_API, {
-    method: 'POST',
-    mode: 'cors',
-    redirect: 'follow',
-    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
-    body: JSON.stringify({ action: 'upsert', ...payload })
-  });
-  const text = await r.text();
-  try { return JSON.parse(text); } catch { return { ok: r.ok, status: r.status, raw: text }; }
-}
-
 export default function App() {
-  const [consent, setConsent] = React.useState(false);
-  const [sending, setSending] = React.useState(false);
-  const [confirmTracking, setConfirmTracking] = React.useState("");
-  const [canPay, setCanPay] = React.useState(false);
-
   const [showConfirmModal, setShowConfirmModal] = React.useState(false);
 
   const [open, setOpen] = useState(false);
@@ -1525,7 +1471,7 @@ export default function App() {
       <Footer />
       <FormWizard open={open} onClose={() => setOpen(false)} />
     </div>
-  );
+
 }
 
 /* ===== Application Data content (for unified PDF) ===== */
@@ -1548,7 +1494,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
   lines.push(`Tracking: ${tracking || ""}`);
   lines.push(`Date/Time: ${when}`);
   lines.push("");
-  lines.push("- Company -");
+  lines.push("— Company —");
   lines.push(`Legal Name: ${safe(company.companyName)}`);
   if (company.companyAltName) lines.push(`Alt/DBA: ${safe(company.companyAltName)}`);
   if (company.hasFloridaAddress !== undefined) lines.push(`Has Florida Address: ${company.hasFloridaAddress ? "Yes" : "No"}`);
@@ -1565,28 +1511,28 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
     if (cityLine) lines.push(`US City/State/ZIP: ${cityLine}`);
   }
   lines.push("");
-  lines.push("- Consents / Declarations -");
+  lines.push("— Consents / Declarations —");
   if (typeof flags==="object" && flags) {
     if (typeof flags.limitations!=="undefined") lines.push(`Limitations: ${String(flags.limitations)}`);
     if (typeof flags.responsibility!=="undefined") lines.push(`Responsibility: ${String(flags.responsibility)}`);
     if (typeof flags.agreed!=="undefined") lines.push(`Agreed: ${String(flags.agreed)}`);
   }
   lines.push("");
-  if (source) { lines.push("- Source -"); lines.push(String(source)); lines.push(""); }
+  if (source) { lines.push("— Source —"); lines.push(String(source)); lines.push(""); }
   if (Array.isArray(updates) && updates.length) {
-    lines.push("- Updates -");
+    lines.push("— Updates —");
     updates.forEach((u, idx)=>{
       try {
         const note = (u && (u.note||u.message||u.msg)) ? String(u.note||u.message||u.msg) : "";
         const st = (u && u.status) ? String(u.status) : "";
         const ts = (u && (u.ts||u.date)) ? String(u.ts||u.date) : "";
-        const line = [`${idx+1}.`, st, note, ts].filter(Boolean).join(" - ");
+        const line = [`${idx+1}.`, st, note, ts].filter(Boolean).join(" — ");
         if (line) lines.push(line);
       } catch(_) {}
-    });
+
     lines.push("");
   }
-  lines.push("- Members -");
+  lines.push("— Members —");
   if (Array.isArray(members) && members.length) {
     members.forEach((m, i) => {
       const full = safe(m.fullName || m.name);
@@ -1594,10 +1540,10 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
       const idoc = safe(m.idOrPassport || m.document);
       const addr = safe(m.address || m.addressLine);
       const email = safe(m.email);
-      lines.push(`${i + 1}. ${full}${role ? " - " + role : ""}${idoc ? " - " + idoc : ""}`);
+      lines.push(`${i + 1}. ${full}${role ? " – " + role : ""}${idoc ? " – " + idoc : ""}`);
       if (addr) lines.push(`   Address: ${addr}`);
       if (email) lines.push(`   Email: ${email}`);
-    });
+
   } else {
     lines.push("(none)");
   }
