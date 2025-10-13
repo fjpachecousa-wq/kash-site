@@ -6,7 +6,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   window.__KASH_WIRE__ = true;
 
   // URL publicada do Apps Script
-  window.CONFIG = window.CONFIG || | {};
+  window.CONFIG = window.CONFIG || {};
   window.CONFIG.appsScriptUrl = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
   const getAPI = () => (window.CONFIG && window.CONFIG.appsScriptUrl) || "";
@@ -918,47 +918,35 @@ function FormWizard({ open, onClose }) {
   }
 
   async function handleSubmit() {
-    if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
-    setLoading(true);
-    const code = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
-    setTracking(code);
-    const dateISO = todayISO();
-
-    const payload = {
-      tracking: code,
-      dateISO,
-      consent: true,
-      company: form.company,
-      members: form.members,
-      accepts: form.accept,
-      contractEN: "",
-      contractPT: "",
-      updates: [{ ts: dateISO, status: "Formulário recebido", note: "Dados enviados e contrato disponível." }],
-      source: "kashsolutions.us",
-    };
-
-    try {
-      // Salva localmente
-      localStorage.setItem(code, JSON.stringify(payload));
-
-      // index de trackings (últimos 50)
-      try {
-        const idxRaw = localStorage.getItem("KASH_TRACKINGS");
-        const idx = idxRaw ? JSON.parse(idxRaw) : [];
-        const entry = { code, dateISO, company: form.company.companyName };
-        const filtered = idx.filter(e => e.code !== code);
-        filtered.unshift(entry);
-        try { await apiUpdate({ kashId: selected, faseAtual: Number(faseAtual)||2, subFase: subFase||null, status, note }); } catch(e) { console.warn("API update falhou", e); }
-      } catch {}
-
-      try { saveTrackingShortcut(code); await apiUpsert({ kashId: code, companyName: form.company.companyName, atualizadoEm: dateISO }); await apiUpdate({ kashId: code, faseAtual: 1, subFase: null, status: 'Formulário recebido', note: 'Contrato criado' }); } catch(e) { console.warn('API falhou', e); }
-
-      
-    } catch {}
-
-    setLoading(false);
-    setStep(3);
+try{
+  setSending(true);
+  const kashId = (typeof getKashId === 'function') ? getKashId() : (window.localStorage && window.localStorage.getItem('kashId')) || "";
+  const formCompany = (form && form.company) ? form.company : (typeof getCompany === 'function' ? getCompany() : {});
+  const formMembers = (form && Array.isArray(form.members)) ? form.members : (typeof getMembers === 'function' ? getMembers() : []);
+  if (!consent) throw new Error("Consentimento obrigatório não marcado");
+  await apiUpsertFull({
+    kashId,
+    company: formCompany,
+    members: formMembers,
+    consent: consent,
+    faseAtual: "Recebido",
+    subFase: "Dados coletados"
+  });
+  if (typeof _readTrackingCode === 'function'){
+    const tk = _readTrackingCode();
+    if (tk) setConfirmTracking(tk);
   }
+  setShowConfirmModal(false);
+  // abrir modal final de sucesso se existir
+  if (typeof setShowSuccessModal === 'function') setShowSuccessModal(true);
+}catch(err){
+  console.error(err);
+  alert("Falha ao enviar os dados. " + (err && err.message ? err.message : ""));
+}finally{
+  setSending(false);
+}
+return;
+}
 
   const { company, members, accept } = form;
   const dateISO = todayISO();
@@ -974,7 +962,7 @@ function FormWizard({ open, onClose }) {
               <button className="text-slate-400 hover:text-slate-200" onClick={onClose}>Fechar</button>
             </div>
 
-            {/* Step 1 */}
+            {/*  Step 1 
             {step === 1 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">1/2 - Dados iniciais da LLC</h4>
@@ -1047,7 +1035,7 @@ function FormWizard({ open, onClose }) {
               </div>
             )}
 
-            {/* Step 2 - Revisão */}
+            {/*  Step 2 - Revisão 
             {step === 2 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">2/2 - Revisão</h4>
@@ -1097,8 +1085,7 @@ function FormWizard({ open, onClose }) {
               </div>
             )}
 
-            {/* Step 3 - Tracking + Contrato (EN + PT na mesma tela) */}
-            {step === 3 && (
+            
               <div className="p-6">
                 <div className="text-center">
                   <h4 className="text-slate-100 font-medium">Dados enviados com sucesso</h4>
@@ -1112,7 +1099,7 @@ function FormWizard({ open, onClose }) {
                     
                   </div>
 
-                  {/* EN + PT in the same view */}
+                  {/*  EN + PT in the same view 
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
     <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
@@ -1415,6 +1402,9 @@ async function apiUpsertFull({ kashId, company, members, consent }){
   return text;
 }
 export default function App() {
+  const [confirmTracking , setConfirmtracking] = React.useState("");
+  const [showConfirmModal , setShowconfirmmodal] = React.useState(false);
+  const [sending , setSending] = React.useState(false);
   const [showConfirmModal, setShowConfirmModal] = React.useState(false);
 
   const [open, setOpen] = useState(false);
