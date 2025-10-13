@@ -1,239 +1,216 @@
-// src/App.jsx
-import React, { useEffect, useMemo, useReducer, useState } from "react";
+import React, { useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 /**
- * KASH Solutions - Single file App.jsx
- * - Coleta de consentimento no modal de conferência (antes do envio)
- * - Removido "Li e Concordo" na tela de tracking
- * - Envio completo (company + members) para Google Sheets (Apps Script)
- * - Sem pagamento/contrato neste fluxo
- * - Geração e exibição do Tracking Number ao final
+ * App.jsx — página completa (único arquivo) com:
+ * - Landing/resumo de serviços (sem botões de compra)
+ * - Formulário de aplicação (empresa + membros)
+ * - Modal de conferência com consentimento obrigatório
+ * - Envio completo (company + members + consent) para Google Apps Script
+ * - Tela/Modal final apenas com Tracking e mensagem de sucesso
+ *
+ * Importante:
+ * - Nenhuma referência a contratos PT/EN ou Formspree.
+ * - Nenhum CTA de pagamento nesta etapa.
+ * - Evita caracteres Unicode problemáticos em template literals.
+ * - Tag JSX sempre balanceada. Sem "try" perdido dentro de JSX.
  */
 
 /* =========================
-   Configurações do Site
+   CONFIG / CONSTANTES
    ========================= */
+if (typeof window !== "undefined") {
+  window.CONFIG = window.CONFIG || {};
+  // URL publicada do Apps Script (ajuste apenas se necessário):
+  if (!window.CONFIG.appsScriptUrl) {
+    window.CONFIG.appsScriptUrl =
+      "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
+  }
+}
+
+const PROCESSO_API =
+  (typeof window !== "undefined" && window.CONFIG?.appsScriptUrl) || "";
+
 const CONFIG = {
-  brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
-  contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" },
-  // URL pública do Apps Script
-  appsScriptUrl:
-    "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec",
+  company: {
+    legal: "KASH CORPORATE SOLUTIONS LLC",
+    trade: "KASH Solutions",
+  },
+  contact: {
+    email: "contato@kashsolutions.us",
+    calendly: "",
+    whatsapp: "",
+  },
+  prices: {
+    llc: "US$ 1,360",
+    flow30: "US$ 300",
+    scale5: "US$ 1,000",
+  },
 };
 
 /* =========================
-   Utilitários de Tracking
+   UTIL: STORAGE / TRACKING
    ========================= */
-function _rand4() {
-  return Math.floor((1 + Math.random()) * 0x10000)
-    .toString(16)
-    .substring(1)
-    .toUpperCase();
-}
-function _genTracking() {
-  // Ex: KASH-2025-AB12-CD34
-  const now = new Date();
-  const y = now.getFullYear();
-  return `KASH-${y}-${_rand4()}-${_rand4()}`;
-}
-function _readTrackingCode() {
+function readState() {
   try {
-    const v = localStorage.getItem("kash_tracking");
-    return v || "";
-  } catch {
-    return "";
+    const raw = localStorage.getItem("kashState");
+    return raw ? JSON.parse(raw) : {};
+  } catch (_) {
+    return {};
   }
 }
-function _saveTrackingCode(code) {
+function writeState(obj) {
   try {
-    localStorage.setItem("kash_tracking", code || "");
-  } catch {
-    /* noop */
-  }
+    localStorage.setItem("kashState", JSON.stringify(obj || {}));
+  } catch (_) {}
 }
 
-/* =========================
-   Utilitários de KashId
-   ========================= */
 function getKashId() {
   try {
-    return localStorage.getItem("kash_id") || "";
-  } catch {
+    const st = readState();
+    return st?.kashId || "";
+  } catch (_) {
     return "";
   }
 }
-function setKashId(v) {
-  try {
-    localStorage.setItem("kash_id", v);
-  } catch {
-    /* noop */
-  }
+function setKashId(kashId) {
+  const curr = readState();
+  curr.kashId = kashId;
+  writeState(curr);
 }
-function getOrCreateKashId() {
-  let id = getKashId();
-  if (!id) {
-    id = _genTracking(); // usa o mesmo formato para simplificar
-    setKashId(id);
-  }
-  return id;
+
+function generateKashId() {
+  // Exemplo: KASH-20251013-1530-ABC123
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const ymd =
+    d.getFullYear().toString() +
+    pad(d.getMonth() + 1) +
+    pad(d.getDate()) +
+    "-" +
+    pad(d.getHours()) +
+    pad(d.getMinutes());
+  const rnd = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `KASH-${ymd}-${rnd}`;
 }
 
 /* =========================
-   Form State (empresa + membros)
+   UTIL: FORM NORMALIZATION
    ========================= */
-const initialForm = {
-  company: {
+function trimStr(v) {
+  return typeof v === "string" ? v.trim() : v;
+}
+function normalizeCompany(c) {
+  const base = {
     companyName: "",
+    ein: "",
+    state: "",
     email: "",
     phone: "",
-    einOrItin: "",
     usAddress: {
       street: "",
-      number: "",
-      complement: "",
       city: "",
       state: "",
       zip: "",
     },
-    activityDescription: "",
+    intlAddress: "",
+    website: "",
+    notes: "",
+  };
+  const out = { ...base, ...(c || {}) };
+  out.companyName = trimStr(out.companyName);
+  out.ein = trimStr(out.ein);
+  out.state = trimStr(out.state);
+  out.email = trimStr(out.email);
+  out.phone = trimStr(out.phone);
+  if (out.usAddress && typeof out.usAddress === "object") {
+    out.usAddress = {
+      street: trimStr(out.usAddress.street),
+      city: trimStr(out.usAddress.city),
+      state: trimStr(out.usAddress.state),
+      zip: trimStr(out.usAddress.zip),
+    };
+  } else {
+    out.usAddress = { street: "", city: "", state: "", zip: "" };
+  }
+  out.intlAddress = trimStr(out.intlAddress);
+  out.website = trimStr(out.website);
+  out.notes = trimStr(out.notes);
+  return out;
+}
+function normalizeMember(m) {
+  const base = {
+    fullName: "",
+    email: "",
+    role: "",
+    phone: "",
+    idOrPassport: "",
+    address: "",
+  };
+  const v = { ...base, ...(m || {}) };
+  v.fullName = trimStr(v.fullName);
+  v.email = trimStr(v.email);
+  v.role = trimStr(v.role);
+  v.phone = trimStr(v.phone);
+  v.idOrPassport = trimStr(v.idOrPassport);
+  v.address = trimStr(v.address);
+  return v;
+}
+function normalizeMembers(arr) {
+  if (!Array.isArray(arr)) return [];
+  return arr.map(normalizeMember).filter((m) => m.fullName || m.email);
+}
+
+/* =========================
+   REDUCER DO FORMULÁRIO
+   ========================= */
+const initialForm = {
+  company: {
+    companyName: "",
+    ein: "",
+    state: "",
+    email: "",
+    phone: "",
+    usAddress: { street: "", city: "", state: "", zip: "" },
+    intlAddress: "",
+    website: "",
+    notes: "",
   },
-  members: [
-    {
-      fullName: "",
-      email: "",
-      phone: "",
-      idOrPassport: "",
-      address: "",
-      role: "",
-    },
-  ],
+  members: [{ fullName: "", email: "", role: "", phone: "", idOrPassport: "", address: "" }],
 };
 
 function formReducer(state, action) {
   switch (action.type) {
-    case "SET_COMPANY_FIELD":
+    case "SET_COMPANY":
+      return { ...state, company: { ...state.company, ...action.payload } };
+    case "SET_US_ADDRESS":
       return {
         ...state,
-        company: { ...state.company, [action.field]: action.value },
-      };
-    case "SET_USADDR_FIELD":
-      return {
-        ...state,
-        company: {
-          ...state.company,
-          usAddress: { ...state.company.usAddress, [action.field]: action.value },
-        },
+        company: { ...state.company, usAddress: { ...state.company.usAddress, ...action.payload } },
       };
     case "ADD_MEMBER":
       return {
         ...state,
-        members: [
-          ...state.members,
-          {
-            fullName: "",
-            email: "",
-            phone: "",
-            idOrPassport: "",
-            address: "",
-            role: "",
-          },
-        ],
+        members: [...state.members, { fullName: "", email: "", role: "", phone: "", idOrPassport: "", address: "" }],
+      };
+    case "UPDATE_MEMBER":
+      return {
+        ...state,
+        members: state.members.map((m, i) => (i === action.index ? { ...m, ...action.payload } : m)),
       };
     case "REMOVE_MEMBER":
-      return {
-        ...state,
-        members: state.members.filter((_, idx) => idx !== action.index),
-      };
-    case "SET_MEMBER_FIELD":
-      return {
-        ...state,
-        members: state.members.map((m, idx) =>
-          idx === action.index ? { ...m, [action.field]: action.value } : m
-        ),
-      };
-    case "RESET":
-      return initialForm;
+      return { ...state, members: state.members.filter((_, i) => i !== action.index) };
+    case "HYDRATE":
+      return { ...state, ...(action.payload || {}) };
     default:
       return state;
   }
 }
 
 /* =========================
-   UI Helpers
+   API: ENVIO COMPLETO
    ========================= */
-function Section({ title, subtitle, children }) {
-  return (
-    <div className="rounded-2xl bg-slate-900/60 border border-slate-700 p-5">
-      <div className="mb-4">
-        <h2 className="text-xl font-semibold text-white">{title}</h2>
-        {subtitle && <p className="text-slate-400 text-sm mt-1">{subtitle}</p>}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Field({ label, children }) {
-  return (
-    <label className="block mb-3">
-      <div className="text-sm text-slate-300 mb-1">{label}</div>
-      {children}
-    </label>
-  );
-}
-
-function Input(props) {
-  return (
-    <input
-      {...props}
-      className={
-        "w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 " +
-        (props.className || "")
-      }
-    />
-  );
-}
-
-function TextArea(props) {
-  return (
-    <textarea
-      {...props}
-      className={
-        "w-full min-h-[90px] rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-slate-100 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-emerald-500 " +
-        (props.className || "")
-      }
-    />
-  );
-}
-
-function CTAButton({ children, variant = "primary", ...rest }) {
-  const base =
-    "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition";
-  const map = {
-    primary:
-      base +
-      " bg-emerald-500 text-emerald-950 hover:bg-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed",
-    ghost:
-      base +
-      " bg-slate-800 text-slate-100 border border-slate-700 hover:bg-slate-700/70",
-  };
-  return (
-    <button {...rest} className={map[variant]}>
-      {children}
-    </button>
-  );
-}
-
-/* =========================
-   API - Envio Completo
-   ========================= */
-async function apiUpsertFull({
-  kashId,
-  company,
-  members,
-  consent,
-  source = "kashsolutions.us",
-}) {
+async function apiUpsertFull({ kashId, company, members, consent }) {
+  if (!PROCESSO_API) throw new Error("Apps Script URL ausente.");
   const payload = {
     action: "upsert",
     kashId,
@@ -244,43 +221,67 @@ async function apiUpsertFull({
     subFase: "Dados coletados",
     consentAt: new Date().toISOString(),
     consentTextVersion: "v2025-10-11",
-    source,
+    source: "kashsolutions.us",
   };
-
-  const res = await fetch(CONFIG.appsScriptUrl, {
+  const r = await fetch(PROCESSO_API, {
     method: "POST",
     redirect: "follow",
-    headers: { "Content-Type": "application/json", "X-Requested-With": "fetch" },
+    headers: {
+      "Content-Type": "application/json",
+      "X-Requested-With": "fetch",
+    },
     body: JSON.stringify(payload),
   });
-
-  const text = await res.text();
-  // Apps Script normalmente retorna texto. Tentamos JSON, mas caímos em texto puro se falhar.
+  const text = await r.text();
+  // Tenta JSON, mas aceita texto simples
   try {
-    const json = JSON.parse(text);
-    return { ok: res.ok, status: res.status, data: json, raw: text };
-  } catch {
-    return { ok: res.ok, status: res.status, data: null, raw: text };
+    const js = JSON.parse(text);
+    return { ok: r.ok, data: js };
+  } catch (_) {
+    return { ok: r.ok, data: text };
   }
 }
 
 /* =========================
-   Modal Genérico
+   COMPONENTES BÁSICOS
    ========================= */
-function Modal({ open, onClose, children, maxWidth = "max-w-2xl" }) {
+function Section({ id, title, subtitle, children }) {
+  return (
+    <section id={id} className="py-12">
+      <div className="mx-auto max-w-5xl px-4">
+        <div className="mb-6">
+          <h2 className="text-2xl font-semibold text-slate-100">{title}</h2>
+          {subtitle && <p className="text-slate-400 text-sm mt-1">{subtitle}</p>}
+        </div>
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function Card({ children }) {
+  return <div className="rounded-xl border border-slate-700/60 bg-slate-800/40 p-4">{children}</div>;
+}
+
+function Field({ label, children }) {
+  return (
+    <label className="block text-sm mb-4">
+      <span className="text-slate-300">{label}</span>
+      <div className="mt-1">{children}</div>
+    </label>
+  );
+}
+
+/* =========================
+   MODAL
+   ========================= */
+function Modal({ open, onClose, children }) {
   if (!open) return null;
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      aria-modal="true"
-      role="dialog"
-    >
-      <div
-        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
-      />
-      <div className={`relative w-full ${maxWidth}`}>
-        <div className="rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50">
+      <div className="absolute inset-0 bg-black/70" onClick={onClose} />
+      <div className="absolute inset-0 flex items-center justify-center p-4">
+        <div className="w-full max-w-2xl rounded-xl bg-slate-900 border border-slate-700 shadow-xl">
           {children}
         </div>
       </div>
@@ -289,270 +290,208 @@ function Modal({ open, onClose, children, maxWidth = "max-w-2xl" }) {
 }
 
 /* =========================
-   App
+   APP
    ========================= */
 export default function App() {
   const [form, dispatch] = useReducer(formReducer, initialForm);
-
-  // Etapas
-  const [step, setStep] = useState(1);
-
-  // Modal de conferência e envio
-  const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [consent, setConsent] = useState(false);
   const [sending, setSending] = useState(false);
-
-  // Modal final (tracking)
-  const [showDoneModal, setShowDoneModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [confirmTracking, setConfirmTracking] = useState("");
 
-  // Carrega tracking existente (se houver)
+  // Hidrata a partir do localStorage (se existir)
   useEffect(() => {
-    const t = _readTrackingCode();
-    if (t) setConfirmTracking(t);
+    try {
+      const st = readState();
+      if (st?.form) dispatch({ type: "HYDRATE", payload: st.form });
+    } catch (_) {}
   }, []);
 
-  const membersSafe = Array.isArray(form.members) ? form.members : [];
-  const companySafe = useMemo(() => form.company || initialForm.company, [form]);
+  // Persiste rascunho
+  useEffect(() => {
+    const curr = readState();
+    curr.form = form;
+    writeState(curr);
+  }, [form]);
 
-  // Campos "prontos" para envio
-  const normalized = useMemo(
-    () => ({
-      company: {
-        companyName: (companySafe.companyName || "").trim(),
-        email: (companySafe.email || "").trim(),
-        phone: (companySafe.phone || "").trim(),
-        einOrItin: (companySafe.einOrItin || "").trim(),
-        usAddress: {
-          street: (companySafe.usAddress?.street || "").trim(),
-          number: (companySafe.usAddress?.number || "").trim(),
-          complement: (companySafe.usAddress?.complement || "").trim(),
-          city: (companySafe.usAddress?.city || "").trim(),
-          state: (companySafe.usAddress?.state || "").trim(),
-          zip: (companySafe.usAddress?.zip || "").trim(),
-        },
-        activityDescription: (companySafe.activityDescription || "").trim(),
-      },
-      members: membersSafe.map((m) => ({
-        fullName: (m.fullName || "").trim(),
-        email: (m.email || "").trim(),
-        phone: (m.phone || "").trim(),
-        idOrPassport: (m.idOrPassport || "").trim(),
-        address: (m.address || "").trim(),
-        role: (m.role || "").trim(),
-      })),
-    }),
-    [companySafe, membersSafe]
-  );
+  // Certifica que existe um kashId no início do fluxo
+  useEffect(() => {
+    const id = getKashId();
+    if (!id) {
+      const novo = generateKashId();
+      setKashId(novo);
+    }
+  }, []);
 
+  const kashId = getKashId();
+
+  // Derivados
+  const company = useMemo(() => normalizeCompany(form.company), [form.company]);
+  const members = useMemo(() => normalizeMembers(form.members), [form.members]);
+
+  /* ============
+     SUBMISSÃO
+     ============ */
   async function handleSubmit() {
-    if (!consent) return; // não envia sem consentimento
-
+    if (!consent) return;
     setSending(true);
     try {
-      const kashId = getOrCreateKashId();
-      const tracking = _genTracking(); // gera um novo tracking para esta submissão
-      _saveTrackingCode(tracking);
-
-      const r = await apiUpsertFull({
-        kashId,
-        company: normalized.company,
-        members: normalized.members,
-        consent: true,
-      });
-
-      // Se o endpoint respondeu OK, abrimos o modal final
-      if (r.ok) {
-        setConfirmTracking(tracking);
-        setShowConfirmModal(false);
-        setShowDoneModal(true);
-        setStep(3); // etapa final
-      } else {
-        alert(
-          "Não foi possível enviar sua aplicação no momento. Tente novamente mais tarde."
-        );
-      }
-    } catch (e) {
-      alert("Ocorreu um erro no envio. Verifique sua conexão e tente novamente.");
+      const res = await apiUpsertFull({ kashId, company, members, consent: true });
+      if (!res.ok) throw new Error("Falha ao enviar. Verifique o Apps Script.");
+      // Confirma tracking (pega do localStorage para consistencia)
+      const tk = getKashId();
+      setConfirmTracking(tk || kashId);
+      setShowConfirmModal(false);
+      setShowSuccessModal(true);
+    } catch (err) {
+      alert("Erro ao enviar. " + (err?.message || "Tente novamente."));
     } finally {
       setSending(false);
     }
   }
 
-  /* =========================
-     UI - Etapas
-     1) Formulário
-     2) Rever dados e consentimento (em modal)
-     3) Tracking (sucesso)
-     ========================= */
-
+  /* ============
+     UI
+     ============ */
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100">
-      {/* Header simples */}
-      <header className="border-b border-slate-800 bg-slate-950/70 backdrop-blur sticky top-0 z-40">
-        <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between">
-          <div className="text-lg font-bold">{CONFIG.brand.trade}</div>
-          <div className="text-xs text-slate-400">
-            {CONFIG.brand.legal} &middot; Florida
-          </div>
+      {/* Header */}
+      <header className="border-b border-slate-800/70 bg-slate-900/40 backdrop-blur sticky top-0 z-30">
+        <div className="mx-auto max-w-5xl px-4 py-3 flex items-center justify-between">
+          <div className="font-semibold">KASH Solutions</div>
+          <nav className="text-sm text-slate-300">
+            <a href="#servicos" className="hover:text-white mr-4">
+              Servicos
+            </a>
+            <a href="#aplicacao" className="hover:text-white">
+              Aplicacao
+            </a>
+          </nav>
         </div>
       </header>
 
-      <main className="max-w-5xl mx-auto px-4 py-10 space-y-8">
-        {/* Etapa 1: Formulário */}
-        <Section
-          title="Aplicação de abertura de empresa"
-          subtitle="Preencha os dados da empresa e dos membros."
-        >
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Field label="Nome da Empresa">
-              <Input
-                value={companySafe.companyName}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_COMPANY_FIELD",
-                    field: "companyName",
-                    value: e.target.value,
-                  })
-                }
-                placeholder="Ex.: KASH Solutions LLC"
+      {/* Hero */}
+      <Section
+        id="inicio"
+        title="Abertura e suporte corporativo nos EUA"
+        subtitle="Fluxo simples: preencha os dados, confirme e receba seu Tracking. A KASH confere e envia instrucoes por e-mail em ate 48 horas."
+      >
+        <Card>
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div>
+              <div className="font-medium">LLC Formation</div>
+              <div className="text-slate-400 text-sm">Abertura da empresa</div>
+              <div className="mt-2 text-emerald-300 text-sm">{CONFIG.prices.llc}</div>
+            </div>
+            <div>
+              <div className="font-medium">KASH Flow 30</div>
+              <div className="text-slate-400 text-sm">Orientacao inicial 30 dias</div>
+              <div className="mt-2 text-emerald-300 text-sm">{CONFIG.prices.flow30}</div>
+            </div>
+            <div>
+              <div className="font-medium">Scale 5</div>
+              <div className="text-slate-400 text-sm">Pacote aceleracao</div>
+              <div className="mt-2 text-emerald-300 text-sm">{CONFIG.prices.scale5}</div>
+            </div>
+          </div>
+        </Card>
+      </Section>
+
+      {/* Aplicação */}
+      <Section id="aplicacao" title="Aplicacao" subtitle="Preencha os dados da empresa e dos membros.">
+        <Card>
+          {/* Empresa */}
+          <div className="grid md:grid-cols-2 gap-4">
+            <Field label="Nome da empresa (Company Name)">
+              <input
+                className="w-full rounded-md bg-slate-900/60 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                value={form.company.companyName}
+                onChange={(e) => dispatch({ type: "SET_COMPANY", payload: { companyName: e.target.value } })}
               />
             </Field>
-            <Field label="E-mail principal">
-              <Input
+            <Field label="EIN (se houver)">
+              <input
+                className="w-full rounded-md bg-slate-900/60 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                value={form.company.ein}
+                onChange={(e) => dispatch({ type: "SET_COMPANY", payload: { ein: e.target.value } })}
+              />
+            </Field>
+            <Field label="Estado (State)">
+              <input
+                className="w-full rounded-md bg-slate-900/60 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                value={form.company.state}
+                onChange={(e) => dispatch({ type: "SET_COMPANY", payload: { state: e.target.value } })}
+              />
+            </Field>
+            <Field label="E-mail de contato">
+              <input
                 type="email"
-                value={companySafe.email}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_COMPANY_FIELD",
-                    field: "email",
-                    value: e.target.value,
-                  })
-                }
-                placeholder="email@empresa.com"
+                className="w-full rounded-md bg-slate-900/60 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                value={form.company.email}
+                onChange={(e) => dispatch({ type: "SET_COMPANY", payload: { email: e.target.value } })}
               />
             </Field>
-            <Field label="Telefone principal">
-              <Input
-                value={companySafe.phone}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_COMPANY_FIELD",
-                    field: "phone",
-                    value: e.target.value,
-                  })
-                }
-                placeholder="+1 (555) 000-0000"
+            <Field label="Telefone">
+              <input
+                className="w-full rounded-md bg-slate-900/60 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                value={form.company.phone}
+                onChange={(e) => dispatch({ type: "SET_COMPANY", payload: { phone: e.target.value } })}
               />
             </Field>
-            <Field label="EIN/ITIN (se houver)">
-              <Input
-                value={companySafe.einOrItin}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_COMPANY_FIELD",
-                    field: "einOrItin",
-                    value: e.target.value,
-                  })
-                }
-                placeholder="Opcional neste momento"
+            <Field label="Website (opcional)">
+              <input
+                className="w-full rounded-md bg-slate-900/60 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                value={form.company.website}
+                onChange={(e) => dispatch({ type: "SET_COMPANY", payload: { website: e.target.value } })}
               />
             </Field>
           </div>
 
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Field label="Endereço - Rua">
-              <Input
-                value={companySafe.usAddress.street}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_USADDR_FIELD",
-                    field: "street",
-                    value: e.target.value,
-                  })
-                }
-                placeholder="Street"
-              />
-            </Field>
-            <Field label="Número">
-              <Input
-                value={companySafe.usAddress.number}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_USADDR_FIELD",
-                    field: "number",
-                    value: e.target.value,
-                  })
-                }
-                placeholder="Number"
-              />
-            </Field>
-            <Field label="Complemento">
-              <Input
-                value={companySafe.usAddress.complement}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_USADDR_FIELD",
-                    field: "complement",
-                    value: e.target.value,
-                  })
-                }
-                placeholder="Apt, Suite..."
+          <div className="mt-4 grid md:grid-cols-4 gap-4">
+            <Field label="End. EUA - Rua">
+              <input
+                className="w-full rounded-md bg-slate-900/60 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                value={form.company.usAddress.street}
+                onChange={(e) => dispatch({ type: "SET_US_ADDRESS", payload: { street: e.target.value } })}
               />
             </Field>
             <Field label="Cidade">
-              <Input
-                value={companySafe.usAddress.city}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_USADDR_FIELD",
-                    field: "city",
-                    value: e.target.value,
-                  })
-                }
-                placeholder="City"
+              <input
+                className="w-full rounded-md bg-slate-900/60 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                value={form.company.usAddress.city}
+                onChange={(e) => dispatch({ type: "SET_US_ADDRESS", payload: { city: e.target.value } })}
               />
             </Field>
-            <Field label="Estado">
-              <Input
-                value={companySafe.usAddress.state}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_USADDR_FIELD",
-                    field: "state",
-                    value: e.target.value,
-                  })
-                }
-                placeholder="FL"
+            <Field label="Estado (UF)">
+              <input
+                className="w-full rounded-md bg-slate-900/60 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                value={form.company.usAddress.state}
+                onChange={(e) => dispatch({ type: "SET_US_ADDRESS", payload: { state: e.target.value } })}
               />
             </Field>
             <Field label="ZIP">
-              <Input
-                value={companySafe.usAddress.zip}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_USADDR_FIELD",
-                    field: "zip",
-                    value: e.target.value,
-                  })
-                }
-                placeholder="00000"
+              <input
+                className="w-full rounded-md bg-slate-900/60 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                value={form.company.usAddress.zip}
+                onChange={(e) => dispatch({ type: "SET_US_ADDRESS", payload: { zip: e.target.value } })}
               />
             </Field>
           </div>
 
-          <div className="mt-6">
-            <Field label="Descrição da atividade (breve)">
-              <TextArea
-                value={companySafe.activityDescription}
-                onChange={(e) =>
-                  dispatch({
-                    type: "SET_COMPANY_FIELD",
-                    field: "activityDescription",
-                    value: e.target.value,
-                  })
-                }
-                placeholder="Descreva sua atividade principal..."
+          <div className="mt-4 grid md:grid-cols-2 gap-4">
+            <Field label="Endereco internacional (opcional)">
+              <input
+                className="w-full rounded-md bg-slate-900/60 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                value={form.company.intlAddress}
+                onChange={(e) => dispatch({ type: "SET_COMPANY", payload: { intlAddress: e.target.value } })}
+              />
+            </Field>
+            <Field label="Notas (opcional)">
+              <input
+                className="w-full rounded-md bg-slate-900/60 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                value={form.company.notes}
+                onChange={(e) => dispatch({ type: "SET_COMPANY", payload: { notes: e.target.value } })}
               />
             </Field>
           </div>
@@ -560,359 +499,216 @@ export default function App() {
           {/* Membros */}
           <div className="mt-8">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-lg font-semibold">Membros</h3>
+              <div className="font-medium">Membros</div>
               <CTAButton
                 variant="ghost"
                 onClick={() => dispatch({ type: "ADD_MEMBER" })}
+                className="text-xs px-3 py-1"
               >
                 Adicionar membro
               </CTAButton>
             </div>
 
             <div className="space-y-4">
-              {membersSafe.map((m, idx) => (
-                <div
-                  key={idx}
-                  className="rounded-xl border border-slate-700 p-4 bg-slate-900/60"
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="text-sm text-slate-300">
-                      Membro #{idx + 1}
-                    </div>
-                    {membersSafe.length > 1 && (
-                      <button
-                        onClick={() =>
-                          dispatch({ type: "REMOVE_MEMBER", index: idx })
-                        }
-                        className="text-xs text-red-300 hover:text-red-200"
-                        type="button"
-                      >
-                        Remover
-                      </button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {form.members.map((m, idx) => (
+                <div key={idx} className="rounded-lg border border-slate-700/60 p-3">
+                  <div className="grid md:grid-cols-3 gap-3">
                     <Field label="Nome completo">
-                      <Input
+                      <input
+                        className="w-full rounded-md bg-slate-900/60 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
                         value={m.fullName}
                         onChange={(e) =>
-                          dispatch({
-                            type: "SET_MEMBER_FIELD",
-                            index: idx,
-                            field: "fullName",
-                            value: e.target.value,
-                          })
+                          dispatch({ type: "UPDATE_MEMBER", index: idx, payload: { fullName: e.target.value } })
                         }
-                        placeholder="Nome completo"
                       />
                     </Field>
                     <Field label="E-mail">
-                      <Input
+                      <input
                         type="email"
+                        className="w-full rounded-md bg-slate-900/60 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
                         value={m.email}
                         onChange={(e) =>
-                          dispatch({
-                            type: "SET_MEMBER_FIELD",
-                            index: idx,
-                            field: "email",
-                            value: e.target.value,
-                          })
+                          dispatch({ type: "UPDATE_MEMBER", index: idx, payload: { email: e.target.value } })
                         }
-                        placeholder="email@exemplo.com"
                       />
                     </Field>
+                    <Field label="Funcao (ex.: Owner, Manager)">
+                      <input
+                        className="w-full rounded-md bg-slate-900/60 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                        value={m.role}
+                        onChange={(e) =>
+                          dispatch({ type: "UPDATE_MEMBER", index: idx, payload: { role: e.target.value } })
+                        }
+                      />
+                    </Field>
+                  </div>
+                  <div className="grid md:grid-cols-3 gap-3 mt-3">
                     <Field label="Telefone">
-                      <Input
+                      <input
+                        className="w-full rounded-md bg-slate-900/60 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
                         value={m.phone}
                         onChange={(e) =>
-                          dispatch({
-                            type: "SET_MEMBER_FIELD",
-                            index: idx,
-                            field: "phone",
-                            value: e.target.value,
-                          })
+                          dispatch({ type: "UPDATE_MEMBER", index: idx, payload: { phone: e.target.value } })
                         }
-                        placeholder="+1 (555) 000-0000"
                       />
                     </Field>
-                    <Field label="Documento (ID/Passaporte)">
-                      <Input
+                    <Field label="ID/Passaporte">
+                      <input
+                        className="w-full rounded-md bg-slate-900/60 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
                         value={m.idOrPassport}
                         onChange={(e) =>
-                          dispatch({
-                            type: "SET_MEMBER_FIELD",
-                            index: idx,
-                            field: "idOrPassport",
-                            value: e.target.value,
-                          })
+                          dispatch({ type: "UPDATE_MEMBER", index: idx, payload: { idOrPassport: e.target.value } })
                         }
-                        placeholder="ID ou Passaporte"
+                      />
+                    </Field>
+                    <Field label="Endereco">
+                      <input
+                        className="w-full rounded-md bg-slate-900/60 border border-slate-700 px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-500"
+                        value={m.address}
+                        onChange={(e) =>
+                          dispatch({ type: "UPDATE_MEMBER", index: idx, payload: { address: e.target.value } })
+                        }
                       />
                     </Field>
                   </div>
 
-                  <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Field label="Endereço completo">
-                      <Input
-                        value={m.address}
-                        onChange={(e) =>
-                          dispatch({
-                            type: "SET_MEMBER_FIELD",
-                            index: idx,
-                            field: "address",
-                            value: e.target.value,
-                          })
-                        }
-                        placeholder="Rua, número, cidade, estado, país"
-                      />
-                    </Field>
-                    <Field label="Função (ex.: Membro, Manager)">
-                      <Input
-                        value={m.role}
-                        onChange={(e) =>
-                          dispatch({
-                            type: "SET_MEMBER_FIELD",
-                            index: idx,
-                            field: "role",
-                            value: e.target.value,
-                          })
-                        }
-                        placeholder="Role"
-                      />
-                    </Field>
-                  </div>
+                  {form.members.length > 1 && (
+                    <div className="mt-3">
+                      <CTAButton
+                        variant="ghost"
+                        className="text-xs px-3 py-1"
+                        onClick={() => dispatch({ type: "REMOVE_MEMBER", index: idx })}
+                      >
+                        Remover
+                      </CTAButton>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Ações do formulário */}
-          <div className="mt-8 flex items-center justify-end gap-3">
-            <CTAButton
-              variant="primary"
-              onClick={() => {
-                // Abre modal de conferência
-                setConsent(false);
-                setShowConfirmModal(true);
-              }}
-            >
-              Conferir e enviar
-            </CTAButton>
+          {/* CTA: abrir modal de confirmacao */}
+          <div className="mt-8 flex items-center justify-end">
+            <CTAButton onClick={() => setShowConfirmModal(true)}>Revisar e Enviar</CTAButton>
           </div>
-        </Section>
+        </Card>
+      </Section>
 
-        {/* Etapa 3: Tracking (sucesso) - aparece após envio */}
-        {step === 3 && (
-          <Section
-            title="Aplicação enviada com sucesso"
-            subtitle="Guarde seu código de acompanhamento (Tracking Number)."
-          >
-            <div className="space-y-4">
-              <div className="text-slate-300">
-                Sua aplicação foi recebida. A equipe KASH analisará as
-                informações e enviará o link de pagamento e contrato por e-mail
-                em até 48 horas.
-              </div>
-              <div className="rounded-lg border border-emerald-600 bg-emerald-500/10 p-4">
-                <div className="text-xs uppercase tracking-wide text-emerald-400">
-                  Tracking Number
-                </div>
-                <div className="text-2xl font-bold text-emerald-300 mt-1">
-                  {confirmTracking || _readTrackingCode() || "N/A"}
-                </div>
-              </div>
-            </div>
-          </Section>
-        )}
-      </main>
+      {/* Rodape simples */}
+      <footer className="py-10 border-t border-slate-800/70 mt-12">
+        <div className="mx-auto max-w-5xl px-4 text-sm text-slate-400">
+          <div>{CONFIG.company.legal} — {CONFIG.company.trade}</div>
+          <div className="mt-1">Contato: {CONFIG.contact.email}</div>
+        </div>
+      </footer>
 
-      {/* Modal de conferência + consentimento */}
-      <Modal
-        open={showConfirmModal}
-        onClose={() => {
-          if (!sending) setShowConfirmModal(false);
-        }}
-        maxWidth="max-w-3xl"
-      >
+      {/* Modal de Conferencia + Consentimento */}
+      <Modal open={showConfirmModal} onClose={() => !sending && setShowConfirmModal(false)}>
         <div className="p-5">
-          <div className="flex items-start justify-between">
-            <div>
-              <h3 className="text-lg font-semibold">Conferência dos dados</h3>
-              <p className="text-sm text-slate-400 mt-1">
-                Revise os dados abaixo. Se estiver tudo correto, marque o
-                consentimento e confirme o envio.
-              </p>
-            </div>
-            <button
-              className="text-slate-400 hover:text-white"
-              onClick={() => !sending && setShowConfirmModal(false)}
-              aria-label="Fechar"
-            >
-              ✕
-            </button>
+          <div className="text-lg font-semibold">Conferir informacoes</div>
+          <div className="text-slate-400 text-sm mt-1">
+            Revise os dados antes de enviar. Ao confirmar, seu Tracking sera exibido.
           </div>
 
-          {/* Resumo dos dados */}
-          <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="rounded-lg border border-slate-700 p-4 bg-slate-900/60">
-              <div className="text-sm font-semibold mb-3">Empresa</div>
-              <div className="space-y-1 text-sm text-slate-300">
-                <div>
-                  <span className="text-slate-400">Nome: </span>
-                  {normalized.company.companyName || "-"}
+          {/* Resumo */}
+          <div className="mt-4 space-y-3 max-h-[50vh] overflow-auto pr-1">
+            <div className="rounded-lg border border-slate-700 p-3">
+              <div className="font-medium mb-2">Empresa</div>
+              <div className="text-sm text-slate-300">
+                <div><span className="text-slate-400">Nome:</span> {company.companyName || "-"}</div>
+                <div><span className="text-slate-400">EIN:</span> {company.ein || "-"}</div>
+                <div><span className="text-slate-400">Estado:</span> {company.state || "-"}</div>
+                <div><span className="text-slate-400">E-mail:</span> {company.email || "-"}</div>
+                <div><span className="text-slate-400">Telefone:</span> {company.phone || "-"}</div>
+                <div className="mt-1">
+                  <span className="text-slate-400">Endereco EUA:</span>{" "}
+                  {[
+                    company.usAddress?.street,
+                    company.usAddress?.city,
+                    company.usAddress?.state,
+                    company.usAddress?.zip,
+                  ]
+                    .filter(Boolean)
+                    .join(", ") || "-"}
                 </div>
-                <div>
-                  <span className="text-slate-400">E-mail: </span>
-                  {normalized.company.email || "-"}
-                </div>
-                <div>
-                  <span className="text-slate-400">Telefone: </span>
-                  {normalized.company.phone || "-"}
-                </div>
-                <div>
-                  <span className="text-slate-400">EIN/ITIN: </span>
-                  {normalized.company.einOrItin || "-"}
-                </div>
-                <div className="mt-2">
-                  <div className="text-slate-400">Endereço (EUA)</div>
-                  <div>
-                    {[
-                      normalized.company.usAddress.street,
-                      normalized.company.usAddress.number,
-                      normalized.company.usAddress.complement,
-                    ]
-                      .filter(Boolean)
-                      .join(", ") || "-"}
-                  </div>
-                  <div>
-                    {[
-                      normalized.company.usAddress.city,
-                      normalized.company.usAddress.state,
-                      normalized.company.usAddress.zip,
-                    ]
-                      .filter(Boolean)
-                      .join(", ") || "-"}
-                  </div>
-                </div>
-                <div className="mt-2">
-                  <div className="text-slate-400">Atividade</div>
-                  <div>{normalized.company.activityDescription || "-"}</div>
-                </div>
+                <div><span className="text-slate-400">Endereco internacional:</span> {company.intlAddress || "-"}</div>
+                <div><span className="text-slate-400">Website:</span> {company.website || "-"}</div>
+                <div><span className="text-slate-400">Notas:</span> {company.notes || "-"}</div>
               </div>
             </div>
 
-            <div className="rounded-lg border border-slate-700 p-4 bg-slate-900/60">
-              <div className="text-sm font-semibold mb-3">Membros</div>
-              <div className="space-y-3 text-sm text-slate-300">
-                {normalized.members.length === 0 && <div>-</div>}
-                {normalized.members.map((m, i) => (
-                  <div key={i} className="pb-3 border-b border-slate-800 last:border-0">
-                    <div>
-                      <span className="text-slate-400">Nome: </span>
-                      {m.fullName || "-"}
+            <div className="rounded-lg border border-slate-700 p-3">
+              <div className="font-medium mb-2">Membros</div>
+              {members.length === 0 ? (
+                <div className="text-sm text-slate-400">Nenhum membro informado.</div>
+              ) : (
+                <div className="space-y-2">
+                  {members.map((m, i) => (
+                    <div key={i} className="text-sm text-slate-300">
+                      <div><span className="text-slate-400">Nome:</span> {m.fullName || "-"}</div>
+                      <div><span className="text-slate-400">E-mail:</span> {m.email || "-"}</div>
+                      <div><span className="text-slate-400">Funcao:</span> {m.role || "-"}</div>
+                      <div><span className="text-slate-400">Telefone:</span> {m.phone || "-"}</div>
+                      <div><span className="text-slate-400">ID/Passaporte:</span> {m.idOrPassport || "-"}</div>
+                      <div><span className="text-slate-400">Endereco:</span> {m.address || "-"}</div>
+                      {i < members.length - 1 && <div className="h-px bg-slate-700/60 my-2" />}
                     </div>
-                    <div>
-                      <span className="text-slate-400">E-mail: </span>
-                      {m.email || "-"}
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Telefone: </span>
-                      {m.phone || "-"}
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Documento: </span>
-                      {m.idOrPassport || "-"}
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Endereço: </span>
-                      {m.address || "-"}
-                    </div>
-                    <div>
-                      <span className="text-slate-400">Função: </span>
-                      {m.role || "-"}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Consentimento (logo acima do botão) */}
-          <div className="mt-5 rounded-lg border border-slate-700 p-4 bg-slate-900/60">
-            <label className="flex items-start gap-3 cursor-pointer select-none">
+          {/* Consentimento + Acoes */}
+          <div className="mt-4">
+            <label className="flex items-start gap-2 select-none">
               <input
                 type="checkbox"
+                className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-900 text-emerald-500 focus:ring-emerald-500"
                 checked={consent}
                 onChange={(e) => setConsent(e.target.checked)}
-                className="mt-1 h-4 w-4 rounded border-slate-600 bg-slate-800 text-emerald-500 focus:ring-emerald-500"
               />
-              <span className="text-sm text-slate-300 leading-relaxed">
-                Estou ciente de que as informações fornecidas serão utilizadas
-                para abertura e registro da empresa na Flórida. <br />
-                <strong className="text-slate-200">
-                  Autorizo a KASH Corporate Solutions a conferir e validar as
-                  informações fornecidas para fins de abertura e registro da
-                  empresa.
-                </strong>
+              <span className="text-sm text-slate-300">
+                Estou ciente de que as informacoes fornecidas serao utilizadas para abertura e suporte corporativo.
+                <br />
+                <span className="font-medium">
+                  Autorizo a KASH Corporate Solutions a conferir e validar as informacoes fornecidas para fins de abertura e registro da empresa.
+                </span>
               </span>
             </label>
 
-            <div className="mt-4 flex items-center justify-end gap-2">
-              <CTAButton
-                variant="ghost"
-                onClick={() => !sending && setShowConfirmModal(false)}
-              >
+            <div className="mt-4 flex items-center justify-between gap-2">
+              <CTAButton variant="ghost" onClick={() => !sending && setShowConfirmModal(false)}>
                 Voltar
               </CTAButton>
               <CTAButton disabled={!consent || sending} onClick={handleSubmit}>
-                {sending ? "Enviando..." : "Confirmar Envio"}
+                {sending ? "Enviando..." : "Confirmar envio"}
               </CTAButton>
             </div>
           </div>
         </div>
       </Modal>
 
-      {/* Modal de sucesso com Tracking (sem checkbox, sem pagamento, sem contrato) */}
-      <Modal
-        open={showDoneModal}
-        onClose={() => setShowDoneModal(false)}
-        maxWidth="max-w-lg"
-      >
-        <div className="p-6">
-          <div className="text-lg font-semibold">Aplicação enviada</div>
-          <p className="text-sm text-slate-400 mt-1">
-            Sua aplicação foi recebida. Anote o código de acompanhamento.
-          </p>
-
-          <div className="mt-4 rounded-lg border border-emerald-600 bg-emerald-500/10 p-4">
-            <div className="text-xs uppercase tracking-wide text-emerald-400">
-              Tracking Number
-            </div>
-            <div className="text-2xl font-bold text-emerald-300 mt-1">
-              {confirmTracking || _readTrackingCode() || "N/A"}
-            </div>
+      {/* Modal de Sucesso (apenas Tracking e mensagem) */}
+      <Modal open={showSuccessModal} onClose={() => setShowSuccessModal(false)}>
+        <div className="p-5">
+          <div className="text-lg font-semibold">Aplicacao recebida</div>
+          <div className="text-slate-300 mt-2">
+            Obrigado. O seu codigo de acompanhamento (Tracking) esta abaixo.
           </div>
-
-          <div className="mt-4 text-sm text-slate-300">
-            A equipe KASH analisará as informações e enviará o link de
-            pagamento e contrato por e-mail em até 48 horas.
+          <div className="mt-4 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3">
+            <div className="text-sm text-slate-300">Tracking Number</div>
+            <div className="text-xl font-mono select-all">{confirmTracking || kashId}</div>
           </div>
-
-          <div className="mt-6 flex items-center justify-end">
-            <CTAButton variant="primary" onClick={() => setShowDoneModal(false)}>
-              Fechar
-            </CTAButton>
+          <div className="text-slate-400 text-sm mt-4">
+            A equipe KASH analisara as informacoes e enviara o link de pagamento e contrato por e-mail em ate 48 horas.
+          </div>
+          <div className="mt-5 flex justify-end">
+            <CTAButton onClick={() => setShowSuccessModal(false)}>Fechar</CTAButton>
           </div>
         </div>
       </Modal>
-
-      {/* Footer simples */}
-      <footer className="mt-16 border-t border-slate-800 py-8">
-        <div className="max-w-5xl mx-auto px-4 text-xs text-slate-500">
-          {CONFIG.brand.legal} &middot; {new Date().getFullYear()}
-        </div>
-      </footer>
     </div>
   );
 }
