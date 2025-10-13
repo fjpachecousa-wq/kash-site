@@ -109,6 +109,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
         (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
         (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
         ""
+      );
 
     }catch(_){ return ""; }
   }
