@@ -1076,6 +1076,19 @@ function FormWizard({ open, onClose }) {
                   <label className={classNames("flex items-start gap-2", company.hasFloridaAddress && "opacity-50")}>
                     <input type="checkbox" checked={accept.limitations} disabled={company.hasFloridaAddress} onChange={(e) => toggleAccept("limitations", e.target.checked)} />
                     <span>Estou ciente de que endereço e agente da KASH são válidos por 12 meses.</span>
+<div className="mt-4 border border-slate-800 rounded-xl p-4 bg-slate-900/60">
+  <label className="flex items-start gap-3 select-none cursor-pointer">
+    <input
+      type="checkbox"
+      className="mt-1 accent-emerald-500"
+      checked={consent}
+      onChange={(e) => setConsent(e.target.checked)}
+    />
+    <span className="text-sm text-slate-300">
+      Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.
+    </span>
+  </label>
+</div>
                   </label>
                   {company.hasFloridaAddress && <div className="text-[12px] text-slate-400 -mt-2">* Indisponível porque você informou endereço próprio na Flórida.</div>}
                 </div>
@@ -1140,7 +1153,7 @@ function FormWizard({ open, onClose }) {
 
                 <div className="mt-6 flex justify-end gap-3">
                   <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
-                  <CTAButton disabled={!consent || loading} onClick={handleSubmit}>{loading ? "Enviando..." : "Enviar"}</CTAButton>
+                  <CTAButton disabled={!consent || sending} onClick={handleSubmit}>
                 </div>
               </div>
             )}
@@ -1184,12 +1197,6 @@ function FormWizard({ open, onClose }) {
                     <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
                     <span> com os termos acima.</span>
                   </label>
-                  <div className="mt-5 border border-slate-800 rounded-xl p-4 bg-slate-900/60">
-                    <label className="flex items-start gap-3 select-none cursor-pointer">
-                      <input type="checkbox" className="mt-1 accent-emerald-500" checked={consent} onChange={(e)=>setConsent(e.target.checked)} />
-                      <span className="text-sm text-slate-300">Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.</span>
-                    </label>
-                  </div>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
  <CTAButton onClick={() => (window.location.href = CONFIG.checkout.stripeUrl)}>
