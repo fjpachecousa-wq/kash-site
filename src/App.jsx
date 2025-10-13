@@ -103,13 +103,14 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
   function getCompanyName(){
     try{
       var q = function(s){ return document.querySelector(s); };
-      return (
+      var v = (
         (q('input[name="companyName"]') && q('input[name="companyName"]').value.trim()) ||
         (q('#companyName') && q('#companyName').value.trim()) ||
         (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
         (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
         ""
-
+      );
+      return String(v||"").trim();
     }catch(_){ return ""; }
   }
   function getKashId(){
@@ -117,38 +118,20 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       var v = localStorage.getItem("last_tracking") ||
               localStorage.getItem("kashId") ||
               localStorage.getItem("tracking") || "";
-      return String(v).toUpperCase().trim();
+      return String(v||"").toUpperCase().trim();
     }catch(_){ return ""; }
   }
   function addMetaObject(obj){
-    obj = obj || {};
-    var k = getKashId();
-    var c = getCompanyName();
-    if (k && !obj.kashId) obj.kashId = k;
-    if (k && !obj.hashId) obj.hashId = k;
-    if (c && !obj.companyName) obj.companyName = c;
-    if (c && !obj.empresaNome) obj.empresaNome = c;
-    return obj;
-  }
-  function addMetaFormData(fd){
     try{
+      obj = obj || {};
       var k = getKashId();
       var c = getCompanyName();
-      if (k && !fd.has('kashId')) fd.set('kashId', k);
-      if (k && !fd.has('hashId')) fd.set('hashId', k);
-      if (c && !fd.has('companyName')) fd.set('companyName', c);
-      if (c && !fd.has('empresaNome')) fd.set('empresaNome', c);
-    }catch(_){}
-  }
-  function addMetaSearchParams(sp){
-    try{
-      var k = getKashId();
-      var c = getCompanyName();
-      if (k && !sp.has('kashId')) sp.set('kashId', k);
-      if (k && !sp.has('hashId')) sp.set('hashId', k);
-      if (c && !sp.has('companyName')) sp.set('companyName', c);
-      if (c && !sp.has('empresaNome')) sp.set('empresaNome', c);
-    }catch(_){}
+      if (k && !obj.kashId) obj.kashId = k;
+      if (k && !obj.hashId) obj.hashId = k;
+      if (c && !obj.companyName) obj.companyName = c;
+      if (c && !obj.empresaNome) obj.empresaNome = c;
+      return obj;
+    }catch(_){ return obj || {}; }
   }
   function isAppsScriptUrl(u){
     try{
@@ -173,10 +156,9 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
               }catch(_){
                 init.body = JSON.stringify(addMetaObject({ raw: body }));
               }
-            } else if (typeof FormData !== "undefined" && body instanceof FormData){
-              addMetaFormData(body);
-            } else if (typeof URLSearchParams !== "undefined" && body instanceof URLSearchParams){
-              addMetaSearchParams(body);
+            }else if (body && typeof body === "object"){
+              init.body = JSON.stringify(addMetaObject(body));
+              init.headers = Object.assign({}, init.headers, { "Content-Type": "application/json" });
             }
           }
         }catch(_){}
@@ -186,6 +168,8 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
     }
   }catch(_){}
 })();
+// ===== /KASH INLINE SHIM =====
+
 // ===== FIM KASH INLINE SHIM =====
 
 // ====== KASH SHIM (NÃO muda layout / JSX) ======
@@ -200,7 +184,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
         (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
         (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
         ""
-
+      );
     }catch(_){ return ""; }
   }
   // Lê kashId do localStorage
@@ -389,7 +373,7 @@ function KLogo({ size = 40 }) {
         <path d="M26 32l22-24h10L42 32l16 24H48L26 32z" fill="url(#g)" />
       </svg>
     </div>
-
+  );
 }
 function CTAButton({ children, variant = "primary", onClick, type = "button", disabled = false }) {
   const base = "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed";
@@ -406,7 +390,7 @@ function SectionTitle({ title, subtitle }) {
       <h3 className="text-2xl text-slate-100 font-semibold">{title}</h3>
       {subtitle && <p className="text-slate-400 text-sm mt-1">{subtitle}</p>}
     </div>
-
+  );
 }
 
 /* ================== HERO/SERVICES/PRICING ================== */
@@ -428,7 +412,7 @@ function DemoCalculator() {
         <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Economia potencial</div><div className="text-lg text-emerald-400">US$ {saved.toLocaleString()}</div></div>
       </div>
     </div>
-
+  );
 }
 function Hero({ onStart }) {
   return (
@@ -454,7 +438,7 @@ function Hero({ onStart }) {
         </div>
       </div>
     </section>
-
+  );
 }
 function Services() {
   const items = [
@@ -477,7 +461,7 @@ function Services() {
         </div>
       </div>
     </section>
-
+  );
 }
 function Pricing({ onStart }) {
   const plans = [
@@ -506,7 +490,7 @@ function Pricing({ onStart }) {
         </div>
       </div>
     </section>
-
+  );
 }
 function HowItWorks() {
   const steps = [
@@ -531,7 +515,7 @@ function HowItWorks() {
         </ol>
       </div>
     </section>
-
+  );
 }
 
 /* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
@@ -550,7 +534,7 @@ function _acceptanceClausePT(fullNameList, dateISO) {
   }
   const d = dt.toLocaleDateString();
   const t = dt.toLocaleTimeString();
-  return `ACEITE E DECLARAÇÃO: Declaro que LI E CONCORDO com todos os termos deste contrato em ${d} e ${t}.`;
+  return `ACEITE E DECLARAÇÃO: Declaro que  com todos os termos deste contrato em ${d} e ${t}.`;
 }
 function _acceptanceClauseEN(fullNameList, dateISO) {
   let dt = new Date();
@@ -733,7 +717,7 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
         <div className="text-red-400 text-xs">{errors.percent || ""}</div>
       </div>
     </div>
-
+  );
 }
 
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
@@ -771,7 +755,7 @@ function TrackingSearch() {
                     <div className="h-2 w-2 rounded-full bg-emerald-400 mt-1" />
                     <div className="text-sm text-slate-300">
                       <div className="font-medium">{u.status}</div>
-                      <div className="text-xs text-slate-400">{u.ts}{u.note ? " - " + u.note : ""}</div>
+                      <div className="text-xs text-slate-400">{u.ts}{u.note ? ` — ${u.note}` : ""}</div>
                     </div>
                   </div>
                 ))}
@@ -787,7 +771,7 @@ function TrackingSearch() {
         )}
       </div>
     </section>
-
+  );
 }
 
 /* ======= Admin + My Trackings ======= */
@@ -822,7 +806,7 @@ function MyTrackings() {
         </div>
       </div>
     </section>
-
+  );
 }
 function AdminPanel() {
   const [open, setOpen] = useState(false);
@@ -900,7 +884,7 @@ function AdminPanel() {
         )}
       </div>
     </section>
-
+  );
 }
 
 /* ======= Form Wizard ======= */
@@ -909,7 +893,7 @@ function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
-  const [agreed, setAgreed] = useState(true); // "Li e concordo"
+  const [agreed, setAgreed] = useState(true); // ""
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState(initialErrors);
 
@@ -1090,7 +1074,16 @@ function FormWizard({ open, onClose }) {
               </div>
             )}
 
-            {/* Step 2 — Revisão */}
+            {/* Step 2 — Revisão
+{/* Consentimento na conferência */}
+<div className="mt-3 p-3 border rounded bg-gray-50 text-sm">
+  <p>Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.</p>
+  <label className="mt-2 flex items-center gap-2">
+    <input type="checkbox" checked={consent} onChange={(e)=>setConsent(e.target.checked)} />
+    <span>Estou ciente e autorizo</span>
+  </label>
+</div>
+ */}
             {step === 2 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">2/2 — Revisão</h4>
@@ -1177,7 +1170,7 @@ function FormWizard({ open, onClose }) {
 
                   <label className="mt-4 flex items-center gap-2 text-sm text-slate-300">
                     <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-                    <span>Li e concordo com os termos acima.</span>
+                    <span> com os termos acima.</span>
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
@@ -1202,7 +1195,7 @@ function FormWizard({ open, onClose }) {
         </div>
       </div>
     </div>
-
+  );
 }
 
 /* ================== FOOTER & APP ================== */
@@ -1214,7 +1207,7 @@ function Footer() {
         <div className="text-slate-400 text-sm">Contato: {CONFIG.contact.email}</div>
       </div>
     </footer>
-
+  );
 }
 
 function _localDateFromISO(dateISO){
@@ -1339,7 +1332,7 @@ function _scrapeFormDataStrong(){
     else if (key==="member_id"){ curr.idOrPassport = val; }
     else if (key==="member_email"){ curr.email = val; }
     else if (key==="member_address"){ curr.address = val; }
-
+  });
   if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.push(curr); }
   const obj = {};
   const setDeep = (path, value) => {
@@ -1374,13 +1367,13 @@ function _scrapeFormDataStrong(){
       if (seg === '') return;
       if (/^\d+$/.test(seg)) parts.push(Number(seg));
       else parts.push(seg);
-
+    });
     return parts;
   };
   Object.keys(flat).forEach(k => {
     const path = parseKey(k);
     setDeep(path, flat[k]);
-
+  });
   return obj;
 }
 
@@ -1450,12 +1443,48 @@ function _scanDocumentForms(){
       for (const [k, v] of fd.entries()){
         if (!out[k]) out[k] = v;
       }
-
+    });
   } catch(_){}
   return out;
 }
 
+function _readTrackingCode(){
+  try { if (window.last_tracking && window.last_tracking.code) return window.last_tracking.code; } catch {}
+  try { const obj = JSON.parse(localStorage.getItem('last_tracking')||'{}'); if (obj && obj.code) return obj.code; } catch {}
+  return '';
+}
+
+function _collectFormSnapshot(){
+  const src = (typeof form !== 'undefined' && form) ? form : (typeof formState !== 'undefined' ? formState : {});
+  const company = src.company || {};
+  const members = Array.isArray(src.members) ? src.members : [];
+  const accepts = { consent: !!(src.accept || src.accepts || {}).consent || !!(typeof consent!=='undefined' && consent) };
+  const faseAtual = 'Recebido';
+  const subFase = 'Dados coletados';
+  const dateISO = new Date().toISOString();
+  const code = (window.last_tracking && window.last_tracking.code) ? window.last_tracking.code : (function(){ try{ const x=JSON.parse(localStorage.getItem('last_tracking')||'{}'); return x.code||'';}catch(_){return ''} })();
+  return { dateISO, kashId: code, company, members, accepts, faseAtual, subFase, source: 'kashsolutions.us', consentAt: dateISO, consentTextVersion: 'v2025-10-11' };
+}
+
+async function apiUpsertFull(){
+  const payload = _collectFormSnapshot();
+  const r = await fetch(PROCESSO_API, {
+    method: 'POST',
+    mode: 'cors',
+    redirect: 'follow',
+    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
+    body: JSON.stringify({ action: 'upsert', ...payload })
+  });
+  const text = await r.text();
+  try { return JSON.parse(text); } catch { return { ok: r.ok, status: r.status, raw: text }; }
+}
+
 export default function App() {
+  const [consent, setConsent] = React.useState(false);
+  const [sending, setSending] = React.useState(false);
+  const [confirmTracking, setConfirmTracking] = React.useState("");
+  const [canPay, setCanPay] = React.useState(false);
+
   const [showConfirmModal, setShowConfirmModal] = React.useState(false);
 
   const [open, setOpen] = useState(false);
@@ -1471,7 +1500,7 @@ export default function App() {
       <Footer />
       <FormWizard open={open} onClose={() => setOpen(false)} />
     </div>
-
+  );
 }
 
 /* ===== Application Data content (for unified PDF) ===== */
@@ -1529,7 +1558,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
         const line = [`${idx+1}.`, st, note, ts].filter(Boolean).join(" — ");
         if (line) lines.push(line);
       } catch(_) {}
-
+    });
     lines.push("");
   }
   lines.push("— Members —");
@@ -1543,7 +1572,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
       lines.push(`${i + 1}. ${full}${role ? " – " + role : ""}${idoc ? " – " + idoc : ""}`);
       if (addr) lines.push(`   Address: ${addr}`);
       if (email) lines.push(`   Email: ${email}`);
-
+    });
   } else {
     lines.push("(none)");
   }
