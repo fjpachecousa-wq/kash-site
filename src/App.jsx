@@ -280,7 +280,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
                 if (!Object.prototype.hasOwnProperty.call(obj, "empresaNome")) obj.empresaNome = name;
                 init.body = JSON.stringify(obj);
               }
-            }catch(_){ /* corpo não-json, ignora */ }
+            }catch(_){ /* corpo não-json, ignora 
           }
         }
       }catch(_){}
@@ -296,7 +296,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbE
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
-  checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
+  checkout: { : "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
 };
 // === KASH Process API (Google Apps Script) ===
@@ -609,47 +609,7 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   const enBody = "";
   const enText = (Array.isArray(enBody) ? enBody.join("\n") : String(enBody));
   const en = [
-    `SERVICE AGREEMENT - ${companyName}`,
-    "",
-    enText,
-    "",
-    _acceptanceClauseEN(names, dateISO),
-    "",
-    "SIGNATURES",
-    _signatureBlockEN(names)
-  ].join("\n");
-  const enLines = doc.splitTextToSize(en, maxW);
-  for (const line of enLines) {
-    if (y > pageH - 60) { doc.addPage(); y = 60; }
-    doc.text(line, marginX, y);
-    y += 16;
-  }
-
-  // --- PT Contract ---
-  doc.addPage(); y = 60;
-  const ptBody = "";
-  const ptText = (Array.isArray(ptBody) ? ptBody.join("\n") : String(ptBody));
-  const pt = [
-    `CONTRATO DE PRESTAÇÃO DE SERVIÇOS - ${companyName}`,
-    "",
-    ptText,
-    "",
-    _acceptanceClausePT(names, dateISO),
-    "",
-    "ASSINATURAS",
-    _signatureBlockPT(names)
-  ].join("\n");
-  const ptLines = doc.splitTextToSize(pt, maxW);
-  for (const line of ptLines) {
-    if (y > pageH - 60) { doc.addPage(); y = 60; }
-    doc.text(line, marginX, y);
-    y += 16;
-  }
-
-  // Footer (local date/time + tracking + page numbers)
-  const dt = _localDateFromISO(dateISO);
-  const pageCount = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
+    `<= pageCount; i++) {
     doc.setPage(i);
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
@@ -1014,7 +974,7 @@ function FormWizard({ open, onClose }) {
               <button className="text-slate-400 hover:text-slate-200" onClick={onClose}>Fechar</button>
             </div>
 
-            {/* Step 1 */}
+            {/* Step 1 
             {step === 1 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">1/2 - Dados iniciais da LLC</h4>
@@ -1075,7 +1035,7 @@ function FormWizard({ open, onClose }) {
                     <span>Declaro que todas as informações prestadas são verdadeiras e completas e assumo total responsabilidade civil e legal por elas.</span>
                   </label>
                   <label className={classNames("flex items-start gap-2", company.hasFloridaAddress && "opacity-50")}>
-                    <input type="checkbox" checked={accept.limitations} disabled={company.hasFloridaAddress} onChange={(e) => toggleAccept("limitations", e.target.checked)} />
+                    <input type="checkbox" checked={accept.limitations}  onChange={(e) => toggleAccept("limitations", e.target.checked)} />
                     <span>Estou ciente de que endereço e agente da KASH são válidos por 12 meses.</span>
                   </label>
                   {company.hasFloridaAddress && <div className="text-[12px] text-slate-400 -mt-2">* Indisponível porque você informou endereço próprio na Flórida.</div>}
@@ -1088,7 +1048,7 @@ function FormWizard({ open, onClose }) {
             )}
 
             {/* Step 2 - Revisão
-{/* Consentimento na conferência */}
+{/* Consentimento na conferência 
 <div className="mt-3 p-3 border rounded bg-gray-50 text-sm">
   <p>Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.</p>
   <label className="mt-2 flex items-center gap-2">
@@ -1096,10 +1056,42 @@ function FormWizard({ open, onClose }) {
     <span>Estou ciente e autorizo</span>
   </label>
 </div>
- */}
+ 
             {step === 2 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">2/2 - Revisão</h4>
+
+{/* Consentimento (dark) – antes do envio */}
+{!confirmTracking && (
+  <div className="mt-6 p-4 rounded-xl border border-slate-700 bg-slate-900/80 text-slate-200 backdrop-blur supports-[backdrop-filter]:bg-slate-900/60">
+    <p className="text-sm leading-relaxed">
+      Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.
+    </p>
+    <label className="mt-3 flex items-center gap-2 text-sm">
+      <input
+        type="checkbox"
+        className="h-4 w-4 accent-emerald-500"
+        checked={typeof consent!=='undefined' ? consent : false}
+        onChange={(e)=> (typeof setConsent==='function' ? setConsent(e.target.checked) : void 0)}
+      />
+      <span>Estou ciente e autorizo</span>
+    </label>
+  </div>
+)}
+<div className="mt-4 flex flex-col sm:flex-row gap-2">
+  <button type="button" className="px-4 py-2 rounded-md bg-slate-700 text-slate-100 hover:bg-slate-600" onClick={()=>setStep(1)}>Voltar</button>
+  <button
+    type="button"
+    className={`px-4 py-2 rounded-md transition ${
+      consent ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-slate-700 text-slate-400 cursor-not-allowed"
+    }`}
+    onClick={handleSubmit}
+    disabled={!consent || sending}
+  >
+    {sending ? "Enviando..." : "Enviar Aplicação"}
+  </button>
+</div>
+
                 <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="text-slate-300 font-medium">Empresa</div>
                   <div className="mt-2 text-sm text-slate-400">
@@ -1146,9 +1138,7 @@ function FormWizard({ open, onClose }) {
               </div>
             )}
 
-            {/* Step 3 - Tracking + Contrato (EN + PT na mesma tela) */}
-            {step === 3 && (
-              <div className="p-6">
+            {/* Step 3 - Tracking + <div className="p-6">
                 <div className="text-center">
                   <h4 className="text-slate-100 font-medium">Dados enviados com sucesso</h4>
                   <p className="text-slate-400 mt-2">Seu código de acompanhamento (tracking):</p>
@@ -1157,14 +1147,14 @@ function FormWizard({ open, onClose }) {
 
                 <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="flex items-center justify-between">
-                    <div className="text-slate-300 font-medium">Contrato (EN + PT juntos)</div>
+                    <div className="text-slate-300 font-medium"></div>
                     
                   </div>
 
-                  {/* EN + PT in the same view */}
+                  {/* EN + PT in the same view 
                   <div className="mt-4 text-[13px] leading-6 text-slate-200 space-y-6 max-h-[55vh] overflow-auto pr-2">
                     <div>
-                      <div className="font-semibold text-slate-100">SERVICE AGREEMENT - KASH Corporate Solutions</div>
+                      <div className="font-semibold text-slate-100"></div>
                       <div className="mt-2 space-y-2 text-slate-300">
                         {null}
                       </div>
@@ -1187,7 +1177,7 @@ function FormWizard({ open, onClose }) {
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
- <CTAButton onClick={() => (window.location.href = CONFIG.checkout.stripeUrl)}>
+ <CTAButton onClick={() => (window.location.href = CONFIG.checkout.)}>
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
     <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
