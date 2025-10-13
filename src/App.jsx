@@ -280,7 +280,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
                 if (!Object.prototype.hasOwnProperty.call(obj, "empresaNome")) obj.empresaNome = name;
                 init.body = JSON.stringify(obj);
               }
-            }catch(_){ /* corpo não-json, ignora 
+            }catch(_){ /* corpo não-json, ignora */ }
           }
         }
       }catch(_){}
@@ -296,14 +296,14 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbE
 const CONFIG = {
   prices: { llc: "US$ 1,360", flow30: "US$ 300", scale5: "US$ 1,000" },
   contact: { whatsapp: "", email: "contato@kashsolutions.us", calendly: "" }, // WhatsApp oculto por ora
-  checkout: {}, // futuro
+  checkout: { stripeUrl: "https://buy.stripe.com/5kQdR95j9eJL9E06WVebu00" }, // futuro
   brand: { legal: "KASH CORPORATE SOLUTIONS LLC", trade: "KASH Solutions" },
 };
 // === KASH Process API (Google Apps Script) ===
 const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 async function apiGetProcesso(kashId){
-  const r = await fetch("${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}");
+  const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
   if(!r.ok) throw new Error("not_found");
   return r.json();
 }
@@ -356,7 +356,7 @@ function classNames(...cls) { return cls.filter(Boolean).join(" "); }
 function todayISO() {
   const d = new Date();
   const pad = (n)=> String(n).padStart(2,"0");
-  return "${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}";
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 }
 
 /* ================== HELPERS ================== */
@@ -435,7 +435,7 @@ function Hero({ onStart }) {
           <KLogo size={42} />
           <div>
             <h1 className="text-2xl md:text-3xl font-semibold text-slate-100">KASH Solutions</h1>
-            <p className="text-slate-400 text-sm">KASH CORPORATE SOLUTIONS LLC . Florida LLC</p>
+            <p className="text-slate-400 text-sm">KASH CORPORATE SOLUTIONS LLC · Florida LLC</p>
           </div>
         </div>
         <div className="mt-10 grid md:grid-cols-2 gap-8 items-start">
@@ -510,7 +510,7 @@ function HowItWorks() {
     { t: "Consulta", d: "Alinhamento de expectativas (opcional)." },
     { t: "Contrato e pagamento", d: "Assinatura eletrônica e checkout." },
     { t: "Formulário de abertura", d: "Dados da empresa, sócios, KYC/AML." },
-    { t: "Pagamento", d: "Fee e taxa estadual - checkout online." },
+    { t: "Pagamento", d: "Fee e taxa estadual — checkout online." },
     { t: "Tracking do processo", d: "Número de protocolo e notificações por e-mail." },
   ];
   return (
@@ -547,7 +547,7 @@ function _acceptanceClausePT(fullNameList, dateISO) {
   }
   const d = dt.toLocaleDateString();
   const t = dt.toLocaleTimeString();
-  return "ACEITE E DECLARAÇÃO: Declaro que  com todos os termos deste contrato em ${d} e ${t}.";
+  return `ACEITE E DECLARAÇÃO: Declaro que  com todos os termos deste contrato em ${d} e ${t}.`;
 }
 function _acceptanceClauseEN(fullNameList, dateISO) {
   let dt = new Date();
@@ -561,18 +561,18 @@ function _acceptanceClauseEN(fullNameList, dateISO) {
   }
   const d = dt.toLocaleDateString();
   const t = dt.toLocaleTimeString();
-  return "ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${d} at ${t}.";
+  return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${d} at ${t}.`;
 }
 function _signatureBlockPT(names) {
   if (!names || !names.length) return "";
   // linha em branco antes do primeiro nome; apenas nomes
-  return "\n" + names.map((n) => "${n}").join("\n\n");
+  return "\n" + names.map((n) => `${n}`).join("\n\n");
 }
 
 function _signatureBlockEN(names) {
   if (!names || !names.length) return "";
   // blank line before the first name; names only
-  return "\n" + names.map((n) => "${n}").join("\n\n");
+  return "\n" + names.map((n) => `${n}`).join("\n\n");
 }
 
 /* ================== PDF (US Letter, Times 10/9) ================== */
@@ -604,25 +604,13 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
     y += 16;
   }
 
-  // --- EN Contract ---
-  doc.addPage(); y = 60;
-  const enBody = "";
-  const enText = (Array.isArray(enBody) ? enBody.join("\n") : String(enBody));
-  const en = [
-    "<= pageCount; i++) {
-    doc.setPage(i);
-    const pw = doc.internal.pageSize.getWidth();
-    const ph = doc.internal.pageSize.getHeight();
-    doc.setFontSize(8);
-    doc.text("" + (dt.toLocaleDateString()) + " " + (dt.toLocaleTimeString()) + " . TN: " + (tracking) + "", 40, ph - 20);
-    doc.text("Page " + (i) + " of " + (pageCount) + "", pw - 40, ph - 20, { align: "right" });
-  }
-
-  const fileName = "KASH_Contract_${tracking}.pdf";
-  doc.save(fileName);
-  return { doc, fileName };
+  
+// --- Contratos removidos (EN/PT) ---
+// Encerramos o PDF apenas com os dados da aplicação.
+const fileName = `KASH_Application_${tracking}.pdf`;
+try { doc.save(fileName); } catch(_e) {}
+return { doc, fileName };
 }
-
 const initialForm = {
   company: { companyName: "", email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
   members: [
@@ -702,7 +690,7 @@ function TrackingSearch() {
   const [notFound, setNotFound] = useState(false);
   const handleLookup = async () => {
     try {
-      try { const obj = await apiGetProcesso(code.trim()); setResult({ tracking: obj.kashId, dateISO: obj.atualizadoEm, company: { companyName: obj.companyName || '-' }, updates: obj.updates || [], faseAtual: obj.faseAtual || 1, subFase: obj.subFase || null }); saveTrackingShortcut(code.trim()); setNotFound(false); return; } catch(e) { setResult(null); setNotFound(true); return; }
+      try { const obj = await apiGetProcesso(code.trim()); setResult({ tracking: obj.kashId, dateISO: obj.atualizadoEm, company: { companyName: obj.companyName || '—' }, updates: obj.updates || [], faseAtual: obj.faseAtual || 1, subFase: obj.subFase || null }); saveTrackingShortcut(code.trim()); setNotFound(false); return; } catch(e) { setResult(null); setNotFound(true); return; }
       setResult(data);
       setNotFound(false);
     } catch { setResult(null); setNotFound(true); }
@@ -719,7 +707,7 @@ function TrackingSearch() {
         {result && (
           <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-4">
             <div className="text-slate-300 font-medium">Status</div>
-            <div className="text-slate-400 text-sm mt-1">Recebido em {result.dateISO}. Empresa: {result.company?.companyName || "-"}</div>
+            <div className="text-slate-400 text-sm mt-1">Recebido em {result.dateISO}. Empresa: {result.company?.companyName || "—"}</div>
             <div className="mt-3">
               <div className="text-slate-400 text-sm mb-1">Linha do tempo:</div>
               <div className="space-y-2">
@@ -728,7 +716,7 @@ function TrackingSearch() {
                     <div className="h-2 w-2 rounded-full bg-emerald-400 mt-1" />
                     <div className="text-sm text-slate-300">
                       <div className="font-medium">{u.status}</div>
-                      <div className="text-xs text-slate-400">{u.ts}{u.note ? " - ${u.note}" : ""}</div>
+                      <div className="text-xs text-slate-400">{u.ts}{u.note ? ` — ${u.note}` : ""}</div>
                     </div>
                   </div>
                 ))}
@@ -762,8 +750,8 @@ function MyTrackings() {
           {list.map((e) => (
             <div key={e.code} className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 p-3">
               <div className="text-sm text-slate-300">
-                <div className="font-medium">{e.company || "-"}</div>
-                <div className="text-slate-400 text-xs">Tracking: {e.code} . {e.dateISO}</div>
+                <div className="font-medium">{e.company || "—"}</div>
+                <div className="text-slate-400 text-xs">Tracking: {e.code} · {e.dateISO}</div>
               </div>
               <div className="flex gap-2">
                 
@@ -771,7 +759,7 @@ function MyTrackings() {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
-                  alert("Empresa: ${data.company?.companyName || "-"}\nTracking: ${data.tracking}\nData: ${data.dateISO}");
+                  alert(`Empresa: ${data.company?.companyName || "—"}\nTracking: ${data.tracking}\nData: ${data.dateISO}`);
                 }}>Ver</CTAButton>
               </div>
             </div>
@@ -803,7 +791,7 @@ function AdminPanel() {
       if (!raw) return alert("Tracking não encontrado.");
       const data = JSON.parse(raw);
       const now = new Date();
-      const ts = "${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}";
+      const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
       const upd = { ts, status, note };
       data.updates = Array.isArray(data.updates) ? [...data.updates, upd] : [upd];
       localStorage.setItem(selected, JSON.stringify(data));
@@ -835,8 +823,8 @@ function AdminPanel() {
                   <div>
                     <div className="text-sm text-slate-300">Tracking</div>
                     <select value={selected} onChange={(e)=>setSelected(e.target.value)} className="w-full rounded bg-slate-950 px-3 py-2 text-sm text-slate-100 border border-slate-700">
-                      <option value="">Selecione...</option>
-                      {list.map((e)=> <option key={e.code} value={e.code}>{e.code} - {e.company}</option>)}
+                      <option value="">Selecione…</option>
+                      {list.map((e)=> <option key={e.code} value={e.code}>{e.code} — {e.company}</option>)}
                     </select>
                   </div>
                   <div>
@@ -974,10 +962,10 @@ function FormWizard({ open, onClose }) {
               <button className="text-slate-400 hover:text-slate-200" onClick={onClose}>Fechar</button>
             </div>
 
-            {/* Step 1 
+            {/* Step 1 */}
             {step === 1 && (
               <div className="p-6">
-                <h4 className="text-slate-100 font-medium">1/2 - Dados iniciais da LLC</h4>
+                <h4 className="text-slate-100 font-medium">1/2 — Dados iniciais da LLC</h4>
                 <div className="mt-4 grid gap-4">
                   <div>
                     <label className="block text-sm text-slate-400">Nome da LLC</label>
@@ -1016,7 +1004,7 @@ function FormWizard({ open, onClose }) {
                     </div>
                   ) : (
                     <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
-                      Não possui endereço na Flórida - usaremos o <b>endereço e agente da KASH por 12 meses</b> incluídos no pacote.
+                      Não possui endereço na Flórida — usaremos o <b>endereço e agente da KASH por 12 meses</b> incluídos no pacote.
                     </div>
                   )}
                 </div>
@@ -1035,7 +1023,7 @@ function FormWizard({ open, onClose }) {
                     <span>Declaro que todas as informações prestadas são verdadeiras e completas e assumo total responsabilidade civil e legal por elas.</span>
                   </label>
                   <label className={classNames("flex items-start gap-2", company.hasFloridaAddress && "opacity-50")}>
-                    <input type="checkbox" checked={accept.limitations}  onChange={(e) => toggleAccept("limitations", e.target.checked)} />
+                    <input type="checkbox" checked={accept.limitations} disabled={company.hasFloridaAddress} onChange={(e) => toggleAccept("limitations", e.target.checked)} />
                     <span>Estou ciente de que endereço e agente da KASH são válidos por 12 meses.</span>
                   </label>
                   {company.hasFloridaAddress && <div className="text-[12px] text-slate-400 -mt-2">* Indisponível porque você informou endereço próprio na Flórida.</div>}
@@ -1047,58 +1035,26 @@ function FormWizard({ open, onClose }) {
               </div>
             )}
 
-            {/* Step 2 - Revisão
-{/* Consentimento na conferência 
+            {/* Step 2 — Revisão
+{/* Consentimento na conferência */}
 <div className="mt-3 p-3 border rounded bg-gray-50 text-sm">
   <p>Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.</p>
   <label className="mt-2 flex items-center gap-2">
-    <input type="checkbox" checked={typeof consent!=='undefined' ? consent : false} onChange={(e)=> (typeof setConsent==='function' ? setConsent(e.target.checked) : void 0)} />
+    <input type="checkbox" checked={consent} onChange={(e)=>setConsent(e.target.checked)} />
     <span>Estou ciente e autorizo</span>
   </label>
 </div>
- 
+ */}
             {step === 2 && (
               <div className="p-6">
-                <h4 className="text-slate-100 font-medium">2/2 - Revisão</h4>
-
-{/* Consentimento (dark) - antes do envio */}
-{!confirmTracking && (
-  <div className="mt-6 p-4 rounded-xl border border-slate-700 bg-slate-900/80 text-slate-200 backdrop-blur supports-[backdrop-filter]:bg-slate-900/60">
-    <p className="text-sm leading-relaxed">
-      Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.
-    </p>
-    <label className="mt-3 flex items-center gap-2 text-sm">
-      <input
-        type="checkbox"
-        className="h-4 w-4 accent-emerald-500"
-        checked={typeof consent!=='undefined' ? consent : false}
-        onChange={(e)=> (typeof setConsent==='function' ? setConsent(e.target.checked) : void 0)}
-      />
-      <span>Estou ciente e autorizo</span>
-    </label>
-  </div>
-)}
-<div className="mt-4 flex flex-col sm:flex-row gap-2">
-  <button type="button" className="px-4 py-2 rounded-md bg-slate-700 text-slate-100 hover:bg-slate-600" onClick={()=>setStep(1)}>Voltar</button>
-  <button
-    type="button"
-    className={"px-4 py-2 rounded-md transition ${
-      consent ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-slate-700 text-slate-400 cursor-not-allowed"
-    }"}
-    onClick={handleSubmit}
-    disabled={!consent || sending}
-  >
-    {sending ? "Enviando..." : "Enviar Aplicação"}
-  </button>
-</div>
-
+                <h4 className="text-slate-100 font-medium">2/2 — Revisão</h4>
                 <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="text-slate-300 font-medium">Empresa</div>
                   <div className="mt-2 text-sm text-slate-400">
-                    <div><span className="text-slate-500">Nome: </span>{company.companyName || "-"}</div>
+                    <div><span className="text-slate-500">Nome: </span>{company.companyName || "—"}</div>
                     <div className="grid md:grid-cols-2 gap-x-6">
-                      <div><span className="text-slate-500">E-mail: </span>{company.email || "-"}</div>
-                      <div><span className="text-slate-500">Telefone: </span>{company.phone || "-"}</div>
+                      <div><span className="text-slate-500">E-mail: </span>{company.email || "—"}</div>
+                      <div><span className="text-slate-500">Telefone: </span>{company.phone || "—"}</div>
                     </div>
                     {company.hasFloridaAddress ? (
                       <div className="mt-1">
@@ -1116,15 +1072,15 @@ function FormWizard({ open, onClose }) {
                   <div className="mt-2 space-y-3 text-sm text-slate-400">
                     {members.map((m, i) => (
                       <div key={i}>
-                        <div className="font-medium text-slate-300">Sócio {i + 1}: {m.fullName || "-"}</div>
+                        <div className="font-medium text-slate-300">Sócio {i + 1}: {m.fullName || "—"}</div>
                         <div className="grid md:grid-cols-2 gap-x-6 gap-y-1">
-                          <div><span className="text-slate-500">E-mail: </span>{m.email || "-"}</div>
-                          <div><span className="text-slate-500">Telefone: </span>{m.phone || "-"}</div>
-                          <div><span className="text-slate-500">Documento: </span>{m.passport || "-"}</div>
-                          <div><span className="text-slate-500">Órgão emissor: </span>{m.issuer || "-"}</div>
-                          <div><span className="text-slate-500">Validade doc.: </span>{m.docExpiry || "-"}</div>
-                          <div><span className="text-slate-500">Nascimento: </span>{m.birthdate || "-"}</div>
-                          <div><span className="text-slate-500">Participação: </span>{m.percent || "-"}%</div>
+                          <div><span className="text-slate-500">E-mail: </span>{m.email || "—"}</div>
+                          <div><span className="text-slate-500">Telefone: </span>{m.phone || "—"}</div>
+                          <div><span className="text-slate-500">Documento: </span>{m.passport || "—"}</div>
+                          <div><span className="text-slate-500">Órgão emissor: </span>{m.issuer || "—"}</div>
+                          <div><span className="text-slate-500">Validade doc.: </span>{m.docExpiry || "—"}</div>
+                          <div><span className="text-slate-500">Nascimento: </span>{m.birthdate || "—"}</div>
+                          <div><span className="text-slate-500">Participação: </span>{m.percent || "—"}%</div>
                         </div>
                       </div>
                     ))}
@@ -1138,7 +1094,9 @@ function FormWizard({ open, onClose }) {
               </div>
             )}
 
-            {/* Step 3 - Tracking + <div className="p-6">
+            {/* Step 3 — Tracking + Contrato (EN + PT na mesma tela) */}
+            {step === 3 && (
+              <div className="p-6">
                 <div className="text-center">
                   <h4 className="text-slate-100 font-medium">Dados enviados com sucesso</h4>
                   <p className="text-slate-400 mt-2">Seu código de acompanhamento (tracking):</p>
@@ -1147,27 +1105,27 @@ function FormWizard({ open, onClose }) {
 
                 <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <div className="flex items-center justify-between">
-                    <div className="text-slate-300 font-medium"></div>
+                    <div className="text-slate-300 font-medium">Contrato (EN + PT juntos)</div>
                     
                   </div>
 
-                  {/* EN + PT in the same view 
+                  {/* EN + PT in the same view */}
                   <div className="mt-4 text-[13px] leading-6 text-slate-200 space-y-6 max-h-[55vh] overflow-auto pr-2">
                     <div>
-                      <div className="font-semibold text-slate-100"></div>
+                      <div className="font-semibold text-slate-100">SERVICE AGREEMENT – KASH Corporate Solutions</div>
                       <div className="mt-2 space-y-2 text-slate-300">
                         {null}
                       </div>
                     </div>
-                    <div className="text-slate-400">- Portuguese Version Below -</div>
+                    <div className="text-slate-400">— Portuguese Version Below —</div>
                     <div>
-                      <div className="font-semibold text-slate-100">CONTRATO - KASH Corporate Solutions</div>
+                      <div className="font-semibold text-slate-100">CONTRATO — KASH Corporate Solutions</div>
                       <div className="mt-2 space-y-2 text-slate-300">
                         {null}
                       </div>
                     </div>
                     <div className="text-xs text-slate-400 border-t border-slate-700 pt-2">
-                      Tracking: {tracking} . Date: {dateISO}
+                      Tracking: {tracking} · Date: {dateISO}
                     </div>
                   </div>
 
@@ -1177,7 +1135,7 @@ function FormWizard({ open, onClose }) {
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
- <CTAButton onClick={() => (window.location.href = CONFIG.checkout.)}>
+ <CTAButton onClick={() => (window.location.href = CONFIG.checkout.stripeUrl)}>
   Pagar US$ 1,360 (Stripe)
 </CTAButton>
     <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
@@ -1206,7 +1164,7 @@ function Footer() {
   return (
     <footer className="py-10 border-t border-slate-800">
       <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="text-slate-400 text-sm">© {new Date().getFullYear()} KASH Solutions - {CONFIG.brand.legal}</div>
+        <div className="text-slate-400 text-sm">© {new Date().getFullYear()} KASH Solutions — {CONFIG.brand.legal}</div>
         <div className="text-slate-400 text-sm">Contato: {CONFIG.contact.email}</div>
       </div>
     </footer>
@@ -1518,53 +1476,53 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
     const p = new Date(dateISO);
     if (!isNaN(p)) dt = p;
   }
-  const when = "${dt.toLocaleDateString()} ${dt.toLocaleTimeString()}";
+  const when = `${dt.toLocaleDateString()} ${dt.toLocaleTimeString()}`;
 
   const lines = [];
   lines.push("APPLICATION DATA (KASH Corporate Solutions LLC)");
   lines.push("");
-  lines.push("Tracking: ${tracking || ""}");
-  lines.push("Date/Time: ${when}");
+  lines.push(`Tracking: ${tracking || ""}`);
+  lines.push(`Date/Time: ${when}`);
   lines.push("");
-  lines.push("- Company -");
-  lines.push("Legal Name: ${safe(company.companyName)}");
-  if (company.companyAltName) lines.push("Alt/DBA: ${safe(company.companyAltName)}");
-  if (company.hasFloridaAddress !== undefined) lines.push("Has Florida Address: ${company.hasFloridaAddress ? "Yes" : "No"}");
-  if (company.hasFloridaAddress && company.floridaAddress) lines.push("Florida Address: ${safe(company.floridaAddress)}");
-  if (company.email) lines.push("Email: ${safe(company.email)}");
-  if (company.phone) lines.push("Phone: ${safe(company.phone)}");
-  if (company.website) lines.push("Website: ${safe(company.website)}");
+  lines.push("— Company —");
+  lines.push(`Legal Name: ${safe(company.companyName)}`);
+  if (company.companyAltName) lines.push(`Alt/DBA: ${safe(company.companyAltName)}`);
+  if (company.hasFloridaAddress !== undefined) lines.push(`Has Florida Address: ${company.hasFloridaAddress ? "Yes" : "No"}`);
+  if (company.hasFloridaAddress && company.floridaAddress) lines.push(`Florida Address: ${safe(company.floridaAddress)}`);
+  if (company.email) lines.push(`Email: ${safe(company.email)}`);
+  if (company.phone) lines.push(`Phone: ${safe(company.phone)}`);
+  if (company.website) lines.push(`Website: ${safe(company.website)}`);
   if (company.usAddress) {
     const a = company.usAddress;
     const a1 = safe(a.line1), a2 = safe(a.line2), city = safe(a.city), st = safe(a.state), zip = safe(a.zip);
     const addrLine = [a1, a2].filter(Boolean).join(', ');
-    if (addrLine) lines.push("US Address: ${addrLine}");
+    if (addrLine) lines.push(`US Address: ${addrLine}`);
     const cityLine = [city, st, zip].filter(Boolean).join(', ');
-    if (cityLine) lines.push("US City/State/ZIP: ${cityLine}");
+    if (cityLine) lines.push(`US City/State/ZIP: ${cityLine}`);
   }
   lines.push("");
-  lines.push("- Consents / Declarations -");
+  lines.push("— Consents / Declarations —");
   if (typeof flags==="object" && flags) {
-    if (typeof flags.limitations!=="undefined") lines.push("Limitations: ${String(flags.limitations)}");
-    if (typeof flags.responsibility!=="undefined") lines.push("Responsibility: ${String(flags.responsibility)}");
-    if (typeof flags.agreed!=="undefined") lines.push("Agreed: ${String(flags.agreed)}");
+    if (typeof flags.limitations!=="undefined") lines.push(`Limitations: ${String(flags.limitations)}`);
+    if (typeof flags.responsibility!=="undefined") lines.push(`Responsibility: ${String(flags.responsibility)}`);
+    if (typeof flags.agreed!=="undefined") lines.push(`Agreed: ${String(flags.agreed)}`);
   }
   lines.push("");
-  if (source) { lines.push("- Source -"); lines.push(String(source)); lines.push(""); }
+  if (source) { lines.push("— Source —"); lines.push(String(source)); lines.push(""); }
   if (Array.isArray(updates) && updates.length) {
-    lines.push("- Updates -");
+    lines.push("— Updates —");
     updates.forEach((u, idx)=>{
       try {
         const note = (u && (u.note||u.message||u.msg)) ? String(u.note||u.message||u.msg) : "";
         const st = (u && u.status) ? String(u.status) : "";
         const ts = (u && (u.ts||u.date)) ? String(u.ts||u.date) : "";
-        const line = ["${idx+1}.", st, note, ts].filter(Boolean).join(" - ");
+        const line = [`${idx+1}.`, st, note, ts].filter(Boolean).join(" — ");
         if (line) lines.push(line);
       } catch(_) {}
     });
     lines.push("");
   }
-  lines.push("- Members -");
+  lines.push("— Members —");
   if (Array.isArray(members) && members.length) {
     members.forEach((m, i) => {
       const full = safe(m.fullName || m.name);
@@ -1572,9 +1530,9 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
       const idoc = safe(m.idOrPassport || m.document);
       const addr = safe(m.address || m.addressLine);
       const email = safe(m.email);
-      lines.push("${i + 1}. ${full}${role ? " - " + role : ""}${idoc ? " - " + idoc : ""}");
-      if (addr) lines.push("   Address: ${addr}");
-      if (email) lines.push("   Email: ${email}");
+      lines.push(`${i + 1}. ${full}${role ? " – " + role : ""}${idoc ? " – " + idoc : ""}`);
+      if (addr) lines.push(`   Address: ${addr}`);
+      if (email) lines.push(`   Email: ${email}`);
     });
   } else {
     lines.push("(none)");
