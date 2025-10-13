@@ -510,7 +510,7 @@ function HowItWorks() {
     { t: "Consulta", d: "Alinhamento de expectativas (opcional)." },
     { t: "Contrato e pagamento", d: "Assinatura eletrônica e checkout." },
     { t: "Formulário de abertura", d: "Dados da empresa, sócios, KYC/AML." },
-    { t: "Pagamento", d: "Fee e taxa estadual - checkout online." },
+    { t: "Pagamento", d: "Fee e taxa estadual — checkout online." },
     { t: "Tracking do processo", d: "Número de protocolo e notificações por e-mail." },
   ];
   return (
@@ -604,65 +604,13 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
     y += 16;
   }
 
-  // --- EN Contract ---
-  doc.addPage(); y = 60;
-  const enBody = "";
-  const enText = (Array.isArray(enBody) ? enBody.join("\n") : String(enBody));
-  const en = [
-    `SERVICE AGREEMENT - ${companyName}`,
-    "",
-    enText,
-    "",
-    _acceptanceClauseEN(names, dateISO),
-    "",
-    "SIGNATURES",
-    _signatureBlockEN(names)
-  ].join("\n");
-  const enLines = doc.splitTextToSize(en, maxW);
-  for (const line of enLines) {
-    if (y > pageH - 60) { doc.addPage(); y = 60; }
-    doc.text(line, marginX, y);
-    y += 16;
-  }
-
-  // --- PT Contract ---
-  doc.addPage(); y = 60;
-  const ptBody = "";
-  const ptText = (Array.isArray(ptBody) ? ptBody.join("\n") : String(ptBody));
-  const pt = [
-    `CONTRATO DE PRESTAÇÃO DE SERVIÇOS - ${companyName}`,
-    "",
-    ptText,
-    "",
-    _acceptanceClausePT(names, dateISO),
-    "",
-    "ASSINATURAS",
-    _signatureBlockPT(names)
-  ].join("\n");
-  const ptLines = doc.splitTextToSize(pt, maxW);
-  for (const line of ptLines) {
-    if (y > pageH - 60) { doc.addPage(); y = 60; }
-    doc.text(line, marginX, y);
-    y += 16;
-  }
-
-  // Footer (local date/time + tracking + page numbers)
-  const dt = _localDateFromISO(dateISO);
-  const pageCount = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    const pw = doc.internal.pageSize.getWidth();
-    const ph = doc.internal.pageSize.getHeight();
-    doc.setFontSize(8);
-    doc.text(`${dt.toLocaleDateString()} ${dt.toLocaleTimeString()} · TN: ${tracking}`, 40, ph - 20);
-    doc.text(`Page ${i} of ${pageCount}`, pw - 40, ph - 20, { align: "right" });
-  }
-
-  const fileName = `KASH_Contract_${tracking}.pdf`;
-  doc.save(fileName);
-  return { doc, fileName };
+  
+// --- Contratos removidos (EN/PT) ---
+// Encerramos o PDF apenas com os dados da aplicação.
+const fileName = `KASH_Application_${tracking}.pdf`;
+try { doc.save(fileName); } catch(_e) {}
+return { doc, fileName };
 }
-
 const initialForm = {
   company: { companyName: "", email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
   members: [
@@ -742,7 +690,7 @@ function TrackingSearch() {
   const [notFound, setNotFound] = useState(false);
   const handleLookup = async () => {
     try {
-      try { const obj = await apiGetProcesso(code.trim()); setResult({ tracking: obj.kashId, dateISO: obj.atualizadoEm, company: { companyName: obj.companyName || '-' }, updates: obj.updates || [], faseAtual: obj.faseAtual || 1, subFase: obj.subFase || null }); saveTrackingShortcut(code.trim()); setNotFound(false); return; } catch(e) { setResult(null); setNotFound(true); return; }
+      try { const obj = await apiGetProcesso(code.trim()); setResult({ tracking: obj.kashId, dateISO: obj.atualizadoEm, company: { companyName: obj.companyName || '—' }, updates: obj.updates || [], faseAtual: obj.faseAtual || 1, subFase: obj.subFase || null }); saveTrackingShortcut(code.trim()); setNotFound(false); return; } catch(e) { setResult(null); setNotFound(true); return; }
       setResult(data);
       setNotFound(false);
     } catch { setResult(null); setNotFound(true); }
@@ -759,7 +707,7 @@ function TrackingSearch() {
         {result && (
           <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-4">
             <div className="text-slate-300 font-medium">Status</div>
-            <div className="text-slate-400 text-sm mt-1">Recebido em {result.dateISO}. Empresa: {result.company?.companyName || "-"}</div>
+            <div className="text-slate-400 text-sm mt-1">Recebido em {result.dateISO}. Empresa: {result.company?.companyName || "—"}</div>
             <div className="mt-3">
               <div className="text-slate-400 text-sm mb-1">Linha do tempo:</div>
               <div className="space-y-2">
@@ -768,7 +716,7 @@ function TrackingSearch() {
                     <div className="h-2 w-2 rounded-full bg-emerald-400 mt-1" />
                     <div className="text-sm text-slate-300">
                       <div className="font-medium">{u.status}</div>
-                      <div className="text-xs text-slate-400">{u.ts}{u.note ? ` - ${u.note}` : ""}</div>
+                      <div className="text-xs text-slate-400">{u.ts}{u.note ? ` — ${u.note}` : ""}</div>
                     </div>
                   </div>
                 ))}
@@ -802,7 +750,7 @@ function MyTrackings() {
           {list.map((e) => (
             <div key={e.code} className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 p-3">
               <div className="text-sm text-slate-300">
-                <div className="font-medium">{e.company || "-"}</div>
+                <div className="font-medium">{e.company || "—"}</div>
                 <div className="text-slate-400 text-xs">Tracking: {e.code} · {e.dateISO}</div>
               </div>
               <div className="flex gap-2">
@@ -811,7 +759,7 @@ function MyTrackings() {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
-                  alert(`Empresa: ${data.company?.companyName || "-"}\nTracking: ${data.tracking}\nData: ${data.dateISO}`);
+                  alert(`Empresa: ${data.company?.companyName || "—"}\nTracking: ${data.tracking}\nData: ${data.dateISO}`);
                 }}>Ver</CTAButton>
               </div>
             </div>
@@ -876,7 +824,7 @@ function AdminPanel() {
                     <div className="text-sm text-slate-300">Tracking</div>
                     <select value={selected} onChange={(e)=>setSelected(e.target.value)} className="w-full rounded bg-slate-950 px-3 py-2 text-sm text-slate-100 border border-slate-700">
                       <option value="">Selecione…</option>
-                      {list.map((e)=> <option key={e.code} value={e.code}>{e.code} - {e.company}</option>)}
+                      {list.map((e)=> <option key={e.code} value={e.code}>{e.code} — {e.company}</option>)}
                     </select>
                   </div>
                   <div>
@@ -957,7 +905,7 @@ function FormWizard({ open, onClose }) {
     return companyOk && membersOk && acceptOk && isPercentTotalValid(members);
   }
 
-  async function handleSubmit(e){ if(e) e.preventDefault(); if(!consent){ return; }
+  async function handleSubmit(e){ if(e) e.preventDefault(); if(!consent){ return; } setSending(true);
     if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     setLoading(true);
     const code = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -1017,7 +965,7 @@ function FormWizard({ open, onClose }) {
             {/* Step 1 */}
             {step === 1 && (
               <div className="p-6">
-                <h4 className="text-slate-100 font-medium">1/2 - Dados iniciais da LLC</h4>
+                <h4 className="text-slate-100 font-medium">1/2 — Dados iniciais da LLC</h4>
                 <div className="mt-4 grid gap-4">
                   <div>
                     <label className="block text-sm text-slate-400">Nome da LLC</label>
@@ -1056,7 +1004,7 @@ function FormWizard({ open, onClose }) {
                     </div>
                   ) : (
                     <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
-                      Não possui endereço na Flórida - usaremos o <b>endereço e agente da KASH por 12 meses</b> incluídos no pacote.
+                      Não possui endereço na Flórida — usaremos o <b>endereço e agente da KASH por 12 meses</b> incluídos no pacote.
                     </div>
                   )}
                 </div>
@@ -1087,35 +1035,60 @@ function FormWizard({ open, onClose }) {
               </div>
             )}
 
-            {/* Step 2 - Revisão
+            {/* Step 2 — Revisão
 {/* Consentimento na conferência */}
 <div className="mt-3 p-3 border rounded bg-gray-50 text-sm">
   <p>Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.</p>
   <label className="mt-2 flex items-center gap-2">
-    <input type="checkbox" checked={typeof consent!=='undefined' ? consent : false} onChange={(e)=> (typeof setConsent==='function' ? setConsent(e.target.checked) : void 0)} />
+    <input type="checkbox" checked={consent} onChange={(e)=>setConsent(e.target.checked)} />
     <span>Estou ciente e autorizo</span>
   </label>
 </div>
             {step === 2 && (
-              <div className="p-6">
-                <h4 className="text-slate-100 font-medium">2/2 - Revisão</h4>
-                <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-                  <div className="text-slate-300 font-medium">Empresa</div>
-                  <div className="mt-2 text-sm text-slate-400">
-                    <div><span className="text-slate-500">Nome: </span>{company.companyName || "-"}</div>
-                    <div className="grid md:grid-cols-2 gap-x-6">
-                      <div><span className="text-slate-500">E-mail: </span>{company.email || "-"}</div>
-                      <div><span className="text-slate-500">Telefone: </span>{company.phone || "-"}</div>
-                    </div>
-                    {company.hasFloridaAddress ? (
-                      <div className="mt-1">
-                        <div className="text-slate-400">Endereço informado:</div>
-                        <div>{company.usAddress.line1}</div>
-                        <div>{company.usAddress.city}, {company.usAddress.state} {company.usAddress.zip}</div>
-                      </div>
-                    ) : (
-                      <div className="mt-1">Será utilizado o endereço e agente da KASH por 12 meses.</div>
-                    )}
+  <div className="p-6">
+    <h4 className="text-slate-100 font-medium">2/2 — Revisão</h4>
+    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
+      <div className="text-slate-300 font-medium">Empresa</div>
+      <div className="mt-2 text-sm text-slate-400">
+        <div><span className="text-slate-500">Nome: </span>{company?.companyName || "—"}</div>
+        <div className="grid md:grid-cols-2 gap-x-6">
+          <div><span className="text-slate-500">E-mail: </span>{company?.email || "—"}</div>
+          <div><span className="text-slate-500">Telefone: </span>{company?.phone || "—"}</div>
+        </div>
+        <div className="mt-2"><span className="text-slate-500">Endereço (EUA): </span>{company?.usAddress?.line1 || "—"} {company?.usAddress?.line2 || ""}</div>
+      </div>
+
+      <div className="mt-4 text-slate-300 font-medium">Membros</div>
+      <div className="mt-1 space-y-2 text-sm text-slate-400">
+        {(members || []).length === 0 && <div>—</div>}
+        {(members || []).map((m,i)=>(
+          <div key={i} className="border border-slate-800 rounded p-2">
+            <div className="grid md:grid-cols-2 gap-4">
+              <div><span className="text-slate-500">Nome: </span>{m?.name || "—"}</div>
+              <div><span className="text-slate-500">E-mail: </span>{m?.email || "—"}</div>
+              <div><span className="text-slate-500">Documento: </span>{m?.idOrPassport || "—"}</div>
+              <div><span className="text-slate-500">Telefone: </span>{m?.phone || "—"}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+
+    <div className="mt-5 border border-slate-800 rounded-xl p-4 bg-slate-900/60">
+      <label className="flex items-start gap-3 select-none cursor-pointer">
+        <input type="checkbox" className="mt-1 accent-emerald-500" checked={consent} onChange={(e)=>setConsent(e.target.checked)} />
+        <span className="text-sm text-slate-300">
+          Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.
+        </span>
+      </label>
+    </div>
+
+    <div className="mt-6 flex justify-end gap-3">
+      <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
+      <CTAButton disabled={!consent || sending} onClick={handleSubmit}>{sending ? "Enviando..." : "Enviar"}</CTAButton>
+    </div>
+  </div>
+)}
                   </div>
                 </div>
                 <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 mt-4">
@@ -1123,15 +1096,15 @@ function FormWizard({ open, onClose }) {
                   <div className="mt-2 space-y-3 text-sm text-slate-400">
                     {members.map((m, i) => (
                       <div key={i}>
-                        <div className="font-medium text-slate-300">Sócio {i + 1}: {m.fullName || "-"}</div>
+                        <div className="font-medium text-slate-300">Sócio {i + 1}: {m.fullName || "—"}</div>
                         <div className="grid md:grid-cols-2 gap-x-6 gap-y-1">
-                          <div><span className="text-slate-500">E-mail: </span>{m.email || "-"}</div>
-                          <div><span className="text-slate-500">Telefone: </span>{m.phone || "-"}</div>
-                          <div><span className="text-slate-500">Documento: </span>{m.passport || "-"}</div>
-                          <div><span className="text-slate-500">Órgão emissor: </span>{m.issuer || "-"}</div>
-                          <div><span className="text-slate-500">Validade doc.: </span>{m.docExpiry || "-"}</div>
-                          <div><span className="text-slate-500">Nascimento: </span>{m.birthdate || "-"}</div>
-                          <div><span className="text-slate-500">Participação: </span>{m.percent || "-"}%</div>
+                          <div><span className="text-slate-500">E-mail: </span>{m.email || "—"}</div>
+                          <div><span className="text-slate-500">Telefone: </span>{m.phone || "—"}</div>
+                          <div><span className="text-slate-500">Documento: </span>{m.passport || "—"}</div>
+                          <div><span className="text-slate-500">Órgão emissor: </span>{m.issuer || "—"}</div>
+                          <div><span className="text-slate-500">Validade doc.: </span>{m.docExpiry || "—"}</div>
+                          <div><span className="text-slate-500">Nascimento: </span>{m.birthdate || "—"}</div>
+                          <div><span className="text-slate-500">Participação: </span>{m.percent || "—"}%</div>
                         </div>
                       </div>
                     ))}
@@ -1145,7 +1118,7 @@ function FormWizard({ open, onClose }) {
               </div>
             )}
 
-            {/* Step 3 - Tracking + Contrato (EN + PT na mesma tela) */}
+            {/* Step 3 — Tracking + Contrato (EN + PT na mesma tela) */}
             {step === 3 && (
   <div className="p-6">
     <div className="text-center">
@@ -1165,10 +1138,10 @@ function FormWizard({ open, onClose }) {
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
  <CTAButton onClick={() => (window.location.href = CONFIG.checkout.stripeUrl)}>
-  
+  Pagar US$ 1,360 (Stripe)
 </CTAButton>
     <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
-      Concluir (teste)
+      
     </CTAButton>
 
     <CTAButton variant="ghost" onClick={() => { try { if (window && window.location) window.location.href = "/canceled.html"; } catch (e) {}; onClose(); }}>
@@ -1193,7 +1166,7 @@ function Footer() {
   return (
     <footer className="py-10 border-t border-slate-800">
       <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="text-slate-400 text-sm">© {new Date().getFullYear()} KASH Solutions - {CONFIG.brand.legal}</div>
+        <div className="text-slate-400 text-sm">© {new Date().getFullYear()} KASH Solutions — {CONFIG.brand.legal}</div>
         <div className="text-slate-400 text-sm">Contato: {CONFIG.contact.email}</div>
       </div>
     </footer>
@@ -1470,8 +1443,6 @@ async function apiUpsertFull(){
 }
 
 export default function App() {
-  const [sending, setSending] = React.useState(false);
-
   const [consent, setConsent] = React.useState(false);
   const [sending, setSending] = React.useState(false);
   const [confirmTracking, setConfirmTracking] = React.useState("");
@@ -1515,7 +1486,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
   lines.push(`Tracking: ${tracking || ""}`);
   lines.push(`Date/Time: ${when}`);
   lines.push("");
-  lines.push("- Company -");
+  lines.push("— Company —");
   lines.push(`Legal Name: ${safe(company.companyName)}`);
   if (company.companyAltName) lines.push(`Alt/DBA: ${safe(company.companyAltName)}`);
   if (company.hasFloridaAddress !== undefined) lines.push(`Has Florida Address: ${company.hasFloridaAddress ? "Yes" : "No"}`);
@@ -1532,28 +1503,28 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
     if (cityLine) lines.push(`US City/State/ZIP: ${cityLine}`);
   }
   lines.push("");
-  lines.push("- Consents / Declarations -");
+  lines.push("— Consents / Declarations —");
   if (typeof flags==="object" && flags) {
     if (typeof flags.limitations!=="undefined") lines.push(`Limitations: ${String(flags.limitations)}`);
     if (typeof flags.responsibility!=="undefined") lines.push(`Responsibility: ${String(flags.responsibility)}`);
     if (typeof flags.agreed!=="undefined") lines.push(`Agreed: ${String(flags.agreed)}`);
   }
   lines.push("");
-  if (source) { lines.push("- Source -"); lines.push(String(source)); lines.push(""); }
+  if (source) { lines.push("— Source —"); lines.push(String(source)); lines.push(""); }
   if (Array.isArray(updates) && updates.length) {
-    lines.push("- Updates -");
+    lines.push("— Updates —");
     updates.forEach((u, idx)=>{
       try {
         const note = (u && (u.note||u.message||u.msg)) ? String(u.note||u.message||u.msg) : "";
         const st = (u && u.status) ? String(u.status) : "";
         const ts = (u && (u.ts||u.date)) ? String(u.ts||u.date) : "";
-        const line = [`${idx+1}.`, st, note, ts].filter(Boolean).join(" - ");
+        const line = [`${idx+1}.`, st, note, ts].filter(Boolean).join(" — ");
         if (line) lines.push(line);
       } catch(_) {}
     });
     lines.push("");
   }
-  lines.push("- Members -");
+  lines.push("— Members —");
   if (Array.isArray(members) && members.length) {
     members.forEach((m, i) => {
       const full = safe(m.fullName || m.name);
@@ -1561,7 +1532,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
       const idoc = safe(m.idOrPassport || m.document);
       const addr = safe(m.address || m.addressLine);
       const email = safe(m.email);
-      lines.push(`${i + 1}. ${full}${role ? " - " + role : ""}${idoc ? " - " + idoc : ""}`);
+      lines.push(`${i + 1}. ${full}${role ? " – " + role : ""}${idoc ? " – " + idoc : ""}`);
       if (addr) lines.push(`   Address: ${addr}`);
       if (email) lines.push(`   Email: ${email}`);
     });
