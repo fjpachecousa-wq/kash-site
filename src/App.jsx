@@ -303,7 +303,7 @@ const CONFIG = {
 const PROCESSO_API = "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 async function apiGetProcesso(kashId){
-  const r = await fetch(`${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}`);
+  const r = await fetch("${PROCESSO_API}?kashId=${encodeURIComponent(kashId)}");
   if(!r.ok) throw new Error("not_found");
   return r.json();
 }
@@ -356,7 +356,7 @@ function classNames(...cls) { return cls.filter(Boolean).join(" "); }
 function todayISO() {
   const d = new Date();
   const pad = (n)=> String(n).padStart(2,"0");
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  return "${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}";
 }
 
 /* ================== HELPERS ================== */
@@ -435,7 +435,7 @@ function Hero({ onStart }) {
           <KLogo size={42} />
           <div>
             <h1 className="text-2xl md:text-3xl font-semibold text-slate-100">KASH Solutions</h1>
-            <p className="text-slate-400 text-sm">KASH CORPORATE SOLUTIONS LLC · Florida LLC</p>
+            <p className="text-slate-400 text-sm">KASH CORPORATE SOLUTIONS LLC . Florida LLC</p>
           </div>
         </div>
         <div className="mt-10 grid md:grid-cols-2 gap-8 items-start">
@@ -547,7 +547,7 @@ function _acceptanceClausePT(fullNameList, dateISO) {
   }
   const d = dt.toLocaleDateString();
   const t = dt.toLocaleTimeString();
-  return `ACEITE E DECLARAÇÃO: Declaro que  com todos os termos deste contrato em ${d} e ${t}.`;
+  return "ACEITE E DECLARAÇÃO: Declaro que  com todos os termos deste contrato em ${d} e ${t}.";
 }
 function _acceptanceClauseEN(fullNameList, dateISO) {
   let dt = new Date();
@@ -561,18 +561,18 @@ function _acceptanceClauseEN(fullNameList, dateISO) {
   }
   const d = dt.toLocaleDateString();
   const t = dt.toLocaleTimeString();
-  return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${d} at ${t}.`;
+  return "ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${d} at ${t}.";
 }
 function _signatureBlockPT(names) {
   if (!names || !names.length) return "";
   // linha em branco antes do primeiro nome; apenas nomes
-  return "\n" + names.map((n) => `${n}`).join("\n\n");
+  return "\n" + names.map((n) => "${n}").join("\n\n");
 }
 
 function _signatureBlockEN(names) {
   if (!names || !names.length) return "";
   // blank line before the first name; names only
-  return "\n" + names.map((n) => `${n}`).join("\n\n");
+  return "\n" + names.map((n) => "${n}").join("\n\n");
 }
 
 /* ================== PDF (US Letter, Times 10/9) ================== */
@@ -609,16 +609,16 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
   const enBody = "";
   const enText = (Array.isArray(enBody) ? enBody.join("\n") : String(enBody));
   const en = [
-    `<= pageCount; i++) {
+    "<= pageCount; i++) {
     doc.setPage(i);
     const pw = doc.internal.pageSize.getWidth();
     const ph = doc.internal.pageSize.getHeight();
     doc.setFontSize(8);
-    doc.text(`${dt.toLocaleDateString()} ${dt.toLocaleTimeString()} · TN: ${tracking}`, 40, ph - 20);
-    doc.text(`Page ${i} of ${pageCount}`, pw - 40, ph - 20, { align: "right" });
+    doc.text("" + (dt.toLocaleDateString()) + " " + (dt.toLocaleTimeString()) + " . TN: " + (tracking) + "", 40, ph - 20);
+    doc.text("Page " + (i) + " of " + (pageCount) + "", pw - 40, ph - 20, { align: "right" });
   }
 
-  const fileName = `KASH_Contract_${tracking}.pdf`;
+  const fileName = "KASH_Contract_${tracking}.pdf";
   doc.save(fileName);
   return { doc, fileName };
 }
@@ -728,7 +728,7 @@ function TrackingSearch() {
                     <div className="h-2 w-2 rounded-full bg-emerald-400 mt-1" />
                     <div className="text-sm text-slate-300">
                       <div className="font-medium">{u.status}</div>
-                      <div className="text-xs text-slate-400">{u.ts}{u.note ? ` - ${u.note}` : ""}</div>
+                      <div className="text-xs text-slate-400">{u.ts}{u.note ? " - ${u.note}" : ""}</div>
                     </div>
                   </div>
                 ))}
@@ -763,7 +763,7 @@ function MyTrackings() {
             <div key={e.code} className="flex items-center justify-between rounded-xl border border-slate-800 bg-slate-900 p-3">
               <div className="text-sm text-slate-300">
                 <div className="font-medium">{e.company || "-"}</div>
-                <div className="text-slate-400 text-xs">Tracking: {e.code} · {e.dateISO}</div>
+                <div className="text-slate-400 text-xs">Tracking: {e.code} . {e.dateISO}</div>
               </div>
               <div className="flex gap-2">
                 
@@ -771,7 +771,7 @@ function MyTrackings() {
                   const raw = localStorage.getItem(e.code);
                   if (!raw) return;
                   const data = JSON.parse(raw);
-                  alert(`Empresa: ${data.company?.companyName || "-"}\nTracking: ${data.tracking}\nData: ${data.dateISO}`);
+                  alert("Empresa: ${data.company?.companyName || "-"}\nTracking: ${data.tracking}\nData: ${data.dateISO}");
                 }}>Ver</CTAButton>
               </div>
             </div>
@@ -803,7 +803,7 @@ function AdminPanel() {
       if (!raw) return alert("Tracking não encontrado.");
       const data = JSON.parse(raw);
       const now = new Date();
-      const ts = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
+      const ts = "${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}-${String(now.getDate()).padStart(2,"0")} ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}";
       const upd = { ts, status, note };
       data.updates = Array.isArray(data.updates) ? [...data.updates, upd] : [upd];
       localStorage.setItem(selected, JSON.stringify(data));
@@ -835,7 +835,7 @@ function AdminPanel() {
                   <div>
                     <div className="text-sm text-slate-300">Tracking</div>
                     <select value={selected} onChange={(e)=>setSelected(e.target.value)} className="w-full rounded bg-slate-950 px-3 py-2 text-sm text-slate-100 border border-slate-700">
-                      <option value="">Selecione…</option>
+                      <option value="">Selecione...</option>
                       {list.map((e)=> <option key={e.code} value={e.code}>{e.code} - {e.company}</option>)}
                     </select>
                   </div>
@@ -1082,9 +1082,9 @@ function FormWizard({ open, onClose }) {
   <button type="button" className="px-4 py-2 rounded-md bg-slate-700 text-slate-100 hover:bg-slate-600" onClick={()=>setStep(1)}>Voltar</button>
   <button
     type="button"
-    className={`px-4 py-2 rounded-md transition ${
+    className={"px-4 py-2 rounded-md transition ${
       consent ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-slate-700 text-slate-400 cursor-not-allowed"
-    }`}
+    }"}
     onClick={handleSubmit}
     disabled={!consent || sending}
   >
@@ -1167,7 +1167,7 @@ function FormWizard({ open, onClose }) {
                       </div>
                     </div>
                     <div className="text-xs text-slate-400 border-t border-slate-700 pt-2">
-                      Tracking: {tracking} · Date: {dateISO}
+                      Tracking: {tracking} . Date: {dateISO}
                     </div>
                   </div>
 
@@ -1518,36 +1518,36 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
     const p = new Date(dateISO);
     if (!isNaN(p)) dt = p;
   }
-  const when = `${dt.toLocaleDateString()} ${dt.toLocaleTimeString()}`;
+  const when = "${dt.toLocaleDateString()} ${dt.toLocaleTimeString()}";
 
   const lines = [];
   lines.push("APPLICATION DATA (KASH Corporate Solutions LLC)");
   lines.push("");
-  lines.push(`Tracking: ${tracking || ""}`);
-  lines.push(`Date/Time: ${when}`);
+  lines.push("Tracking: ${tracking || ""}");
+  lines.push("Date/Time: ${when}");
   lines.push("");
   lines.push("- Company -");
-  lines.push(`Legal Name: ${safe(company.companyName)}`);
-  if (company.companyAltName) lines.push(`Alt/DBA: ${safe(company.companyAltName)}`);
-  if (company.hasFloridaAddress !== undefined) lines.push(`Has Florida Address: ${company.hasFloridaAddress ? "Yes" : "No"}`);
-  if (company.hasFloridaAddress && company.floridaAddress) lines.push(`Florida Address: ${safe(company.floridaAddress)}`);
-  if (company.email) lines.push(`Email: ${safe(company.email)}`);
-  if (company.phone) lines.push(`Phone: ${safe(company.phone)}`);
-  if (company.website) lines.push(`Website: ${safe(company.website)}`);
+  lines.push("Legal Name: ${safe(company.companyName)}");
+  if (company.companyAltName) lines.push("Alt/DBA: ${safe(company.companyAltName)}");
+  if (company.hasFloridaAddress !== undefined) lines.push("Has Florida Address: ${company.hasFloridaAddress ? "Yes" : "No"}");
+  if (company.hasFloridaAddress && company.floridaAddress) lines.push("Florida Address: ${safe(company.floridaAddress)}");
+  if (company.email) lines.push("Email: ${safe(company.email)}");
+  if (company.phone) lines.push("Phone: ${safe(company.phone)}");
+  if (company.website) lines.push("Website: ${safe(company.website)}");
   if (company.usAddress) {
     const a = company.usAddress;
     const a1 = safe(a.line1), a2 = safe(a.line2), city = safe(a.city), st = safe(a.state), zip = safe(a.zip);
     const addrLine = [a1, a2].filter(Boolean).join(', ');
-    if (addrLine) lines.push(`US Address: ${addrLine}`);
+    if (addrLine) lines.push("US Address: ${addrLine}");
     const cityLine = [city, st, zip].filter(Boolean).join(', ');
-    if (cityLine) lines.push(`US City/State/ZIP: ${cityLine}`);
+    if (cityLine) lines.push("US City/State/ZIP: ${cityLine}");
   }
   lines.push("");
   lines.push("- Consents / Declarations -");
   if (typeof flags==="object" && flags) {
-    if (typeof flags.limitations!=="undefined") lines.push(`Limitations: ${String(flags.limitations)}`);
-    if (typeof flags.responsibility!=="undefined") lines.push(`Responsibility: ${String(flags.responsibility)}`);
-    if (typeof flags.agreed!=="undefined") lines.push(`Agreed: ${String(flags.agreed)}`);
+    if (typeof flags.limitations!=="undefined") lines.push("Limitations: ${String(flags.limitations)}");
+    if (typeof flags.responsibility!=="undefined") lines.push("Responsibility: ${String(flags.responsibility)}");
+    if (typeof flags.agreed!=="undefined") lines.push("Agreed: ${String(flags.agreed)}");
   }
   lines.push("");
   if (source) { lines.push("- Source -"); lines.push(String(source)); lines.push(""); }
@@ -1558,7 +1558,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
         const note = (u && (u.note||u.message||u.msg)) ? String(u.note||u.message||u.msg) : "";
         const st = (u && u.status) ? String(u.status) : "";
         const ts = (u && (u.ts||u.date)) ? String(u.ts||u.date) : "";
-        const line = [`${idx+1}.`, st, note, ts].filter(Boolean).join(" - ");
+        const line = ["${idx+1}.", st, note, ts].filter(Boolean).join(" - ");
         if (line) lines.push(line);
       } catch(_) {}
     });
@@ -1572,9 +1572,9 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
       const idoc = safe(m.idOrPassport || m.document);
       const addr = safe(m.address || m.addressLine);
       const email = safe(m.email);
-      lines.push(`${i + 1}. ${full}${role ? " - " + role : ""}${idoc ? " - " + idoc : ""}`);
-      if (addr) lines.push(`   Address: ${addr}`);
-      if (email) lines.push(`   Email: ${email}`);
+      lines.push("${i + 1}. ${full}${role ? " - " + role : ""}${idoc ? " - " + idoc : ""}");
+      if (addr) lines.push("   Address: ${addr}");
+      if (email) lines.push("   Email: ${email}");
     });
   } else {
     lines.push("(none)");
