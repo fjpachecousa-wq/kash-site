@@ -494,241 +494,28 @@ function Pricing({ onStart }) {
               <ul className="mt-3 text-sm text-slate-400 space-y-1 list-disc list-inside">
                 {p.features.map((f) => <li key={f}>{f}</li>)}
               </ul>
-              <div className="mt-5 flex flex-col items-center gap-1">
-                {!p.disabled && <CTAButton onClick={onStart}>{p.cta}</CTAButton>}
-                {p.disabled && <span className="text-xs text-slate-500">Em breve</span>}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-function HowItWorks() {
-  const steps = [
-    { t: "Consulta", d: "Alinhamento de expectativas (opcional)." },
-    { t: "Contrato e pagamento", d: "Assinatura eletrônica e checkout." },
-    { t: "Formulário de abertura", d: "Dados da empresa, sócios, KYC/AML." },
-    { t: "Pagamento", d: "Fee e taxa estadual — checkout online." },
-    { t: "Tracking do processo", d: "Número de protocolo e notificações por e-mail." },
-  ];
-  return (
-    <section className="py-16 border-t border-slate-800" id="como-funciona">
-      <div className="max-w-6xl mx-auto px-4">
-        <SectionTitle title="Como funciona" subtitle="Fluxo enxuto e auditável, do onboarding ao registro concluído." />
-        <ol className="mt-10 grid md:grid-cols-5 gap-5">
-          {steps.map((s, i) => (
-            <li key={s.t} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-              <div className="text-emerald-400 font-semibold">{String(i + 1).padStart(2, "0")}</div>
-              <h4 className="text-slate-100 mt-2 font-medium">{s.t}</h4>
-              <p className="text-slate-400 text-sm mt-1">{s.d}</p>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
-  );
-}
+              <div className="mt-5 border border-slate-800 rounded-xl p-4 bg-slate-900/60">
+  <label className="flex items-start gap-3 select-none cursor-pointer">
+    <input
+      type="checkbox"
+      className="mt-1 accent-emerald-500"
+      checked={consent}
+      onChange={(e) => setConsent(e.target.checked)}
+    />
+    <span className="text-sm text-slate-300">
+      Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.
+    </span>
+  </label>
+</div>
 
-/* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
-
-
-/* ===== Acceptance (PT/EN) + Signatures (helpers) ===== */
-function _acceptanceClausePT(fullNameList, dateISO) {
-  let dt = new Date();
-  if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
-    const [y,m,d] = dateISO.split("-").map(Number);
-    const now = new Date();
-    dt = new Date(y,(m||1)-1,d||1, now.getHours(), now.getMinutes(), now.getSeconds());
-  } else if (dateISO) {
-    const parsed = new Date(dateISO);
-    if (!isNaN(parsed)) dt = parsed;
-  }
-  const d = dt.toLocaleDateString();
-  const t = dt.toLocaleTimeString();
-  return `ACEITE E DECLARAÇÃO: Declaro que  com todos os termos deste contrato em ${d} e ${t}.`;
-}
-function _acceptanceClauseEN(fullNameList, dateISO) {
-  let dt = new Date();
-  if (dateISO && /^\d{4}-\d{2}-\d{2}$/.test(dateISO)) {
-    const [y,m,d] = dateISO.split("-").map(Number);
-    const now = new Date();
-    dt = new Date(y,(m||1)-1,d||1, now.getHours(), now.getMinutes(), now.getSeconds());
-  } else if (dateISO) {
-    const parsed = new Date(dateISO);
-    if (!isNaN(parsed)) dt = parsed;
-  }
-  const d = dt.toLocaleDateString();
-  const t = dt.toLocaleTimeString();
-  return `ACCEPTANCE AND DECLARATION: I confirm that I HAVE READ AND AGREE to all terms of this agreement on ${d} at ${t}.`;
-}
-function _signatureBlockPT(names) {
-  if (!names || !names.length) return "";
-  // linha em branco antes do primeiro nome; apenas nomes
-  return "\n" + names.map((n) => `${n}`).join("\n\n");
-}
-
-function _signatureBlockEN(names) {
-  if (!names || !names.length) return "";
-  // blank line before the first name; names only
-  return "\n" + names.map((n) => `${n}`).join("\n\n");
-}
-
-/* ================== PDF (US Letter, Times 10/9) ================== */
-
-function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], company, members = [] }) {
-  // Prefer provided objects; fallback to global state if available
-  const _company = company || (typeof data!=="undefined" && data.company) || (typeof result!=="undefined" && result.company) || { companyName };
-  const _members = (members && members.length)
-    ? members
-    : (Array.isArray(memberNames) && memberNames.length ? memberNames.map(n=>({fullName:n})) 
-       : (typeof data!=="undefined" && Array.isArray(data.members) ? data.members 
-          : (typeof result!=="undefined" && Array.isArray(result.members) ? result.members : [])));
-  const names = _members.map(p => p.fullName || p.name).filter(Boolean);
-
-  const doc = new jsPDF({ unit: "pt", format: "a4" });
-  const marginX = 40;
-  const maxW = doc.internal.pageSize.getWidth() - marginX * 2;
-  const pageH = doc.internal.pageSize.getHeight();
-
-  // --- PAGE 1: Application Data ---
-  doc.setFont("Times", "Normal");
-  doc.setFontSize(12);
-  let y = 60;
-  const appLines = _applicationDataLines({ company: _company, members: _members, tracking, dateISO });
-  const appWrapped = doc.splitTextToSize(appLines.join("\n"), maxW);
-  for (const line of appWrapped) {
-    if (y > pageH - 60) { doc.addPage(); y = 60; }
-    doc.text(line, marginX, y);
-    y += 16;
-  }
-
-  
-// --- Contratos removidos (EN/PT) ---
-// Encerramos o PDF apenas com os dados da aplicação.
-const fileName = `KASH_Application_${tracking}.pdf`;
-try { doc.save(fileName); } catch(_e) {}
-return { doc, fileName };
-}
-const initialForm = {
-  company: { companyName: "", email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
-  members: [
-    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
-    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
-  ],
-  accept: { responsibility: false, limitations: false },
-};
-function formReducer(state, action) {
-  switch (action.type) {
-    case "UPDATE_COMPANY": return { ...state, company: { ...state.company, [action.field]: action.value } };
-    case "UPDATE_US_ADDRESS": return { ...state, company: { ...state.company, usAddress: { ...state.company.usAddress, [action.field]: action.value } } };
-    case "UPDATE_MEMBER": return { ...state, members: state.members.map((m,i)=> i===action.index ? { ...m, [action.field]: action.value } : m) };
-    case "ADD_MEMBER": return { ...state, members: [...state.members, { fullName:"", role:"", idOrPassport:"", issuer:"", docExpiry:"", birthdate:"", percent:"", email:"", address:"", phone:"" }] };
-    case "REMOVE_MEMBER": return { ...state, members: state.members.filter((_,i)=> i!==action.index) };
-    case "TOGGLE_ACCEPT": return { ...state, accept: { ...state.accept, [action.key]: action.value } };
-    default: return state;
-  }
-}
-
-function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
-  return (
-    <div className="p-4 border border-slate-700 rounded-xl bg-slate-800 space-y-2">
-      <div className="flex items-center justify-between mb-1">
-        <div className="text-slate-300 font-medium">Sócio {index + 1}</div>
-        {canRemove && <button className="text-slate-400 hover:text-slate-200 text-xs" onClick={onRemove}>Remover</button>}
-      </div>
-      <div className="grid md:grid-cols-2 gap-2">
-        <div>
-          <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.fullName && "border-red-500")} placeholder="Nome completo" value={data.fullName} onChange={(e) => onChange("fullName", e.target.value)} />
-          <div className="text-red-400 text-xs">{errors.fullName || ""}</div>
-        </div>
-        <div>
-          <input type="email" className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.email && "border-red-500")} placeholder="E-mail do sócio" value={data.email} onChange={(e) => onChange("email", e.target.value)} />
-          <div className="text-red-400 text-xs">{errors.email || ""}</div>
-        </div>
-      </div>
-      <div className="grid md:grid-cols-2 gap-2">
-        <div>
-          <input className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.phone && "border-red-500")} placeholder="Telefone do sócio" value={data.phone} onChange={(e) => onChange("phone", e.target.value)} />
-          <div className="text-red-400 text-xs">{errors.phone || ""}</div>
-        </div>
-        <div>
-          <input className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.passport && "border-red-500")} placeholder="Passaporte (ou RG)" value={data.passport} onChange={(e) => onChange("passport", e.target.value)} />
-          <div className="text-red-400 text-xs">{errors.passport || ""}</div>
-        </div>
-      </div>
-      <div className="grid md:grid-cols-3 gap-2">
-        <div>
-          <input className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Órgão emissor" value={data.issuer} onChange={(e) => onChange("issuer", e.target.value)} />
-        </div>
-        <div>
-          <input type="date" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.docExpiry && "border-red-500")} value={data.docExpiry} onChange={(e) => onChange("docExpiry", e.target.value)} />
-          <div className="text-[11px] text-slate-400 mt-1">Validade do documento</div>
-          <div className="text-red-400 text-xs">{errors.docExpiry || ""}</div>
-        </div>
-        <div>
-          <input type="date" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.birthdate && "border-red-500")} value={data.birthdate} onChange={(e) => onChange("birthdate", e.target.value)} />
-          <div className="text-[11px] text-slate-400 mt-1">Data de nascimento</div>
-          <div className="text-red-400 text-xs">{errors.birthdate || ""}</div>
-        </div>
-      </div>
-      <div>
-        <input type="number" className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.percent && "border-red-500")} placeholder="% de participação" value={data.percent} onChange={(e) => onChange("percent", e.target.value)} />
-        <div className="text-red-400 text-xs">{errors.percent || ""}</div>
-      </div>
-    </div>
-  );
-}
-
-const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
-
-/* ======= Tracking Search (inline) ======= */
-function TrackingSearch() {
-  const [code, setCode] = useState("");
-  const [result, setResult] = useState(null);
-  const [notFound, setNotFound] = useState(false);
-  const handleLookup = async () => {
-    try {
-      try { const obj = await apiGetProcesso(code.trim()); setResult({ tracking: obj.kashId, dateISO: obj.atualizadoEm, company: { companyName: obj.companyName || '—' }, updates: obj.updates || [], faseAtual: obj.faseAtual || 1, subFase: obj.subFase || null }); saveTrackingShortcut(code.trim()); setNotFound(false); return; } catch(e) { setResult(null); setNotFound(true); return; }
-      setResult(data);
-      setNotFound(false);
-    } catch { setResult(null); setNotFound(true); }
-  };
-  return (
-    <section className="py-12 border-t border-slate-800">
-      <div className="max-w-4xl mx-auto px-4">
-        <SectionTitle title="Consultar processo por Tracking" subtitle="Insira seu código (ex.: KASH-XXXXXX) para verificar os dados enviados e baixar o contrato." />
-        <div className="mt-4 flex gap-2">
-          <input className="flex-1 rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="KASH-ABC123" value={code} onChange={(e)=>setCode(e.target.value)} />
-          <CTAButton onClick={handleLookup}>Consultar</CTAButton>
-        </div>
-        {notFound && <div className="text-sm text-red-400 mt-2">Tracking não encontrado neste dispositivo.</div>}
-        {result && (
-          <div className="mt-6 rounded-2xl border border-slate-800 bg-slate-900 p-4">
-            <div className="text-slate-300 font-medium">Status</div>
-            <div className="text-slate-400 text-sm mt-1">Recebido em {result.dateISO}. Empresa: {result.company?.companyName || "—"}</div>
-            <div className="mt-3">
-              <div className="text-slate-400 text-sm mb-1">Linha do tempo:</div>
-              <div className="space-y-2">
-                {(result.updates || []).map((u, i) => (
-                  <div key={i} className="flex items-start gap-2">
-                    <div className="h-2 w-2 rounded-full bg-emerald-400 mt-1" />
-                    <div className="text-sm text-slate-300">
-                      <div className="font-medium">{u.status}</div>
-                      <div className="text-xs text-slate-400">{u.ts}{u.note ? ` — ${u.note}` : ""}</div>
-                    </div>
-                  </div>
-                ))}
-                {(!result.updates || result.updates.length === 0) && (
-                  <div className="text-xs text-slate-500">Sem atualizações adicionais.</div>
-                )}
-              </div>
-            </div>
-            <div className="mt-4">
-              
-            </div>
-          </div>
+<div className="mt-4 flex items-center justify-between gap-2">
+  <div className="flex items-center gap-2">
+    <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
+    <CTAButton disabled={!consent || sending} onClick={handleSubmit}>
+      {sending ? "Enviando..." : "Enviar"}
+    </CTAButton>
+  </div>
+</div></div>
         )}
       </div>
     </section>
@@ -905,7 +692,7 @@ function FormWizard({ open, onClose }) {
     return companyOk && membersOk && acceptOk && isPercentTotalValid(members);
   }
 
-  async function handleSubmit(e){ if(e) e.preventDefault(); if(!consent){ return; } setSending(true);
+  async function handleSubmit(e){ if(e) e.preventDefault(); if(!consent){ return; } if(sending) return; setSending(true); if(e) e.preventDefault(); if(!consent){ return; } setSending(true);
     if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     setLoading(true);
     const code = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
