@@ -104,12 +104,13 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
     try{
       var q = function(s){ return document.querySelector(s); };
       return (
-        (q('[name="companyName"]') && q('[name="companyName"]').value) ||
-        (q('#companyName') && q('#companyName').value) ||
-        (q('[data-company-name]') && q('[data-company-name]').getAttribute('data-company-name')) ||
+        (q('input[name="companyName"]') && q('input[name="companyName"]').value.trim()) ||
+        (q('#companyName') && q('#companyName').value.trim()) ||
+        (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
+        (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
         ""
-      ).toString().trim();
-    }catch(e){ return ""; }
+      );
+    }catch(_){ return ""; }
   }
   function getKashId(){
     try{
@@ -117,7 +118,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
               localStorage.getItem("kashId") ||
               localStorage.getItem("tracking") || "";
       return String(v).toUpperCase().trim();
-    }catch(e){ return ""; }
+    }catch(_){ return ""; }
   }
   function addMetaObject(obj){
     obj = obj || {};
@@ -137,7 +138,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       if (k && !fd.has('hashId')) fd.set('hashId', k);
       if (c && !fd.has('companyName')) fd.set('companyName', c);
       if (c && !fd.has('empresaNome')) fd.set('empresaNome', c);
-    }catch(e){}
+    }catch(_){}
   }
   function addMetaSearchParams(sp){
     try{
@@ -147,13 +148,15 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       if (k && !sp.has('hashId')) sp.set('hashId', k);
       if (c && !sp.has('companyName')) sp.set('companyName', c);
       if (c && !sp.has('empresaNome')) sp.set('empresaNome', c);
-    }catch(e){}
+    }catch(_){}
   }
   function isAppsScriptUrl(u){
     try{
-      var su = (typeof window!=='undefined' && (window.SCRIPT_URL || window.PROCESSO_API)) || "";
-      return su && String(u||"").indexOf(String(su))===0;
-    }catch(e){ return false; }
+      var su = (typeof window!=='undefined' && (window.SCRIPT_URL || (window.CONFIG && window.CONFIG.appsScriptUrl))) ||
+               (typeof SCRIPT_URL!=='undefined' && SCRIPT_URL) || "";
+      return (su && String(u||"").indexOf(String(su))===0) ||
+             String(u||"").indexOf("script.google.com/macros")>=0;
+    }catch(_){ return false; }
   }
   try{
     if (typeof window!=='undefined' && !window.__kash_inline_fetch_patched){
@@ -167,7 +170,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
               try{
                 var obj = JSON.parse(body);
                 init.body = JSON.stringify(addMetaObject(obj));
-              }catch(e){
+              }catch(_){
                 init.body = JSON.stringify(addMetaObject({ raw: body }));
               }
             } else if (typeof FormData !== "undefined" && body instanceof FormData){
@@ -176,12 +179,12 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
               addMetaSearchParams(body);
             }
           }
-        }catch(e){}
+        }catch(_){}
         return _fetch.apply(this, arguments);
       };
       window.__kash_inline_fetch_patched = true;
     }
-  }catch(e){}
+  }catch(_){}
 })();
 // ===== FIM KASH INLINE SHIM =====
 
@@ -403,7 +406,7 @@ function SectionTitle({ title, subtitle }) {
       <h3 className="text-2xl text-slate-100 font-semibold">{title}</h3>
       {subtitle && <p className="text-slate-400 text-sm mt-1">{subtitle}</p>}
     </div>
-  );
+/* removido fechamento IIFE inconsistente */
 }
 
 /* ================== HERO/SERVICES/PRICING ================== */
@@ -425,7 +428,7 @@ function DemoCalculator() {
         <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Economia potencial</div><div className="text-lg text-emerald-400">US$ {saved.toLocaleString()}</div></div>
       </div>
     </div>
-  );
+/* removido fechamento IIFE inconsistente */
 }
 function Hero({ onStart }) {
   return (
@@ -451,7 +454,7 @@ function Hero({ onStart }) {
         </div>
       </div>
     </section>
-  );
+/* removido fechamento IIFE inconsistente */
 }
 function Services() {
   const items = [
@@ -474,7 +477,7 @@ function Services() {
         </div>
       </div>
     </section>
-  );
+/* removido fechamento IIFE inconsistente */
 }
 function Pricing({ onStart }) {
   const plans = [
@@ -503,7 +506,7 @@ function Pricing({ onStart }) {
         </div>
       </div>
     </section>
-  );
+/* removido fechamento IIFE inconsistente */
 }
 function HowItWorks() {
   const steps = [
@@ -528,7 +531,7 @@ function HowItWorks() {
         </ol>
       </div>
     </section>
-  );
+/* removido fechamento IIFE inconsistente */
 }
 
 /* ================== CONTRACT MODEL (11 clauses; EN + PT) ================== */
@@ -547,7 +550,7 @@ function _acceptanceClausePT(fullNameList, dateISO) {
   }
   const d = dt.toLocaleDateString();
   const t = dt.toLocaleTimeString();
-  return `ACEITE E DECLARAÇÃO: Declaro que  com todos os termos deste contrato em ${d} e ${t}.`;
+  return `ACEITE E DECLARAÇÃO: Declaro que LI E CONCORDO com todos os termos deste contrato em ${d} e ${t}.`;
 }
 function _acceptanceClauseEN(fullNameList, dateISO) {
   let dt = new Date();
@@ -604,13 +607,65 @@ function generateLetterPdf({ companyName, tracking, dateISO, memberNames = [], c
     y += 16;
   }
 
-  
-// --- Contratos removidos (EN/PT) ---
-// Encerramos o PDF apenas com os dados da aplicação.
-const fileName = `KASH_Application_${tracking}.pdf`;
-try { doc.save(fileName); } catch(_e) {}
-return { doc, fileName };
+  // --- EN Contract ---
+  doc.addPage(); y = 60;
+  const enBody = "";
+  const enText = (Array.isArray(enBody) ? enBody.join("\n") : String(enBody));
+  const en = [
+    `SERVICE AGREEMENT – ${companyName}`,
+    "",
+    enText,
+    "",
+    _acceptanceClauseEN(names, dateISO),
+    "",
+    "SIGNATURES",
+    _signatureBlockEN(names)
+  ].join("\n");
+  const enLines = doc.splitTextToSize(en, maxW);
+  for (const line of enLines) {
+    if (y > pageH - 60) { doc.addPage(); y = 60; }
+    doc.text(line, marginX, y);
+    y += 16;
+  }
+
+  // --- PT Contract ---
+  doc.addPage(); y = 60;
+  const ptBody = "";
+  const ptText = (Array.isArray(ptBody) ? ptBody.join("\n") : String(ptBody));
+  const pt = [
+    `CONTRATO DE PRESTAÇÃO DE SERVIÇOS – ${companyName}`,
+    "",
+    ptText,
+    "",
+    _acceptanceClausePT(names, dateISO),
+    "",
+    "ASSINATURAS",
+    _signatureBlockPT(names)
+  ].join("\n");
+  const ptLines = doc.splitTextToSize(pt, maxW);
+  for (const line of ptLines) {
+    if (y > pageH - 60) { doc.addPage(); y = 60; }
+    doc.text(line, marginX, y);
+    y += 16;
+  }
+
+  // Footer (local date/time + tracking + page numbers)
+  const dt = _localDateFromISO(dateISO);
+  const pageCount = doc.internal.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    const pw = doc.internal.pageSize.getWidth();
+    const ph = doc.internal.pageSize.getHeight();
+    doc.setFontSize(8);
+    doc.text(`${dt.toLocaleDateString()} ${dt.toLocaleTimeString()} · TN: ${tracking}`, 40, ph - 20);
+    doc.text(`Page ${i} of ${pageCount}`, pw - 40, ph - 20, { align: "right" });
+  }
+
+  const fileName = `KASH_Contract_${tracking}.pdf`;
+  doc.save(fileName);
+  return { doc, fileName };
 }
+
 const initialForm = {
   company: { companyName: "", email: "", phone: "", hasFloridaAddress: false, usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" } },
   members: [
@@ -678,7 +733,7 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
         <div className="text-red-400 text-xs">{errors.percent || ""}</div>
       </div>
     </div>
-  );
+/* removido fechamento IIFE inconsistente */
 }
 
 const US_STATES = ["AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"];
@@ -716,7 +771,7 @@ function TrackingSearch() {
                     <div className="h-2 w-2 rounded-full bg-emerald-400 mt-1" />
                     <div className="text-sm text-slate-300">
                       <div className="font-medium">{u.status}</div>
-                      <div className="text-xs text-slate-400">{u.ts}{u.note ? ` — ${u.note}` : ""}</div>
+                      <div className="text-xs text-slate-400">{u.ts}{u.note ? " - " + u.note : ""}</div>
                     </div>
                   </div>
                 ))}
@@ -854,7 +909,7 @@ function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   const [tracking, setTracking] = useState("");
-  const [agreed, setAgreed] = useState(true); // ""
+  const [agreed, setAgreed] = useState(true); // "Li e concordo"
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState(initialErrors);
 
@@ -905,7 +960,7 @@ function FormWizard({ open, onClose }) {
     return companyOk && membersOk && acceptOk && isPercentTotalValid(members);
   }
 
-  async function handleSubmit() {
+  async function handleSubmit(e){ if(e) e.preventDefault(); if(!consent){ return; }
     if (!validate()) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
     setLoading(true);
     const code = "KASH-" + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -1035,16 +1090,7 @@ function FormWizard({ open, onClose }) {
               </div>
             )}
 
-            {/* Step 2 — Revisão
-{/* Consentimento na conferência */}
-<div className="mt-3 p-3 border rounded bg-gray-50 text-sm">
-  <p>Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.</p>
-  <label className="mt-2 flex items-center gap-2">
-    <input type="checkbox" checked={consent} onChange={(e)=>setConsent(e.target.checked)} />
-    <span>Estou ciente e autorizo</span>
-  </label>
-</div>
- */}
+            {/* Step 2 — Revisão */}
             {step === 2 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">2/2 — Revisão</h4>
@@ -1096,47 +1142,25 @@ function FormWizard({ open, onClose }) {
 
             {/* Step 3 — Tracking + Contrato (EN + PT na mesma tela) */}
             {step === 3 && (
-              <div className="p-6">
-                <div className="text-center">
-                  <h4 className="text-slate-100 font-medium">Dados enviados com sucesso</h4>
-                  <p className="text-slate-400 mt-2">Seu código de acompanhamento (tracking):</p>
-                  <div className="mt-2 text-emerald-400 text-xl font-bold">{tracking}</div>
-                </div>
-
-                <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="text-slate-300 font-medium">Contrato (EN + PT juntos)</div>
-                    
-                  </div>
-
-                  {/* EN + PT in the same view */}
-                  <div className="mt-4 text-[13px] leading-6 text-slate-200 space-y-6 max-h-[55vh] overflow-auto pr-2">
-                    <div>
-                      <div className="font-semibold text-slate-100">SERVICE AGREEMENT – KASH Corporate Solutions</div>
-                      <div className="mt-2 space-y-2 text-slate-300">
-                        {null}
-                      </div>
-                    </div>
-                    <div className="text-slate-400">— Portuguese Version Below —</div>
-                    <div>
-                      <div className="font-semibold text-slate-100">CONTRATO — KASH Corporate Solutions</div>
-                      <div className="mt-2 space-y-2 text-slate-300">
-                        {null}
-                      </div>
-                    </div>
-                    <div className="text-xs text-slate-400 border-t border-slate-700 pt-2">
-                      Tracking: {tracking} · Date: {dateISO}
-                    </div>
-                  </div>
-
-                  <label className="mt-4 flex items-center gap-2 text-sm text-slate-300">
-                    <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} />
-                    <span> com os termos acima.</span>
+  <div className="p-6">
+    <div className="text-center">
+      <div className="text-slate-300">Dados enviados com sucesso</div>
+      <div className="mt-2 text-emerald-400 text-lg font-bold">{_readTrackingCode()}</div>
+      <div className="mt-4 text-slate-400 text-sm">
+        Sua aplicação foi recebida. A equipe KASH analisará as informações e enviará o link de pagamento e contrato por e-mail em até 48 horas.
+      </div>
+    </div>
+    <div className="mt-6 flex justify-end">
+      <CTAButton onClick={() => setOpen(false)}>Fechar</CTAButton>
+    </div>
+  </div>
+)} />
+                    <span>Li e concordo com os termos acima.</span>
                   </label>
                   <div className="mt-4 flex items-center justify-between gap-2">
   <div className="flex items-center gap-2">
  <CTAButton onClick={() => (window.location.href = CONFIG.checkout.stripeUrl)}>
-  Pagar US$ 1,360 (Stripe)
+  
 </CTAButton>
     <CTAButton onClick={() => { try { const form = document.querySelector('form[action*=""]'); if (form) { const email = form.querySelector('input[name="email"]')?.value || ""; let rp=form.querySelector('input[name="_replyto"]'); if(!rp){rp=document.createElement("input"); rp.type="hidden"; rp.name="_replyto"; form.appendChild(rp);} rp.value=email; form.submit(); } } catch(_err) {} try { const kashId=(localStorage.getItem("last_tracking")||"").toUpperCase(); const companyName=document.querySelector('input[name="companyName"]')?.value || ""; fetch(SCRIPT_URL,{mode:"no-cors",method:"POST",body:JSON.stringify({kashId,faseAtual:1,atualizadoEm:new Date().toISOString(),companyName}),mode:"no-cors"}); } catch(_err) {} }}>
       Concluir (teste)
@@ -1293,7 +1317,7 @@ function _scrapeFormDataStrong(){
     else if (key==="member_id"){ curr.idOrPassport = val; }
     else if (key==="member_email"){ curr.email = val; }
     else if (key==="member_address"){ curr.address = val; }
-  });
+/* removido fechamento IIFE inconsistente */
   if (curr.fullName || curr.role || curr.idOrPassport || curr.email || curr.address) { seq.push(curr); }
   const obj = {};
   const setDeep = (path, value) => {
@@ -1328,13 +1352,13 @@ function _scrapeFormDataStrong(){
       if (seg === '') return;
       if (/^\d+$/.test(seg)) parts.push(Number(seg));
       else parts.push(seg);
-    });
+/* removido fechamento IIFE inconsistente */
     return parts;
   };
   Object.keys(flat).forEach(k => {
     const path = parseKey(k);
     setDeep(path, flat[k]);
-  });
+/* removido fechamento IIFE inconsistente */
   return obj;
 }
 
@@ -1404,47 +1428,15 @@ function _scanDocumentForms(){
       for (const [k, v] of fd.entries()){
         if (!out[k]) out[k] = v;
       }
-    });
+/* removido fechamento IIFE inconsistente */
   } catch(_){}
   return out;
 }
 
-function _readTrackingCode(){
-  try { if (window.last_tracking && window.last_tracking.code) return window.last_tracking.code; } catch {}
-  try { const obj = JSON.parse(localStorage.getItem('last_tracking')||'{}'); if (obj && obj.code) return obj.code; } catch {}
-  return '';
-}
-
-function _collectFormSnapshot(){
-  const src = (typeof form !== 'undefined' && form) ? form : (typeof formState !== 'undefined' ? formState : {});
-  const company = src.company || {};
-  const members = Array.isArray(src.members) ? src.members : [];
-  const accepts = { consent: !!(src.accept || src.accepts || {}).consent || !!(typeof consent!=='undefined' && consent) };
-  const faseAtual = 'Recebido';
-  const subFase = 'Dados coletados';
-  const dateISO = new Date().toISOString();
-  const code = (window.last_tracking && window.last_tracking.code) ? window.last_tracking.code : (function(){ try{ const x=JSON.parse(localStorage.getItem('last_tracking')||'{}'); return x.code||'';}catch(_){return ''} })();
-  return { dateISO, kashId: code, company, members, accepts, faseAtual, subFase, source: 'kashsolutions.us', consentAt: dateISO, consentTextVersion: 'v2025-10-11' };
-}
-
-async function apiUpsertFull(){
-  const payload = _collectFormSnapshot();
-  const r = await fetch(PROCESSO_API, {
-    method: 'POST',
-    mode: 'cors',
-    redirect: 'follow',
-    headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'fetch' },
-    body: JSON.stringify({ action: 'upsert', ...payload })
-  });
-  const text = await r.text();
-  try { return JSON.parse(text); } catch { return { ok: r.ok, status: r.status, raw: text }; }
-}
-
 export default function App() {
+
   const [consent, setConsent] = React.useState(false);
   const [sending, setSending] = React.useState(false);
-  const [confirmTracking, setConfirmTracking] = React.useState("");
-  const [canPay, setCanPay] = React.useState(false);
 
   const [showConfirmModal, setShowConfirmModal] = React.useState(false);
 
@@ -1461,7 +1453,7 @@ export default function App() {
       <Footer />
       <FormWizard open={open} onClose={() => setOpen(false)} />
     </div>
-  );
+/* removido fechamento IIFE inconsistente */
 }
 
 /* ===== Application Data content (for unified PDF) ===== */
@@ -1519,7 +1511,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
         const line = [`${idx+1}.`, st, note, ts].filter(Boolean).join(" — ");
         if (line) lines.push(line);
       } catch(_) {}
-    });
+/* removido fechamento IIFE inconsistente */
     lines.push("");
   }
   lines.push("— Members —");
@@ -1533,7 +1525,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
       lines.push(`${i + 1}. ${full}${role ? " – " + role : ""}${idoc ? " – " + idoc : ""}`);
       if (addr) lines.push(`   Address: ${addr}`);
       if (email) lines.push(`   Email: ${email}`);
-    });
+/* removido fechamento IIFE inconsistente */
   } else {
     lines.push("(none)");
   }
