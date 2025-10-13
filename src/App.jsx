@@ -1001,7 +1001,7 @@ function FormWizard({ open, onClose }) {
               <button className="text-slate-400 hover:text-slate-200" onClick={onClose}>Fechar</button>
             </div>
 
-            {/* Step 1 */}
+            {/* Step 1 
             {step === 1 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">1/2 — Dados iniciais da LLC</h4>
@@ -1075,7 +1075,7 @@ function FormWizard({ open, onClose }) {
             )}
 
             {/* Step 2 — Revisão
-{/* Consentimento na conferência */}
+{/* Consentimento na conferência 
 <div className="mt-3 p-3 border rounded bg-gray-50 text-sm">
   <p>Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.</p>
   <label className="mt-2 flex items-center gap-2">
@@ -1083,7 +1083,7 @@ function FormWizard({ open, onClose }) {
     <span>Estou ciente e autorizo</span>
   </label>
 </div>
- */}
+ 
             {step === 2 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">2/2 — Revisão</h4>
@@ -1128,12 +1128,12 @@ function FormWizard({ open, onClose }) {
 
                 <div className="mt-6 flex justify-end gap-3">
                   <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
-                  <CTAButton onClick={handleSubmit}>{loading ? "Enviando..." : "Enviar"}</CTAButton>
+                  <CTAButton disabled={!consent || sending} onClick={handleSubmit}>{sending ? "Enviando..." : "Enviar"}</CTAButton>{loading ? "Enviando..." : "Enviar"}</CTAButton>
                 </div>
               </div>
             )}
 
-            {/* Step 3 — Tracking + Contrato (EN + PT na mesma tela) */}
+            {/* Step 3 — Tracking + Contrato (EN + PT na mesma tela) 
             {step === 3 && (
               <div className="p-6">
                 <div className="text-center">
@@ -1148,7 +1148,7 @@ function FormWizard({ open, onClose }) {
                     
                   </div>
 
-                  {/* EN + PT in the same view */}
+                  {/* EN + PT in the same view 
                   <div className="mt-4 text-[13px] leading-6 text-slate-200 space-y-6 max-h-[55vh] overflow-auto pr-2">
                     <div>
                       <div className="font-semibold text-slate-100">SERVICE AGREEMENT – KASH Corporate Solutions</div>
