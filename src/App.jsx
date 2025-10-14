@@ -13,7 +13,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
 
   // Salvar companyName enquanto digita
   const mirrorCompany = () => {
-    { try {
+    try {
       const $ = (s) => document.querySelector(s);
       const el =
         $('input[name="companyName"]') ||
@@ -31,7 +31,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
 
   // Capturar KASH real no DOM (ignora KASH-XXXXXX)
   const captureKash = () => {
-    { try {
+    try {
       const m = (document.body.innerText||"").match(/KASH-(?!X{6})[A-Z0-9-]{4,}/i);
       if (m && m[0]) localStorage.setItem("last_tracking", String(m[0]).toUpperCase());
     } catch {}
@@ -39,7 +39,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
 
   // Expor função para setar tracking no momento da geração
   window.__setKashTracking = function(code){
-    { try {
+    try {
       const real = String(code||"").toUpperCase();
       if (/^KASH-(?!X{6})[A-Z0-9-]{4,}$/.test(real)) localStorage.setItem("last_tracking", real);
     } catch {}
@@ -81,7 +81,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
       .forEach(b => {
         if (b.__kash_click_wired) return;
         b.addEventListener("click", () => {
-          { try {
+          try {
             const kashId = (localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "").toUpperCase().trim();
             const companyName = (localStorage.getItem("companyName") || "").trim();
             if (!kashId && !companyName) return;
@@ -110,7 +110,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
         (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
         ""
       );
-    } catch(_) { return \"\"; }
+    }catch(_){ return ""; }
   }
   function getKashId(){
     try{
@@ -118,7 +118,7 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
               localStorage.getItem("kashId") ||
               localStorage.getItem("tracking") || "";
       return String(v).toUpperCase().trim();
-    } catch(_) { return \"\"; }
+    }catch(_){ return ""; }
   }
   function addMetaObject(obj){
     obj = obj || {};
@@ -200,14 +200,16 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
         (q('[data-company-name]') && (q('[data-company-name]').getAttribute('data-company-name')||'').trim()) ||
         (q('input[name="empresaNome"]') && q('input[name="empresaNome"]').value.trim()) ||
         ""
-);}catch(_){ return ""; }
+      );
+      );
+    }catch(_){ return ""; }
   }
   // Lê kashId do localStorage
   function getKashId(){
     try{
       var v = localStorage.getItem("last_tracking") || localStorage.getItem("kashId") || localStorage.getItem("tracking") || "";
       return String(v).toUpperCase().trim();
-    } catch(_) { return \"\"; }
+    }catch(_){ return ""; }
   }
   // Adiciona metadados ao JSON
   function addMeta(obj){
@@ -255,26 +257,26 @@ if (typeof window !== "undefined" && !window.__KASH_WIRE__) {
 // ====== KASH COMPANY PATCH (somente companyName; sem alterar layout) ======
 (function(){
   function __kash_getCompanyName(){
-    { try {
+    try{
       const c1 = document.querySelector('input[name="companyName"]')?.value;
       const c2 = document.querySelector('input[name="empresaNome"]')?.value;
       const c3 = document.querySelector('#companyName')?.value;
       const c4 = document.querySelector('[data-company-name]')?.getAttribute('data-company-name');
       const c5 = document.querySelector('[name*="company"]')?.value;
       return (c1 || c2 || c3 || c4 || c5 || "").toString().trim();
-    } catch(_) { return \"\"; }
+    } catch(_){ return ""; }
   }
 
-  { try {
+  try{
     const __orig_fetch = window.fetch;
     window.fetch = function(input, init){
-      { try {
+      try{
         const url = (typeof input === "string") ? input : (input && input.url) ? input.url : "";
         const target = (url || "").toString();
         const scriptUrl = (window.SCRIPT_URL || (typeof SCRIPT_URL === "string" ? SCRIPT_URL : "")) || "";
         if (scriptUrl && target.startsWith(scriptUrl)) {
           if (init && init.body && typeof init.body === "string" && init.body.trim().startsWith("{")) {
-            { try {
+            try{
               const obj = JSON.parse(init.body);
               const name = __kash_getCompanyName();
               if (name) {
@@ -343,7 +345,7 @@ function getTrackingShortcuts() {
   catch { return []; }
 }
 function clearAnySensitiveLocalData() {
-  { try {
+  try {
     const keepKey = "kash.tracking.shortcuts";
     const shortcuts = localStorage.getItem(keepKey);
     localStorage.clear();
@@ -796,7 +798,7 @@ function AdminPanel() {
   const addUpdate = async () => {
     if (!selected) return alert("Escolha um tracking.");
     if (!status) return alert("Informe um status.");
-    { try {
+    try {
       const raw = localStorage.getItem(selected);
       if (!raw) return alert("Tracking não encontrado.");
       const data = JSON.parse(raw);
@@ -1359,7 +1361,7 @@ function _harvestFromFlat(flat){
 function _scanDocumentForms(){
   const out = {};
   if (typeof document==="undefined" || !document.forms) return out;
-  { try {
+  try {
     const forms = Array.from(document.forms);
     forms.forEach(f => {
       const fd = new FormData(f);
@@ -1399,7 +1401,49 @@ async function apiUpsertFull({ kashId, company, members, consent }){
   if (!res.ok) throw new Error("Falha no envio: " + text);
   return text;
 }
+
+function _readTrackingCode(){
+  try{
+    return localStorage.getItem("kashId") || "";
+  }catch(_){
+    return "";
+  }
+}
+
+
+function getOrCreateKashId(){
+  try{
+    let k = localStorage.getItem("kashId");
+    if(!k){
+      k = "KASH-" + Math.random().toString(36).slice(2,10).toUpperCase();
+      localStorage.setItem("kashId", k);
+    }
+    return k;
+  }catch(_){
+    return "KASH-" + Math.random().toString(36).slice(2,10).toUpperCase();
+  }
+}
+
+
+function collectFormData(){
+  // Attempt to reuse common state names; fallback to safe shapes
+  let company = {};
+  let members = [];
+  try{
+    if (typeof formState === "object" && formState) {
+      company = formState.company || {};
+      members = Array.isArray(formState.members) ? formState.members : [];
+    } else if (typeof state === "object" && state) {
+      company = state.company || {};
+      members = Array.isArray(state.members) ? state.members : [];
+    }
+  }catch(_){}
+  return { company, members };
+}
+
 export default function App() {
+  const [consent, setConsent] = React.useState(false);
+
   const [confirmTracking , setConfirmtracking] = React.useState("");
   const [showConfirmModal , setShowconfirmmodal] = React.useState(false);
   const [sending , setSending] = React.useState(false);
@@ -1469,7 +1513,7 @@ function _applicationDataLines({ company = {}, members = [], tracking, dateISO, 
   if (Array.isArray(updates) && updates.length) {
     lines.push("- Updates -");
     updates.forEach((u, idx)=>{
-      { try {
+      try {
         const note = (u && (u.note||u.message||u.msg)) ? String(u.note||u.message||u.msg) : "";
         const st = (u && u.status) ? String(u.status) : "";
         const ts = (u && (u.ts||u.date)) ? String(u.ts||u.date) : "";
