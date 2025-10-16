@@ -1,7 +1,8 @@
-// src/App.jsx – KASH Solutions (versão corrigida: tracking vem só do servidor)
-// Mantém o visual/fluxo original. Corrige a causa do tracking repetido:
-// - Remove geração local de kashId (localStorage).
-// - apiUpsertFull retorna JSON e handleSubmit exibe o kashId do servidor.
+// src/App.jsx – KASH Solutions (versão corrigida: tracking só do servidor + erros detalhados)
+// Mantém o visual/fluxo original. Corrige a causa do tracking repetido e melhora diagnostico:
+// - Não gera kashId no cliente (vem do servidor).
+// - apiUpsertFull valida HTTP e JSON e propaga mensagem do servidor.
+// - handleSubmit mostra o erro real em vez de "falha de conexão".
 
 import React, { useEffect, useMemo, useReducer, useState } from "react";
 
@@ -41,13 +42,13 @@ function isPercentTotalValid(members) {
 }
 
 /* ========================= API (Apps Script) ========================= */
-// Agora: não envia kashId; retorna JSON { ok, kashId, ... } do servidor
+// Não envia kashId; espera JSON { ok:true, kashId, ... } do servidor
 async function apiUpsertFull({ company, members, consent }) {
-  const url = (typeof window !== "undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) || "";
+  const url =
+    (typeof window !== "undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) || "";
   if (!url) throw new Error("Apps Script URL ausente");
 
   const payload = {
-    // action é opcional para o seu doPost, deixei por clareza
     action: "ingest",
     company,
     members,
@@ -66,15 +67,25 @@ async function apiUpsertFull({ company, members, consent }) {
   });
 
   const text = await res.text();
+
+  // Se o Web App não estiver público, costuma vir 302/401/403 ou HTML de login
+  if (!res.ok) {
+    // expõe um trecho da resposta pra ajudar diagnóstico
+    throw new Error(`HTTP ${res.status} — ${text.slice(0, 200)}`);
+  }
+
   let json;
   try {
     json = JSON.parse(text);
   } catch {
-    throw new Error("Resposta do servidor inválida.");
+    throw new Error("Resposta do servidor inválida (não-JSON).");
   }
-  if (!json || json.ok !== true || !json.kashId) {
-    throw new Error("Servidor não retornou kashId.");
+
+  if (json?.ok !== true || !json?.kashId) {
+    // Se o servidor mandou uma mensagem de erro, mostre-a
+    throw new Error(json?.error || "Servidor não retornou kashId.");
   }
+
   return json; // { ok:true, kashId, ... }
 }
 
@@ -466,17 +477,18 @@ function FormWizard({ open, onClose }) {
 
     setSending(true);
     try {
-      // Agora o tracking é o do servidor
+      // Tracking vem do servidor
       const resp = await apiUpsertFull({
         company: form.company,
         members: form.members,
         consent
       });
-      setDoneCode(resp.kashId);    // <-- tracking oficial
-      setStep(3);                  // tela final
+      setDoneCode(resp.kashId);   // <-- tracking oficial
+      setStep(3);                 // tela final
     } catch (err) {
       console.error(err);
-      alert("Falha ao enviar. Verifique sua conexão e tente novamente.");
+      // Mostra a mensagem real (HTTP/code/erro do servidor)
+      alert(`Falha ao enviar: ${err.message || err}`);
     } finally {
       setSending(false);
     }
