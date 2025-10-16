@@ -1,8 +1,7 @@
-// src/App.jsx – KASH Solutions (compat server exige kashId; sem diagnósticos extras)
+// src/App.jsx – KASH Solutions (compat GAS kashId; sem diagnósticos extras)
 // - Gera um kashId novo por envio (não usa localStorage).
-// - Envia kashId no payload para compatibilizar com o GAS que exige o campo.
-// - Mantém o visual e fluxo original.
-// - Mensagens de erro simples (sem logs/diagnóstico na interface).
+// - Envia kashId e campos compat (action/op/meta) para o GAS.
+// - Mantém visual/fluxo, mensagens simples.
 
 import React, { useEffect, useMemo, useReducer, useState } from "react";
 
@@ -42,20 +41,23 @@ function isPercentTotalValid(members) {
 }
 
 /* ========================= API (Apps Script) ========================= */
-// Compat GAS: envia kashId (obrigatório no servidor atual). Não faz diagnósticos verbosos.
 function makeClientKashId() {
-  // Gera um código curto, novo a cada envio (sem armazenar no navegador)
   const r = Math.random().toString(36).slice(2, 8).toUpperCase();
   return `KASH-${r}`;
 }
 
 async function apiUpsertFull({ company, members, consent }) {
   const url = (typeof window !== "undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) || "";
-  if (!url) throw new Error("URL de envio ausente.");
+  if (!url) throw new Error("Falha no envio.");
+
+  const kashId = makeClientKashId();
 
   const payload = {
-    action: "upsert",              // compat com handlers que esperam "upsert"
-    kashId: makeClientKashId(),    // servidor exige kashId; geramos um por envio
+    // Envio amplo para compatibilidade com handlers diferentes:
+    action: "upsert",
+    op: "ingest",
+    kashId,
+    meta: { kashId },
     company,
     members,
     accepts: { consent: !!consent },
@@ -66,23 +68,39 @@ async function apiUpsertFull({ company, members, consent }) {
     source: "kashsolutions.us"
   };
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" }, // evita preflight CORS
-    body: JSON.stringify(payload)
-  });
+  // Timeout de rede (evita “parece sem internet” quando só está lento)
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), 20000); // 20s
 
-  // Se houver algum problema de rede/permite, retorna erro genérico (sem "sujeiras")
+  let res;
+  try {
+    res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, // evita preflight CORS
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(t);
+  }
+
   if (!res.ok) throw new Error("Falha no envio.");
 
-  let json;
+  // Tenta JSON primeiro
+  try {
+    const json = await res.clone().json();
+    if (json && (json.kashId || (json.data && json.data.kashId)) && json.ok !== false) {
+      return { ok: true, kashId: json.kashId || json.data.kashId };
+    }
+  } catch (_) { /* continua para fallback em texto */ }
+
+  // Fallback: tenta extrair kashId de texto
   const text = await res.text();
-  try { json = JSON.parse(text); } catch { throw new Error("Falha no envio."); }
+  const m = text.match(/"kashId"\s*:\s*"([^"]+)"/i) || text.match(/kash[-_ ]?id[:=]\s*([A-Z0-9\-]+)/i);
+  if (m && m[1]) return { ok: true, kashId: m[1] };
 
-  // Espera { ok:true, kashId: "..."}; se não vier, trata como erro genérico
-  if (!json || json.ok !== true || !json.kashId) throw new Error("Falha no envio.");
-
-  return json; // { ok:true, kashId, ... }
+  // Se chegar aqui, não conseguimos obter o tracking
+  throw new Error("Falha no envio.");
 }
 
 /* ========================= UI BASICS ========================= */
