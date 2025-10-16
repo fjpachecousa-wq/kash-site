@@ -1,62 +1,69 @@
-// src/App.jsx – KASH Solutions (rebuild enxuto)
-// - React 18+ (hooks puros), sem dependências externas.
-// - Envio compacto para GAS com aliases mínimos (kashId + kashID + kash_id + tracking + meta.kashId).
-// - Content-Type: text/plain;charset=utf-8 (evita preflight). Troque para application/json quando o GAS suportar CORS.
-// - Validações: 2 sócios mínimos; e-mail/telefone; endereço (quando marcado); % 0–100 e soma == 100; 18+.
-// - Fallback para resposta não-JSON do GAS (regex do kashId), mas prefere JSON.
+"use client";
 
-import React, { useMemo, useReducer, useState } from "react";
+/**
+ * KASH Solutions – página completa (Next.js App Router)
+ * - Visual preservado (Tailwind).
+ * - Hooks em client component (use client).
+ * - Sem acessos a `window` no escopo de módulo.
+ * - Envio para GAS com kashId + aliases e validações reforçadas.
+ */
+
+import { useEffect, useMemo, useReducer, useState } from "react";
 
 /* ========================= CONFIG ========================= */
-// Opcional: substitua pela sua env: import.meta.env.VITE_APP_GAS_URL / process.env.NEXT_PUBLIC_GAS_URL
 const APPS_SCRIPT_URL =
-  (typeof window !== "undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) ||
   "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 /* ========================= UTILS ========================= */
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const phoneRe = /^[0-9+()\-\s]{8,}$/;      // simples e permissivo
-const zipRe   = /^\d{5}(-\d{4})?$/;        // 33101 ou 33101-1234
-
+const phoneRe = /^[0-9+()\-\s]{8,}$/;           // compatível
+const zipRe   = /^\d{5}(-\d{4})?$/;              // ZIP 5 ou 9
 const US_STATES = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",
   "MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC",
   "SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"
 ];
 
-const cx = (...xs) => xs.filter(Boolean).join(" ");
-const todayISO = () => {
-  const d = new Date(), p = (n)=>String(n).padStart(2,"0");
-  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
-};
-const ageFromISO = (iso) => {
-  if (!iso) return 0;
-  const [y,m,dd] = iso.split("-").map(Number);
+function classNames(...xs) { return xs.filter(Boolean).join(" "); }
+function todayISO() {
+  const d = new Date();
+  const pad = (n)=>String(n).padStart(2,"0");
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function calcAgeFullDate(dateStr) {
+  if (!dateStr) return 0;
+  const [y,m,day] = dateStr.split("-").map(Number);
   const now = new Date();
-  let a = now.getFullYear() - y;
+  let age = now.getFullYear() - y;
   const mo = (now.getMonth()+1) - m;
-  if (mo < 0 || (mo === 0 && now.getDate() < dd)) a--;
-  return a;
-};
-const sum100 = (members) => {
-  const total = members.reduce((acc, m) => acc + (Number(m.percent || 0) || 0), 0);
-  return Math.abs(total - 100) < 0.001;
-};
-const makeKashId = () => `KASH-${Date.now()}-${Math.random().toString(36).slice(2,12).toUpperCase()}`;
+  if (mo < 0 || (mo === 0 && now.getDate() < day)) age--;
+  return age;
+}
+function isPercentTotalValid(members) {
+  const sum = members.reduce((acc, m) => acc + (Number(m.percent || 0) || 0), 0);
+  return Math.abs(sum - 100) < 0.001;
+}
 
-/* ========================= API ========================= */
-async function sendToGAS({ company, members, consent }) {
-  if (!APPS_SCRIPT_URL) throw new Error("URL de envio ausente");
+/* ========================= API (Apps Script) ========================= */
+function makeClientKashId() {
+  const rand = Math.random().toString(36).slice(2, 12).toUpperCase();
+  return `KASH-${Date.now()}-${rand}`;
+}
 
-  const kashId = makeKashId();
+async function apiUpsertFull({ company, members, consent }) {
+  const url = APPS_SCRIPT_URL;
+  if (!url) throw new Error("Falha no envio.");
+
+  const kashId = makeClientKashId();
   const payload = {
     action: "upsert",
     op: "ingest",
+    // aliases p/ compatibilidade
     kashId,
-    // aliases mínimos para compat (mantém robustez sem “inchar” demais):
     kashID: kashId,
     kash_id: kashId,
     tracking: kashId,
+    id: kashId,
     meta: { kashId },
     company,
     members,
@@ -69,106 +76,89 @@ async function sendToGAS({ company, members, consent }) {
   };
 
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 20000); // 20s
+  const timeout = setTimeout(() => controller.abort(), 20000);
 
   let res;
   try {
-    res = await fetch(APPS_SCRIPT_URL, {
+    res = await fetch(url, {
       method: "POST",
-      // TROCAR para "application/json" quando seu GAS estiver com CORS completo:
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, // evita preflight; troque p/ application/json após CORS no GAS
       body: JSON.stringify(payload),
       signal: controller.signal
     });
   } finally {
-    clearTimeout(t);
+    clearTimeout(timeout);
   }
 
-  if (!res.ok) throw new Error("Falha no envio");
+  if (!res.ok) throw new Error("Falha no envio.");
 
-  // Tenta JSON limpo
+  // Preferir JSON
   try {
     const json = await res.clone().json();
-    const serverId = json?.kashId ?? json?.data?.kashId ?? null;
-    if (json?.ok !== false && serverId) return { ok: true, kashId: serverId };
+    const serverKash = (json && (json.kashId || (json.data && json.data.kashId))) || null;
+    if (json && json.ok !== false && serverKash) {
+      return { ok: true, kashId: serverKash };
+    }
   } catch {/* continua */}
 
-  // Fallback: tenta texto e extrai kashId
+  // Fallback texto
   const text = await res.text();
   const m = text.match(/"kashId"\s*:\s*"([A-Za-z0-9\-_]{6,})"/) || text.match(/kash[-_ ]?id[:=]\s*([A-Z0-9\-]{6,})/i);
-  if (m?.[1]) return { ok: true, kashId: m[1] };
+  if (m && m[1]) return { ok: true, kashId: m[1] };
 
-  // Se não veio, ainda assim retornamos o local (melhor UX)
-  return { ok: true, kashId };
+  throw new Error("Falha no envio.");
 }
 
-/* ========================= STATE / REDUCER ========================= */
-const initialForm = {
-  company: {
-    companyName: "",
-    email: "",
-    phone: "",
-    hasFloridaAddress: false,
-    usAddress: { line1: "", line2: "", city: "", state: "", zip: "" }, // state vazio obriga escolher
-  },
-  members: [
-    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
-    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" }
-  ],
-  accept: { responsibility: false, limitations: false }
-};
-
-function reducer(state, action) {
-  switch (action.type) {
-    case "SET_COMPANY":      return { ...state, company: { ...state.company, [action.field]: action.value } };
-    case "SET_US_ADDR":      return { ...state, company: { ...state.company, usAddress: { ...state.company.usAddress, [action.field]: action.value } } };
-    case "SET_MEMBER":       return { ...state, members: state.members.map((m,i)=> i===action.index? { ...m, [action.field]: action.value } : m) };
-    case "ADD_MEMBER":       return { ...state, members: [...state.members, { fullName:"", email:"", phone:"", passport:"", issuer:"", docExpiry:"", birthdate:"", percent:"" }] };
-    case "REMOVE_MEMBER":    return { ...state, members: state.members.filter((_,i)=> i!==action.index) };
-    case "SET_ACCEPT":       return { ...state, accept: { ...state.accept, [action.field]: action.value } };
-    case "RESET":            return initialForm;
-    default:                 return state;
-  }
+/* ========================= UI BASICS ========================= */
+function KLogo({ size = 40 }) {
+  return (
+    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
+      <div className="absolute inset-0 rounded-2xl bg-slate-900" />
+      <div className="absolute inset-[3px] rounded-xl bg-slate-800 shadow-inner" />
+      <svg width={size * 0.7} height={size * 0.7} viewBox="0 0 64 64" className="absolute">
+        <defs>
+          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#34d399" />
+            <stop offset="100%" stopColor="#10b981" />
+          </linearGradient>
+        </defs>
+        <path d="M14 8h8v48h-8z" fill="url(#g)" />
+        <path d="M26 32l22-24h10L42 32l16 24H48L26 32z" fill="url(#g)" />
+      </svg>
+    </div>
+  );
 }
 
-/* ========================= UI ATOMS ========================= */
-const KLogo = ({ size=40 }) => (
-  <div className="relative flex items-center justify-center" style={{ width:size, height:size }}>
-    <div className="absolute inset-0 rounded-2xl bg-slate-900" />
-    <div className="absolute inset-[3px] rounded-xl bg-slate-800 shadow-inner" />
-    <svg width={size*0.7} height={size*0.7} viewBox="0 0 64 64" className="absolute">
-      <defs>
-        <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#34d399" />
-          <stop offset="100%" stopColor="#10b981" />
-        </linearGradient>
-      </defs>
-      <path d="M14 8h8v48h-8z" fill="url(#g)" />
-      <path d="M26 32l22-24h10L42 32l16 24H48L26 32z" fill="url(#g)" />
-    </svg>
-  </div>
-);
-
-const Button = ({ children, variant="primary", onClick, type="button", disabled=false }) => {
+function CTAButton({ children, variant = "primary", onClick, type = "button", disabled = false }) {
   const base = "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed";
   const styles =
-    variant==="primary" ? "bg-emerald-500/90 hover:bg-emerald-500 text-slate-900 shadow"
-  : variant==="ghost"   ? "bg-transparent border border-slate-700 text-slate-200 hover:bg-slate-800"
-                        : "bg-slate-700 text-slate-100 hover:bg-slate-600";
-  return <button type={type} onClick={onClick} disabled={disabled} className={cx(base, styles)}>{children}</button>;
-};
+    variant === "primary"
+      ? "bg-emerald-500/90 hover:bg-emerald-500 text-slate-900 shadow"
+      : variant === "ghost"
+      ? "bg-transparent border border-slate-700 text-slate-200 hover:bg-slate-800"
+      : "bg-slate-700 text-slate-100 hover:bg-slate-600";
+  return (
+    <button type={type} onClick={onClick} disabled={disabled} className={classNames(base, styles)}>
+      {children}
+    </button>
+  );
+}
 
-const SectionTitle = ({ title, subtitle }) => (
-  <div>
-    <h3 className="text-2xl text-slate-100 font-semibold">{title}</h3>
-    {subtitle && <p className="text-slate-400 text-sm mt-1">{subtitle}</p>}
-  </div>
-);
+function SectionTitle({ title, subtitle }) {
+  return (
+    <div>
+      <h3 className="text-2xl text-slate-100 font-semibold">{title}</h3>
+      {subtitle && <p className="text-slate-400 text-sm mt-1">{subtitle}</p>}
+    </div>
+  );
+}
 
-/* ========================= SECTIONS ========================= */
-const DemoCalculator = () => {
+/* ========================= PAGE SECTIONS ========================= */
+function DemoCalculator() {
   const [monthly, setMonthly] = useState(4000);
-  const yearly = monthly * 12, withheld = yearly * 0.3, saved = Math.max(0, withheld - 1360);
+  const yearly = monthly * 12;
+  const withheld = yearly * 0.3;
+  const saved = Math.max(0, withheld - 1360);
   return (
     <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
       <div className="flex items-center justify-between">
@@ -176,49 +166,66 @@ const DemoCalculator = () => {
         <span className="text-xs text-emerald-300">Simulador</span>
       </div>
       <div className="mt-4">
-        <input type="range" min={1000} max={20000} step={100} value={monthly} onChange={(e)=>setMonthly(+e.target.value)} className="w-full" />
-        <div className="mt-2 text-sm text-slate-400">Receita mensal: <span className="text-slate-200">US$ {monthly.toLocaleString()}</span></div>
+        <input type="range" min={1000} max={20000} step={100} value={monthly} onChange={(e)=>setMonthly(Number(e.target.value))} className="w-full" />
+        <div className="mt-2 text-sm text-slate-400">
+          Receita mensal: <span className="text-slate-200">US$ {monthly.toLocaleString()}</span>
+        </div>
       </div>
       <div className="mt-4 grid grid-cols-3 gap-3 text-center">
-        <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Receita/ano</div><div className="text-lg text-slate-100">US$ {yearly.toLocaleString()}</div></div>
-        <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Retenção 30%</div><div className="text-lg text-slate-100">US$ {withheld.toLocaleString()}</div></div>
-        <div className="rounded-xl bg-slate-800 p-3"><div className="text-xs text-slate-400">Economia potencial</div><div className="text-lg text-emerald-400">US$ {saved.toLocaleString()}</div></div>
+        <div className="rounded-xl bg-slate-800 p-3">
+          <div className="text-xs text-slate-400">Receita/ano</div>
+          <div className="text-lg text-slate-100">US$ {yearly.toLocaleString()}</div>
+        </div>
+        <div className="rounded-xl bg-slate-800 p-3">
+          <div className="text-xs text-slate-400">Retenção 30%</div>
+          <div className="text-lg text-slate-100">US$ {withheld.toLocaleString()}</div>
+        </div>
+        <div className="rounded-xl bg-slate-800 p-3">
+          <div className="text-xs text-slate-400">Economia potencial</div>
+          <div className="text-lg text-emerald-400">US$ {saved.toLocaleString()}</div>
+        </div>
       </div>
     </div>
   );
-};
+}
 
-const Hero = ({ onStart }) => (
-  <section className="pt-16 pb-10">
-    <div className="max-w-6xl mx-auto px-4">
-      <div className="flex items-center gap-3">
-        <KLogo size={42} />
-        <div>
-          <h1 className="text-2xl md:text-3xl font-semibold text-slate-100">KASH Solutions</h1>
-          <p className="text-slate-400 text-sm">KASH CORPORATE SOLUTIONS LLC · Florida LLC</p>
-        </div>
-      </div>
-      <div className="mt-10 grid md:grid-cols-2 gap-8 items-start">
-        <div>
-          <h2 className="text-3xl md:text-4xl font-semibold text-slate-100">Abra sua LLC na Flórida e elimine a retenção de 30%.</h2>
-          <p className="mt-4 text-slate-300">Abertura da empresa, EIN, endereço e agente por 12 meses.</p>
-          <div className="mt-8 flex flex-wrap gap-3">
-            <Button onClick={onStart}>Começar agora</Button>
-            <a href="#como-funciona" className="inline-flex"><Button variant="ghost">Como funciona</Button></a>
+function Hero({ onStart }) {
+  return (
+    <section className="pt-16 pb-10">
+      <div className="max-w-6xl mx-auto px-4">
+        <div className="flex items-center gap-3">
+          <KLogo size={42} />
+          <div>
+            <h1 className="text-2xl md:text-3xl font-semibold text-slate-100">KASH Solutions</h1>
+            <p className="text-slate-400 text-sm">KASH CORPORATE SOLUTIONS LLC · Florida LLC</p>
           </div>
         </div>
-        <DemoCalculator />
+        <div className="mt-10 grid md:grid-cols-2 gap-8 items-start">
+          <div>
+            <h2 className="text-3xl md:text-4xl font-semibold text-slate-100">
+              Abra sua LLC na Flórida e elimine a retenção de 30%.
+            </h2>
+            <p className="mt-4 text-slate-300">Abertura da empresa, EIN, endereço e agente por 12 meses.</p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <CTAButton onClick={onStart}>Começar agora</CTAButton>
+              <a href="#como-funciona" className="inline-flex">
+                <CTAButton variant="ghost">Como funciona</CTAButton>
+              </a>
+            </div>
+          </div>
+          <DemoCalculator />
+        </div>
       </div>
-    </div>
-  </section>
-);
+    </section>
+  );
+}
 
-const Services = () => {
+function Services() {
   const items = [
     { t: "Abertura LLC Partnership", d: "Registro oficial na Flórida (Sunbiz)." },
     { t: "EIN (IRS)", d: "Obtenção do Employer Identification Number." },
     { t: "Operating Agreement", d: "Documento societário digital." },
-    { t: "Endereço + Agente (12 meses)", d: "Inclusos no pacote de abertura." }
+    { t: "Endereço + Agente (12 meses)", d: "Inclusos no pacote de abertura." },
   ];
   return (
     <section className="py-14 border-t border-slate-800">
@@ -235,13 +242,13 @@ const Services = () => {
       </div>
     </section>
   );
-};
+}
 
-const Pricing = ({ onStart }) => {
+function Pricing({ onStart }) {
   const plans = [
     { name: "Abertura LLC", price: "US$ 1,360", features: ["Endereço + Agente 12 meses", "EIN", "Operating Agreement"], cta: "Contratar", disabled: false },
     { name: "KASH FLOW 30 (Mensal)", price: "US$ 300", features: ["Classificação contábil", "Relatórios mensais"], cta: "Assinar", disabled: true },
-    { name: "KASH SCALE 5 (Mensal)", price: "US$ 1,000", features: ["Até 5 contratos", "Suporte prioritário"], cta: "Assinar", disabled: true }
+    { name: "KASH SCALE 5 (Mensal)", price: "US$ 1,000", features: ["Até 5 contratos", "Suporte prioritário"], cta: "Assinar", disabled: true },
   ];
   return (
     <section className="py-14 border-t border-slate-800">
@@ -256,7 +263,8 @@ const Pricing = ({ onStart }) => {
                 {p.features.map((f) => <li key={f}>{f}</li>)}
               </ul>
               <div className="mt-5 flex flex-col items-center gap-1">
-                {!p.disabled ? <Button onClick={onStart}>{p.cta}</Button> : <span className="text-xs text-slate-500">Em breve</span>}
+                {!p.disabled && <CTAButton onClick={onStart}>{p.cta}</CTAButton>}
+                {p.disabled && <span className="text-xs text-slate-500">Em breve</span>}
               </div>
             </div>
           ))}
@@ -264,15 +272,15 @@ const Pricing = ({ onStart }) => {
       </div>
     </section>
   );
-};
+}
 
-const HowItWorks = () => {
+function HowItWorks() {
   const steps = [
     { t: "Consulta", d: "Alinhamento de expectativas (opcional)." },
     { t: "Contrato e pagamento", d: "Assinatura e checkout acontecem depois da conferência." },
     { t: "Formulário de abertura", d: "Dados da empresa, sócios, KYC/AML." },
     { t: "Envio", d: "Você recebe o tracking do processo." },
-    { t: "Acompanhamento", d: "Atualizações por e-mail." }
+    { t: "Acompanhamento", d: "Atualizações por e-mail." },
   ];
   return (
     <section className="py-16 border-t border-slate-800" id="como-funciona">
@@ -290,121 +298,217 @@ const HowItWorks = () => {
       </div>
     </section>
   );
+}
+
+/* ========================= FORM REDUCER ========================= */
+const initialForm = {
+  company: {
+    companyName: "",
+    email: "",
+    phone: "",
+    hasFloridaAddress: false,
+    usAddress: { line1: "", line2: "", city: "", state: "", zip: "" }, // state começa vazio quando tem endereço
+  },
+  members: [
+    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
+    { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" }
+  ],
+  accept: { responsibility: false, limitations: false }
 };
 
-/* ========================= FORM PARTS ========================= */
-const MemberCard = ({ index, data, onChange, onRemove, canRemove, errors }) => (
-  <div className="p-4 border border-slate-700 rounded-xl bg-slate-800 space-y-2">
-    <div className="flex items-center justify-between mb-1">
-      <div className="text-slate-300 font-medium">Sócio {index + 1}</div>
-      {canRemove && <button className="text-slate-400 hover:text-slate-200 text-xs" onClick={onRemove}>Remover</button>}
-    </div>
-    <div className="grid md:grid-cols-2 gap-2">
-      <div>
-        <input className={cx("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.fullName && "border-red-500")} placeholder="Nome completo" value={data.fullName} onChange={(e)=>onChange("fullName", e.target.value)} />
-        <div className="text-red-400 text-xs">{errors.fullName || ""}</div>
-      </div>
-      <div>
-        <input type="email" className={cx("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.email && "border-red-500")} placeholder="E-mail do sócio" value={data.email} onChange={(e)=>onChange("email", e.target.value)} />
-        <div className="text-red-400 text-xs">{errors.email || ""}</div>
-      </div>
-    </div>
-    <div className="grid md:grid-cols-2 gap-2">
-      <div>
-        <input className={cx("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.phone && "border-red-500")} placeholder="Telefone do sócio" value={data.phone} onChange={(e)=>onChange("phone", e.target.value)} />
-        <div className="text-red-400 text-xs">{errors.phone || ""}</div>
-      </div>
-      <div>
-        <input className={cx("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.passport && "border-red-500")} placeholder="Passaporte (ou RG)" value={data.passport} onChange={(e)=>onChange("passport", e.target.value)} />
-        <div className="text-red-400 text-xs">{errors.passport || ""}</div>
-      </div>
-    </div>
-    <div className="grid md:grid-cols-3 gap-2">
-      <div>
-        <input className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Órgão emissor" value={data.issuer} onChange={(e)=>onChange("issuer", e.target.value)} />
-      </div>
-      <div>
-        <input type="date" className={cx("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.docExpiry && "border-red-500")} value={data.docExpiry} onChange={(e)=>onChange("docExpiry", e.target.value)} />
-        <div className="text-[11px] text-slate-400 mt-1">Validade do documento</div>
-        <div className="text-red-400 text-xs">{errors.docExpiry || ""}</div>
-      </div>
-      <div>
-        <input type="date" className={cx("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.birthdate && "border-red-500")} value={data.birthdate} onChange={(e)=>onChange("birthdate", e.target.value)} />
-        <div className="text-[11px] text-slate-400 mt-1">Data de nascimento</div>
-        <div className="text-red-400 text-xs">{errors.birthdate || ""}</div>
-      </div>
-    </div>
-    <div>
-      <input type="number" min={0} max={100} step="0.01" className={cx("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.percent && "border-red-500")} placeholder="% de participação" value={data.percent} onChange={(e)=>onChange("percent", e.target.value)} />
-      <div className="text-red-400 text-xs">{errors.percent || ""}</div>
-    </div>
-  </div>
-);
+function formReducer(state, action) {
+  switch (action.type) {
+    case "UPDATE_COMPANY":
+      return { ...state, company: { ...state.company, [action.field]: action.value } };
+    case "UPDATE_US_ADDRESS":
+      return { ...state, company: { ...state.company, usAddress: { ...state.company.usAddress, [action.field]: action.value } } };
+    case "UPDATE_MEMBER":
+      return { ...state, members: state.members.map((m, i) => (i === action.index ? { ...m, [action.field]: action.value } : m)) };
+    case "ADD_MEMBER":
+      return { ...state, members: [...state.members, { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" }] };
+    case "REMOVE_MEMBER":
+      return { ...state, members: state.members.filter((_, i) => i !== action.index) };
+    case "TOGGLE_ACCEPT":
+      return { ...state, accept: { ...state.accept, [action.key]: action.value } };
+    default:
+      return state;
+  }
+}
 
-/* ========================= FORM WIZARD ========================= */
-const FormWizard = ({ open, onClose }) => {
+/* ========================= FORM COMPONENTS ========================= */
+function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
+  return (
+    <div className="p-4 border border-slate-700 rounded-xl bg-slate-800 space-y-2">
+      <div className="flex items-center justify-between mb-1">
+        <div className="text-slate-300 font-medium">Sócio {index + 1}</div>
+        {canRemove && (
+          <button className="text-slate-400 hover:text-slate-200 text-xs" onClick={onRemove}>
+            Remover
+          </button>
+        )}
+      </div>
+      <div className="grid md:grid-cols-2 gap-2">
+        <div>
+          <input
+            className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.fullName && "border-red-500")}
+            placeholder="Nome completo"
+            value={data.fullName}
+            onChange={(e) => onChange("fullName", e.target.value)}
+          />
+          <div className="text-red-400 text-xs">{errors.fullName || ""}</div>
+        </div>
+        <div>
+          <input
+            type="email"
+            className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.email && "border-red-500")}
+            placeholder="E-mail do sócio"
+            value={data.email}
+            onChange={(e) => onChange("email", e.target.value)}
+          />
+          <div className="text-red-400 text-xs">{errors.email || ""}</div>
+        </div>
+      </div>
+      <div className="grid md:grid-cols-2 gap-2">
+        <div>
+          <input
+            className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.phone && "border-red-500")}
+            placeholder="Telefone do sócio"
+            value={data.phone}
+            onChange={(e) => onChange("phone", e.target.value)}
+          />
+          <div className="text-red-400 text-xs">{errors.phone || ""}</div>
+        </div>
+        <div>
+          <input
+            className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.passport && "border-red-500")}
+            placeholder="Passaporte (ou RG)"
+            value={data.passport}
+            onChange={(e) => onChange("passport", e.target.value)}
+          />
+          <div className="text-red-400 text-xs">{errors.passport || ""}</div>
+        </div>
+      </div>
+      <div className="grid md:grid-cols-3 gap-2">
+        <div>
+          <input
+            className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+            placeholder="Órgão emissor"
+            value={data.issuer}
+            onChange={(e) => onChange("issuer", e.target.value)}
+          />
+        </div>
+        <div>
+          <input
+            type="date"
+            className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.docExpiry && "border-red-500")}
+            value={data.docExpiry}
+            onChange={(e) => onChange("docExpiry", e.target.value)}
+          />
+          <div className="text-[11px] text-slate-400 mt-1">Validade do documento</div>
+          <div className="text-red-400 text-xs">{errors.docExpiry || ""}</div>
+        </div>
+        <div>
+          <input
+            type="date"
+            className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.birthdate && "border-red-500")}
+            value={data.birthdate}
+            onChange={(e) => onChange("birthdate", e.target.value)}
+          />
+          <div className="text-[11px] text-slate-400 mt-1">Data de nascimento</div>
+          <div className="text-red-400 text-xs">{errors.birthdate || ""}</div>
+        </div>
+      </div>
+      <div>
+        <input
+          type="number"
+          className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.percent && "border-red-500")}
+          placeholder="% de participação"
+          value={data.percent}
+          onChange={(e) => onChange("percent", e.target.value)}
+        />
+        <div className="text-red-400 text-xs">{errors.percent || ""}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ========================= FORM WIZARD (MODAL) ========================= */
+const initialErrors = { company: {}, members: [], accept: {} };
+
+function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [sending, setSending] = useState(false);
   const [consent, setConsent] = useState(false);
-  const [form, dispatch] = useReducer(reducer, initialForm);
-  const [errors, setErrors] = useState({ company:{}, members:[], accept:{} });
+  const [form, dispatch] = useReducer(formReducer, initialForm);
+  const [errors, setErrors] = useState(initialErrors);
   const [doneCode, setDoneCode] = useState("");
 
-  const setCompany  = (f,v)=> dispatch({ type:"SET_COMPANY", field:f, value:v });
-  const setUS       = (f,v)=> dispatch({ type:"SET_US_ADDR", field:f, value:v });
-  const setMember   = (i,f,v)=> dispatch({ type:"SET_MEMBER", index:i, field:f, value:v });
-  const addMember   = ()=> dispatch({ type:"ADD_MEMBER" });
-  const removeMember= (i)=> dispatch({ type:"REMOVE_MEMBER", index:i });
-  const setAccept   = (f,v)=> dispatch({ type:"SET_ACCEPT", field:f, value:v });
+  const updateCompany = (field, value) => dispatch({ type: "UPDATE_COMPANY", field, value });
+  const updateUS = (field, value) => dispatch({ type: "UPDATE_US_ADDRESS", field, value });
+  const updateMember = (i, field, value) => dispatch({ type: "UPDATE_MEMBER", index: i, field, value });
+  const addMember = () => dispatch({ type: "ADD_MEMBER" });
+  const removeMember = (i) => dispatch({ type: "REMOVE_MEMBER", index: i });
+  const toggleAccept = (k, v) => dispatch({ type: "TOGGLE_ACCEPT", key: k, value: v });
 
   function validate() {
     const { company, members, accept } = form;
-    const e = { company:{}, members: members.map(()=>({})), accept:{} };
+    const errs = { company: {}, members: members.map(() => ({})), accept: {} };
 
-    if (members.length < 2) { alert("É necessário informar pelo menos 2 sócios."); setErrors(e); return false; }
-
-    if (!company.companyName || company.companyName.length < 3) e.company.companyName = "Informe o nome da LLC.";
-    if (!emailRe.test(company.email || "")) e.company.email = "E-mail inválido.";
-    if (!phoneRe.test(company.phone || "")) e.company.phone = "Telefone inválido.";
+    if (members.length < 2) {
+      alert("É necessário informar pelo menos 2 sócios.");
+      setErrors(errs);
+      return false;
+    }
+    if (!company.companyName || company.companyName.length < 3) errs.company.companyName = "Informe o nome da LLC.";
+    if (!emailRe.test(company.email || "")) errs.company.email = "E-mail inválido.";
+    if (!phoneRe.test(company.phone || "")) errs.company.phone = "Telefone inválido.";
 
     if (company.hasFloridaAddress) {
-      if (!company.usAddress.line1) e.company.line1 = "Address Line 1 obrigatório.";
-      if (!company.usAddress.city)  e.company.city  = "City obrigatória.";
-      if (!company.usAddress.state) e.company.state = "State obrigatório.";
-      if (!company.usAddress.zip || !zipRe.test(company.usAddress.zip)) e.company.zip = "ZIP inválido. Ex.: 33101 ou 33101-1234.";
+      if (!company.usAddress.line1) errs.company.line1 = "Address Line 1 obrigatório.";
+      if (!company.usAddress.city) errs.company.city = "City obrigatória.";
+      if (!company.usAddress.state) errs.company.state = "State obrigatório.";
+      if (!company.usAddress.zip || !zipRe.test(company.usAddress.zip)) errs.company.zip = "ZIP inválido. Ex.: 33101 ou 33101-1234.";
     }
 
-    for (let i=0;i<members.length;i++) {
+    for (let i = 0; i < members.length; i++) {
       const m = members[i];
-      if (!m.fullName || m.fullName.length < 5) e.members[i].fullName = "Nome inválido.";
-      if (!emailRe.test(m.email || ""))        e.members[i].email = "E-mail inválido.";
-      if (!phoneRe.test(m.phone || ""))        e.members[i].phone = "Telefone inválido.";
-      if (!m.passport || m.passport.length<3)  e.members[i].passport = "Documento obrigatório.";
-      if (!m.docExpiry)                        e.members[i].docExpiry = "Validade obrigatória.";
-      if (!m.birthdate)                        e.members[i].birthdate = "Nascimento obrigatório.";
-      if (m.birthdate && ageFromISO(m.birthdate) < 18) e.members[i].birthdate = "Precisa ter 18+.";
+      if (!m.fullName || m.fullName.length < 5) errs.members[i].fullName = "Nome inválido.";
+      if (!emailRe.test(m.email || "")) errs.members[i].email = "E-mail inválido.";
+      if (!phoneRe.test(m.phone || "")) errs.members[i].phone = "Telefone inválido.";
+      if (!m.passport || m.passport.length < 3) errs.members[i].passport = "Documento obrigatório.";
+      if (!m.docExpiry) errs.members[i].docExpiry = "Validade obrigatória.";
+      if (!m.birthdate) errs.members[i].birthdate = "Nascimento obrigatório.";
+      if (m.birthdate && calcAgeFullDate(m.birthdate) < 18) errs.members[i].birthdate = "Precisa ter 18+.";
       const p = Number(m.percent);
-      if (!Number.isFinite(p) || p <= 0 || p > 100) e.members[i].percent = "% entre 0 e 100.";
+      if (!Number.isFinite(p) || p <= 0 || p > 100) errs.members[i].percent = "% entre 0 e 100.";
     }
 
-    if (!accept.responsibility) e.accept.base = "Aceite a declaração de responsabilidade.";
-    if (!company.hasFloridaAddress && !accept.limitations) e.accept.base = "Aceite as limitações (endereço/agente 12 meses).";
+    if (!accept.responsibility) errs.accept.base = "Aceite a declaração de responsabilidade.";
+    if (!form.company.hasFloridaAddress && !accept.limitations) errs.accept.base = "Aceite as limitações (endereço/agente 12 meses).";
 
-    setErrors(e);
-    const okCompany = Object.keys(e.company).length===0;
-    const okMembers = e.members.every(m => Object.keys(m).length===0);
-    const okAccept  = accept.responsibility && (company.hasFloridaAddress || accept.limitations);
-    const okTotal   = sum100(members);
-    if (!okTotal) alert("A soma dos percentuais deve ser 100%.");
-    return okCompany && okMembers && okAccept && okTotal;
+    setErrors(errs);
+    const companyOk = Object.keys(errs.company).length === 0;
+    const membersOk = errs.members.every((m) => Object.keys(m).length === 0);
+    const acceptOk = accept.responsibility && (form.company.hasFloridaAddress || accept.limitations);
+    const percentOk = isPercentTotalValid(members);
+    if (!percentOk) alert("A soma dos percentuais deve ser 100%.");
+    return companyOk && membersOk && acceptOk && percentOk;
   }
 
   async function handleSubmit() {
-    if (!consent) { alert("Marque o consentimento para prosseguir."); return; }
+    if (!consent) {
+      alert("Marque o consentimento para prosseguir.");
+      return;
+    }
     if (!validate()) return;
+
     setSending(true);
     try {
-      const resp = await sendToGAS({ company: form.company, members: form.members, consent });
+      const resp = await apiUpsertFull({
+        company: form.company,
+        members: form.members,
+        consent
+      });
       setDoneCode(resp.kashId);
       setStep(3);
     } catch {
@@ -414,10 +518,12 @@ const FormWizard = ({ open, onClose }) => {
     }
   }
 
-  const dateISO = useMemo(()=> todayISO(), []);
+  const dateISO = useMemo(() => todayISO(), []);
+
+  if (!open) return null;
 
   return (
-    <div className={cx("fixed inset-0 z-50", !open && "hidden")} aria-hidden={!open}>
+    <div className="fixed inset-0 z-50" aria-hidden={!open}>
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div className="absolute inset-0 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-4 pt-16 pb-10">
@@ -427,33 +533,52 @@ const FormWizard = ({ open, onClose }) => {
               <button className="text-slate-400 hover:text-slate-200" onClick={onClose}>Fechar</button>
             </div>
 
-            {step===1 && (
+            {step === 1 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">1/2 - Dados iniciais da LLC</h4>
-
                 <div className="mt-4 grid gap-4">
                   <div>
                     <label className="block text-sm text-slate-400">Nome da LLC</label>
-                    <input className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Ex.: SUNSHINE MEDIA LLC" value={form.company.companyName} onChange={(e)=>setCompany("companyName", e.target.value)} />
+                    <input
+                      className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                      placeholder="Ex.: SUNSHINE MEDIA LLC"
+                      value={form.company.companyName}
+                      onChange={(e) => updateCompany("companyName", e.target.value)}
+                    />
                     <div className="text-red-400 text-xs">{errors.company.companyName || ""}</div>
                   </div>
 
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm text-slate-400">E-mail principal</label>
-                      <input type="email" className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="email@exemplo.com" value={form.company.email} onChange={(e)=>setCompany("email", e.target.value)} />
+                      <input
+                        type="email"
+                        className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        placeholder="email@exemplo.com"
+                        value={form.company.email}
+                        onChange={(e) => updateCompany("email", e.target.value)}
+                      />
                       <div className="text-red-400 text-xs">{errors.company.email || ""}</div>
                     </div>
                     <div>
                       <label className="block text-sm text-slate-400">Telefone principal</label>
-                      <input className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="+1 (305) 123-4567" value={form.company.phone} onChange={(e)=>setCompany("phone", e.target.value)} />
+                      <input
+                        className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        placeholder="+1 (305) 123-4567"
+                        value={form.company.phone}
+                        onChange={(e) => updateCompany("phone", e.target.value)}
+                      />
                       <div className="text-red-400 text-xs">{errors.company.phone || ""}</div>
                     </div>
                   </div>
 
                   <div className="mt-2">
                     <label className="inline-flex items-center gap-2 text-sm text-slate-300">
-                      <input type="checkbox" checked={form.company.hasFloridaAddress} onChange={(e)=>setCompany("hasFloridaAddress", e.target.checked)} />
+                      <input
+                        type="checkbox"
+                        checked={form.company.hasFloridaAddress}
+                        onChange={(e) => updateCompany("hasFloridaAddress", e.target.checked)}
+                      />
                       <span>Possui endereço físico na Flórida?</span>
                     </label>
                   </div>
@@ -461,39 +586,58 @@ const FormWizard = ({ open, onClose }) => {
                   {form.company.hasFloridaAddress ? (
                     <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
                       <div className="text-slate-300 font-medium mb-2">Endereço da empresa (USA)</div>
-                      <input className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Address Line 1" value={form.company.usAddress.line1} onChange={(e)=>setUS("line1", e.target.value)} />
+                      <input
+                        className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                        placeholder="Address Line 1"
+                        value={form.company.usAddress.line1}
+                        onChange={(e) => updateUS("line1", e.target.value)}
+                      />
                       <div className="grid md:grid-cols-3 gap-2 mt-2">
-                        <input className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="City" value={form.company.usAddress.city} onChange={(e)=>setUS("city", e.target.value)} />
-                        <select className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" value={form.company.usAddress.state} onChange={(e)=>setUS("state", e.target.value)}>
+                        <input
+                          className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          placeholder="City"
+                          value={form.company.usAddress.city}
+                          onChange={(e) => updateUS("city", e.target.value)}
+                        />
+                        <select
+                          className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          value={form.company.usAddress.state}
+                          onChange={(e) => updateUS("state", e.target.value)}
+                        >
                           <option value="">Selecione</option>
-                          {US_STATES.map(s => <option key={s} value={s}>{s}</option>)}
+                          {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
                         </select>
-                        <input className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="ZIP Code" value={form.company.usAddress.zip} onChange={(e)=>setUS("zip", e.target.value)} />
+                        <input
+                          className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          placeholder="ZIP Code"
+                          value={form.company.usAddress.zip}
+                          onChange={(e) => updateUS("zip", e.target.value)}
+                        />
                       </div>
                       <div className="grid md:grid-cols-4 gap-2 mt-1 text-xs text-red-400">
                         <div>{errors.company.line1 || ""}</div>
-                        <div>{errors.company.city  || ""}</div>
+                        <div>{errors.company.city || ""}</div>
                         <div>{errors.company.state || ""}</div>
-                        <div>{errors.company.zip   || ""}</div>
+                        <div>{errors.company.zip || ""}</div>
                       </div>
                     </div>
                   ) : (
                     <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
-                      Não possui endereço na Flórida - usaremos o <b>endereço e agente da KASH por 12 meses</b> incluídos no pacote.
+                      Não possui endereço na Flórida — usaremos o <b>endereço e agente da KASH por 12 meses</b>.
                     </div>
                   )}
                 </div>
 
                 <h4 className="mt-6 text-slate-100 font-medium">Sócios (mínimo 2)</h4>
                 <div className="mt-2 space-y-4">
-                  {form.members.map((m,i)=>(
+                  {form.members.map((m, i) => (
                     <MemberCard
                       key={i}
                       index={i}
                       data={m}
-                      canRemove={form.members.length>2}
-                      onChange={(f,v)=>setMember(i,f,v)}
-                      onRemove={()=>removeMember(i)}
+                      canRemove={form.members.length > 2}
+                      onChange={(field, value) => updateMember(i, field, value)}
+                      onRemove={() => removeMember(i)}
                       errors={errors.members[i] || {}}
                     />
                   ))}
@@ -502,22 +646,31 @@ const FormWizard = ({ open, onClose }) => {
 
                 <div className="mt-6 space-y-3 text-sm text-slate-300">
                   <label className="flex items-start gap-2">
-                    <input type="checkbox" checked={form.accept.responsibility} onChange={(e)=>setAccept("responsibility", e.target.checked)} />
-                    <span>Declaro que todas as informações prestadas são verdadeiras e completas e assumo total responsabilidade civil e legal por elas.</span>
+                    <input
+                      type="checkbox"
+                      checked={form.accept.responsibility}
+                      onChange={(e) => toggleAccept("responsibility", e.target.checked)}
+                    />
+                    <span>Declaro que todas as informações prestadas são verdadeiras e completas e assumo total responsabilidade.</span>
                   </label>
-                  <label className={cx("flex items-start gap-2", form.company.hasFloridaAddress && "opacity-50")}>
-                    <input type="checkbox" checked={form.accept.limitations} disabled={form.company.hasFloridaAddress} onChange={(e)=>setAccept("limitations", e.target.checked)} />
+                  <label className={classNames("flex items-start gap-2", form.company.hasFloridaAddress && "opacity-50")}>
+                    <input
+                      type="checkbox"
+                      checked={form.accept.limitations}
+                      disabled={form.company.hasFloridaAddress}
+                      onChange={(e) => toggleAccept("limitations", e.target.checked)}
+                    />
                     <span>Estou ciente de que endereço e agente da KASH são válidos por 12 meses.</span>
                   </label>
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <Button onClick={()=>{ if (validate()) setStep(2); }}>Continuar</Button>
+                  <CTAButton onClick={() => { /* valida e avança */ if (validate()) setStep(2); }}>Continuar</CTAButton>
                 </div>
               </div>
             )}
 
-            {step===2 && (
+            {step === 2 && (
               <div className="p-6">
                 <h4 className="text-slate-100 font-medium">2/2 - Conferência antes do envio</h4>
 
@@ -544,9 +697,9 @@ const FormWizard = ({ open, onClose }) => {
                 <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 mt-4">
                   <div className="text-slate-300 font-medium">Sócios</div>
                   <div className="mt-2 space-y-3 text-sm text-slate-400">
-                    {form.members.map((m,i)=>(
+                    {form.members.map((m, i) => (
                       <div key={i}>
-                        <div className="font-medium text-slate-300">Sócio {i+1}: {m.fullName || "-"}</div>
+                        <div className="font-medium text-slate-300">Sócio {i + 1}: {m.fullName || "-"}</div>
                         <div className="grid md:grid-cols-2 gap-x-6 gap-y-1">
                           <div><span className="text-slate-500">E-mail: </span>{m.email || "-"}</div>
                           <div><span className="text-slate-500">Telefone: </span>{m.phone || "-"}</div>
@@ -564,28 +717,35 @@ const FormWizard = ({ open, onClose }) => {
                 <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <label className="flex items-start gap-2 text-sm text-slate-200">
                     <input type="checkbox" checked={consent} onChange={(e)=>setConsent(e.target.checked)} />
-                    <span>Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.</span>
+                    <span>Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas.</span>
                   </label>
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <Button variant="ghost" onClick={()=>setStep(1)}>Voltar</Button>
-                  <Button onClick={handleSubmit} disabled={!consent || sending}>{sending ? "Enviando..." : "Enviar"}</Button>
+                  <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
+                  <CTAButton onClick={handleSubmit} disabled={!consent || sending}>
+                    {sending ? "Enviando..." : "Enviar"}
+                  </CTAButton>
                 </div>
               </div>
             )}
 
-            {step===3 && (
+            {step === 3 && (
               <div className="p-6">
                 <div className="text-center">
                   <h4 className="text-slate-100 font-medium">Dados enviados com sucesso</h4>
                   <p className="text-slate-400 mt-2">Seu código de acompanhamento (tracking):</p>
                   <div className="mt-2 text-emerald-400 text-xl font-bold">{doneCode}</div>
-                  <p className="text-slate-400 mt-4">Sua aplicação foi recebida. A equipe KASH analisará as informações e enviará o link de pagamento e contrato por e-mail em até 48 horas.</p>
-                  <div className="mt-6"><Button onClick={onClose}>Fechar</Button></div>
+                  <p className="text-slate-400 mt-4">
+                    Sua aplicação foi recebida. A equipe KASH analisará as informações e enviará o link de pagamento e contrato por e-mail em até 48 horas.
+                  </p>
+                  <div className="mt-6">
+                    <CTAButton onClick={onClose}>Fechar</CTAButton>
+                  </div>
                 </div>
               </div>
             )}
+
           </div>
 
           <div className="text-center text-[11px] text-slate-500 mt-3">Data: {dateISO}</div>
@@ -593,29 +753,40 @@ const FormWizard = ({ open, onClose }) => {
       </div>
     </div>
   );
-};
+}
 
 /* ========================= FOOTER ========================= */
-const Footer = () => (
-  <footer className="py-10 border-t border-slate-800">
-    <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
-      <div className="text-slate-400 text-sm">© {new Date().getFullYear()} KASH Solutions - KASH CORPORATE SOLUTIONS LLC</div>
-      <div className="text-slate-400 text-sm">Contato: contato@kashsolutions.us</div>
-    </div>
-  </footer>
-);
+function Footer() {
+  return (
+    <footer className="py-10 border-t border-slate-800">
+      <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="text-slate-400 text-sm">© {new Date().getFullYear()} KASH Solutions - KASH CORPORATE SOLUTIONS LLC</div>
+        <div className="text-slate-400 text-sm">Contato: contato@kashsolutions.us</div>
+      </div>
+    </footer>
+  );
+}
 
 /* ========================= APP ROOT ========================= */
-export default function App() {
+export default function Page() {
   const [open, setOpen] = useState(false);
+
+  // (Somente client) — se você quiser expor a URL no window.CONFIG sem SSR
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.CONFIG = window.CONFIG || {};
+      window.CONFIG.appsScriptUrl = APPS_SCRIPT_URL;
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200">
-      <Hero onStart={()=>setOpen(true)} />
+      <Hero onStart={() => setOpen(true)} />
       <Services />
-      <Pricing onStart={()=>setOpen(true)} />
+      <Pricing onStart={() => setOpen(true)} />
       <HowItWorks />
       <Footer />
-      <FormWizard open={open} onClose={()=>setOpen(false)} />
+      <FormWizard open={open} onClose={() => setOpen(false)} />
     </div>
   );
 }
