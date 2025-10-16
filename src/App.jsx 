@@ -1,7 +1,10 @@
-// src/App.jsx – KASH Solutions (compat GAS kashId; sem diagnósticos extras)
-// - Gera um kashId novo por envio (não usa localStorage).
-// - Envia kashId e campos compat (action/op/meta) para o GAS.
-// - Mantém visual/fluxo, mensagens simples.
+// src/App.jsx – KASH Solutions (compat GAS + aliases de kashId + validações reforçadas)
+// - Gera kashId robusto por envio (sem localStorage).
+// - Envia kashId em múltiplos aliases para compatibilidade com GAS legados.
+// - Mantém Content-Type text/plain (evita preflight). Se o GAS for atualizado para CORS completo, dá para trocar para application/json.
+// - Validações reforçadas: mínimo 2 sócios; percent 0–100 por sócio; ZIP US; state obrigatório quando há endereço; soma == 100.
+// - Fallback de parsing de kashId mais estrito.
+// - Mensagens simples para o usuário.
 
 import React, { useEffect, useMemo, useReducer, useState } from "react";
 
@@ -12,8 +15,13 @@ if (typeof window !== "undefined") {
     "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 }
 
+/* ========================= UTILS ========================= */
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// Aceita + () - espaço e dígitos, com pelo menos 8 caracteres (mantém compat).
 const phoneRe = /^[0-9+()\-\s]{8,}$/;
+// ZIP 5 dígitos com opcional -4
+const zipRe = /^\d{5}(-\d{4})?$/;
+
 const US_STATES = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",
   "MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC",
@@ -28,11 +36,11 @@ function todayISO() {
 }
 function calcAgeFullDate(dateStr) {
   if (!dateStr) return 0;
-  const d = new Date(dateStr);
-  const t = new Date();
-  let age = t.getFullYear() - d.getFullYear();
-  const m = t.getMonth() - d.getMonth();
-  if (m < 0 || (m === 0 && t.getDate() < d.getDate())) age--;
+  const [y,m,day] = dateStr.split("-").map(Number);
+  const now = new Date();
+  let age = now.getFullYear() - y;
+  const mo = (now.getMonth()+1) - m;
+  if (mo < 0 || (mo === 0 && now.getDate() < day)) age--;
   return age;
 }
 function isPercentTotalValid(members) {
@@ -42,8 +50,9 @@ function isPercentTotalValid(members) {
 
 /* ========================= API (Apps Script) ========================= */
 function makeClientKashId() {
-  const r = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `KASH-${r}`;
+  // Aumenta entropia: timestamp + 10 chars
+  const rand = Math.random().toString(36).slice(2, 12).toUpperCase();
+  return `KASH-${Date.now()}-${rand}`;
 }
 
 async function apiUpsertFull({ company, members, consent }) {
@@ -53,10 +62,14 @@ async function apiUpsertFull({ company, members, consent }) {
   const kashId = makeClientKashId();
 
   const payload = {
-    // Envio amplo para compatibilidade com handlers diferentes:
     action: "upsert",
     op: "ingest",
+    // aliases para compatibilidade com GAS que validam nomes diferentes:
     kashId,
+    kashID: kashId,
+    kash_id: kashId,
+    tracking: kashId,
+    id: kashId,
     meta: { kashId },
     company,
     members,
@@ -68,15 +81,16 @@ async function apiUpsertFull({ company, members, consent }) {
     source: "kashsolutions.us"
   };
 
-  // Timeout de rede (evita “parece sem internet” quando só está lento)
+  // Timeout de rede
   const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), 20000); // 20s
+  const t = setTimeout(() => controller.abort(), 20000);
 
   let res;
   try {
     res = await fetch(url, {
       method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" }, // evita preflight CORS
+      // Mantemos text/plain para evitar preflight em contas GAS sem CORS completo
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload),
       signal: controller.signal
     });
@@ -89,17 +103,22 @@ async function apiUpsertFull({ company, members, consent }) {
   // Tenta JSON primeiro
   try {
     const json = await res.clone().json();
-    if (json && (json.kashId || (json.data && json.data.kashId)) && json.ok !== false) {
-      return { ok: true, kashId: json.kashId || json.data.kashId };
+    const serverKash =
+      (json && (json.kashId || (json.data && json.data.kashId))) || null;
+    if (json && json.ok !== false && serverKash) {
+      return { ok: true, kashId: serverKash };
     }
   } catch (_) { /* continua para fallback em texto */ }
 
-  // Fallback: tenta extrair kashId de texto
+  // Fallback: tenta extrair kashId de texto (regex mais estrito)
   const text = await res.text();
-  const m = text.match(/"kashId"\s*:\s*"([^"]+)"/i) || text.match(/kash[-_ ]?id[:=]\s*([A-Z0-9\-]+)/i);
+  const m =
+    text.match(/"kashId"\s*:\s*"([A-Za-z0-9\-_]{6,})"/) ||
+    text.match(/kash[-_ ]?id[:=]\s*([A-Z0-9\-]{6,})/i);
   if (m && m[1]) return { ok: true, kashId: m[1] };
 
   // Se chegar aqui, não conseguimos obter o tracking
+  // (mas o servidor recebeu; ainda assim, manter erro simples para o usuário)
   throw new Error("Falha no envio.");
 }
 
@@ -295,7 +314,8 @@ const initialForm = {
     email: "",
     phone: "",
     hasFloridaAddress: false,
-    usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" },
+    // Quando o usuário disser que tem endereço, forçamos escolher o state (começa vazio)
+    usAddress: { line1: "", line2: "", city: "", state: "", zip: "" },
   },
   members: [
     { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
@@ -430,9 +450,10 @@ function FormWizard({ open, onClose }) {
   const [errors, setErrors] = useState(initialErrors);
   const [doneCode, setDoneCode] = useState("");
 
+  // Se marcar que possui endereço, garantir que o state precise ser escolhido
   useEffect(() => {
-    if (form.company.hasFloridaAddress && form.accept.limitations) {
-      dispatch({ type: "TOGGLE_ACCEPT", key: "limitations", value: false });
+    if (form.company.hasFloridaAddress && !form.company.usAddress.state) {
+      // nada a fazer aqui (já começamos com state: "")
     }
   }, [form.company.hasFloridaAddress]);
 
@@ -447,6 +468,13 @@ function FormWizard({ open, onClose }) {
     const { company, members, accept } = form;
     const errs = { company: {}, members: members.map(() => ({})), accept: {} };
 
+    // Min 2 sócios
+    if (members.length < 2) {
+      alert("É necessário informar pelo menos 2 sócios.");
+      setErrors(errs);
+      return false;
+    }
+
     if (!company.companyName || company.companyName.length < 3) errs.company.companyName = "Informe o nome da LLC.";
     if (!emailRe.test(company.email || "")) errs.company.email = "E-mail inválido.";
     if (!phoneRe.test(company.phone || "")) errs.company.phone = "Telefone inválido.";
@@ -455,7 +483,7 @@ function FormWizard({ open, onClose }) {
       if (!company.usAddress.line1) errs.company.line1 = "Address Line 1 obrigatório.";
       if (!company.usAddress.city) errs.company.city = "City obrigatória.";
       if (!company.usAddress.state) errs.company.state = "State obrigatório.";
-      if (!company.usAddress.zip) errs.company.zip = "ZIP obrigatório.";
+      if (!company.usAddress.zip || !zipRe.test(company.usAddress.zip)) errs.company.zip = "ZIP inválido. Ex.: 33101 ou 33101-1234.";
     }
 
     for (let i = 0; i < members.length; i++) {
@@ -467,7 +495,8 @@ function FormWizard({ open, onClose }) {
       if (!m.docExpiry) errs.members[i].docExpiry = "Validade obrigatória.";
       if (!m.birthdate) errs.members[i].birthdate = "Nascimento obrigatório.";
       if (m.birthdate && calcAgeFullDate(m.birthdate) < 18) errs.members[i].birthdate = "Precisa ter 18+.";
-      if (!m.percent || Number(m.percent) <= 0) errs.members[i].percent = "% obrigatório.";
+      const p = Number(m.percent);
+      if (!Number.isFinite(p) || p <= 0 || p > 100) errs.members[i].percent = "% entre 0 e 100.";
     }
 
     if (!accept.responsibility) errs.accept.base = "Aceite a declaração de responsabilidade.";
@@ -586,6 +615,7 @@ function FormWizard({ open, onClose }) {
                           value={form.company.usAddress.state}
                           onChange={(e) => updateUS("state", e.target.value)}
                         >
+                          <option value="">Selecione</option>
                           {US_STATES.map((s) => (
                             <option key={s} value={s}>{s}</option>
                           ))}
@@ -596,6 +626,12 @@ function FormWizard({ open, onClose }) {
                           value={form.company.usAddress.zip}
                           onChange={(e) => updateUS("zip", e.target.value)}
                         />
+                      </div>
+                      <div className="grid md:grid-cols-4 gap-2 mt-1 text-xs text-red-400">
+                        <div>{errors.company.line1 || ""}</div>
+                        <div>{errors.company.city || ""}</div>
+                        <div>{errors.company.state || ""}</div>
+                        <div>{errors.company.zip || ""}</div>
                       </div>
                     </div>
                   ) : (
