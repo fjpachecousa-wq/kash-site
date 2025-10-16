@@ -1,12 +1,7 @@
-// src/App.jsx – KASH Solutions (reescrita integral, saneada)
-// Observações de implementação:
-// - Mantém o visual da página (Hero/Services/Pricing/HowItWorks/Footer).
-// - Formulário em 2 passos com revisão e CONSENTIMENTO obrigatório no modal.
-// - Envio completo (company + members + consent) para Google Apps Script.
-// - CORS-safe: POST com "text/plain;charset=utf-8" (sem preflight).
-// - Removeu quaisquer vestígios de contrato/pagamento neste fluxo.
-// - Removeu caracteres problemáticos dentro de template literals.
-// - Sem código morto/resíduos; checagens de fechamento de tags e chaves.
+// src/App.jsx – KASH Solutions (versão corrigida: tracking vem só do servidor)
+// Mantém o visual/fluxo original. Corrige a causa do tracking repetido:
+// - Remove geração local de kashId (localStorage).
+// - apiUpsertFull retorna JSON e handleSubmit exibe o kashId do servidor.
 
 import React, { useEffect, useMemo, useReducer, useState } from "react";
 
@@ -46,33 +41,41 @@ function isPercentTotalValid(members) {
 }
 
 /* ========================= API (Apps Script) ========================= */
-async function apiUpsertFull({ kashId, company, members, consent }) {
-  // Envia para o Apps Script web app (doPost)
-  const res = await fetch(SCRIPT_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json;charset=UTF-8' },
+// Agora: não envia kashId; retorna JSON { ok, kashId, ... } do servidor
+async function apiUpsertFull({ company, members, consent }) {
+  const url = (typeof window !== "undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) || "";
+  if (!url) throw new Error("Apps Script URL ausente");
+
+  const payload = {
+    // action é opcional para o seu doPost, deixei por clareza
+    action: "ingest",
+    company,
+    members,
+    accepts: { consent: !!consent },
+    faseAtual: "Recebido",
+    subFase: "Dados coletados",
+    consentAt: new Date().toISOString(),
+    consentTextVersion: "v2025-10-11",
+    source: "kashsolutions.us"
+  };
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "text/plain;charset=utf-8" }, // evita preflight CORS
     body: JSON.stringify(payload)
   });
+
   const text = await res.text();
-  let j = null;
-  try { j = JSON.parse(text); } catch(_) {}
-  if (j && j.kashId) {
-    // Guarda o tracking oficial retornado pelo servidor
-    try { localStorage.setItem('kashId', j.kashId); } catch(_) {}
-  }
-  return j || { ok: res.ok, raw: text };
-}
-
-function getOrCreateKashId() {
-  // DEPRECATED: do not pre-generate tracking on client.
-  // Return value is null; the server will generate the official kashId on submit.
-  return null;
-}
-
-    return k;
+  let json;
+  try {
+    json = JSON.parse(text);
   } catch {
-    return "KASH-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+    throw new Error("Resposta do servidor inválida.");
   }
+  if (!json || json.ok !== true || !json.kashId) {
+    throw new Error("Servidor não retornou kashId.");
+  }
+  return json; // { ok:true, kashId, ... }
 }
 
 /* ========================= UI BASICS ========================= */
@@ -459,17 +462,18 @@ function FormWizard({ open, onClose }) {
       alert("Marque o consentimento para prosseguir.");
       return;
     }
+    if (!validate()) return;
+
     setSending(true);
     try {
-      // Não gere tracking no cliente; deixe o servidor emitir
+      // Agora o tracking é o do servidor
       const resp = await apiUpsertFull({
         company: form.company,
         members: form.members,
         consent
       });
-      const serverKashId = (resp && resp.kashId) ? resp.kashId : null;
-      setDoneCode(serverKashId || "(gerado)");
-      setStep(3); // tela final
+      setDoneCode(resp.kashId);    // <-- tracking oficial
+      setStep(3);                  // tela final
     } catch (err) {
       console.error(err);
       alert("Falha ao enviar. Verifique sua conexão e tente novamente.");
@@ -667,7 +671,7 @@ function FormWizard({ open, onClose }) {
                   </div>
                 </div>
 
-                {/* CONSENTIMENTO obrigatório (fica acima do botão Enviar) */}
+                {/* CONSENTIMENTO obrigatório */}
                 <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <label className="flex items-start gap-2 text-sm text-slate-200">
                     <input type="checkbox" checked={consent} onChange={(e)=>setConsent(e.target.checked)} />
@@ -735,10 +739,4 @@ export default function App() {
       <FormWizard open={open} onClose={() => setOpen(false)} />
     </div>
   );
-useEffect(() => {
-    if (open) {
-      try { localStorage.removeItem('kashId'); } catch(_) {}
-    }
-  }, [open]);
-
 }
