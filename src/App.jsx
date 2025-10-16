@@ -79,12 +79,13 @@ async function apiUpsertFull({ kashId, company, members, consent }) {
   return text;
 }
 
-function generateKashId() {
-  // Always create a fresh tracking id; do NOT reuse localStorage values
-  const ts = Date.now().toString(36).toUpperCase(); // time-based
-  const rnd = Math.random().toString(36).slice(2, 6).toUpperCase(); // randomness
-  return `KASH-${ts}-${rnd}`;
-}
+function getOrCreateKashId() {
+  try {
+    let k = localStorage.getItem("kashId");
+    if (!k) {
+      k = "KASH-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+      localStorage.setItem("kashId", k);
+    }
     return k;
   } catch {
     return "KASH-" + Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -305,8 +306,6 @@ function formReducer(state, action) {
       return { ...state, members: state.members.filter((_, i) => i !== action.index) };
     case "TOGGLE_ACCEPT":
       return { ...state, accept: { ...state.accept, [action.key]: action.value } };
-    case "RESET_ALL":
-      return JSON.parse(JSON.stringify(initialForm));
     default:
       return state;
   }
@@ -413,18 +412,6 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
 const initialErrors = { company: {}, members: [], accept: {} };
 
 function FormWizard({ open, onClose }) {
-  // Reset wizard when it is closed, so a new application starts clean
-  useEffect(() => {
-    if (!open) {
-      setStep(1);
-      setSending(false);
-      setConsent(false);
-      dispatch({ type: "RESET_ALL" });
-      setErrors(initialErrors);
-      setDoneCode("");
-    }
-  }, [open]);
-
   const [step, setStep] = useState(1);
   const [sending, setSending] = useState(false);
   const [consent, setConsent] = useState(false); // estado único e padronizado
@@ -491,7 +478,7 @@ function FormWizard({ open, onClose }) {
     }
     setSending(true);
     try {
-      const kashId = generateKashId();
+      const kashId = getOrCreateKashId();
       await apiUpsertFull({
         kashId,
         company: form.company,
