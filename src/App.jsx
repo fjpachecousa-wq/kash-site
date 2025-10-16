@@ -86,6 +86,18 @@ function getOrCreateKashId() {
       k = "KASH-" + Math.random().toString(36).slice(2, 8).toUpperCase();
       localStorage.setItem("kashId", k);
     }
+
+
+async function serverCreateCase({ company, members, consent }) {
+  const res = await fetch("/api/create-case", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ company, members, consent }),
+  });
+  if (!res.ok) throw new Error("Falha ao criar kashId no servidor");
+  return res.json(); // { kashId }
+}
+
     return k;
   } catch {
     return "KASH-" + Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -478,7 +490,19 @@ function FormWizard({ open, onClose }) {
     }
     setSending(true);
     try {
-      const kashId = getOrCreateKashId();
+      let kashId;
+try {
+  const out = await serverCreateCase({ company, members, consent });
+  kashId = out.kashId;
+} catch {
+  // Fallback preservando formato antigo, sem alterar a UI
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  const t = Math.random().toString(36).slice(2, 10).toUpperCase();
+  kashId = `KASH-${yyyy}${mm}${dd}-${t}`;
+}
       await apiUpsertFull({
         kashId,
         company: form.company,
