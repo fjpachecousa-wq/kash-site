@@ -1,8 +1,8 @@
-// src/App.jsx – KASH Solutions (versão corrigida: tracking só do servidor + erros detalhados)
-// Mantém o visual/fluxo original. Corrige a causa do tracking repetido e melhora diagnostico:
-// - Não gera kashId no cliente (vem do servidor).
-// - apiUpsertFull valida HTTP e JSON e propaga mensagem do servidor.
-// - handleSubmit mostra o erro real em vez de "falha de conexão".
+// src/App.jsx – KASH Solutions (compat server exige kashId; sem diagnósticos extras)
+// - Gera um kashId novo por envio (não usa localStorage).
+// - Envia kashId no payload para compatibilizar com o GAS que exige o campo.
+// - Mantém o visual e fluxo original.
+// - Mensagens de erro simples (sem logs/diagnóstico na interface).
 
 import React, { useEffect, useMemo, useReducer, useState } from "react";
 
@@ -42,14 +42,20 @@ function isPercentTotalValid(members) {
 }
 
 /* ========================= API (Apps Script) ========================= */
-// Não envia kashId; espera JSON { ok:true, kashId, ... } do servidor
+// Compat GAS: envia kashId (obrigatório no servidor atual). Não faz diagnósticos verbosos.
+function makeClientKashId() {
+  // Gera um código curto, novo a cada envio (sem armazenar no navegador)
+  const r = Math.random().toString(36).slice(2, 8).toUpperCase();
+  return `KASH-${r}`;
+}
+
 async function apiUpsertFull({ company, members, consent }) {
-  const url =
-    (typeof window !== "undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) || "";
-  if (!url) throw new Error("Apps Script URL ausente");
+  const url = (typeof window !== "undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) || "";
+  if (!url) throw new Error("URL de envio ausente.");
 
   const payload = {
-    action: "ingest",
+    action: "upsert",              // compat com handlers que esperam "upsert"
+    kashId: makeClientKashId(),    // servidor exige kashId; geramos um por envio
     company,
     members,
     accepts: { consent: !!consent },
@@ -66,25 +72,15 @@ async function apiUpsertFull({ company, members, consent }) {
     body: JSON.stringify(payload)
   });
 
-  const text = await res.text();
-
-  // Se o Web App não estiver público, costuma vir 302/401/403 ou HTML de login
-  if (!res.ok) {
-    // expõe um trecho da resposta pra ajudar diagnóstico
-    throw new Error(`HTTP ${res.status} — ${text.slice(0, 200)}`);
-  }
+  // Se houver algum problema de rede/permite, retorna erro genérico (sem "sujeiras")
+  if (!res.ok) throw new Error("Falha no envio.");
 
   let json;
-  try {
-    json = JSON.parse(text);
-  } catch {
-    throw new Error("Resposta do servidor inválida (não-JSON).");
-  }
+  const text = await res.text();
+  try { json = JSON.parse(text); } catch { throw new Error("Falha no envio."); }
 
-  if (json?.ok !== true || !json?.kashId) {
-    // Se o servidor mandou uma mensagem de erro, mostre-a
-    throw new Error(json?.error || "Servidor não retornou kashId.");
-  }
+  // Espera { ok:true, kashId: "..."}; se não vier, trata como erro genérico
+  if (!json || json.ok !== true || !json.kashId) throw new Error("Falha no envio.");
 
   return json; // { ok:true, kashId, ... }
 }
@@ -411,7 +407,7 @@ const initialErrors = { company: {}, members: [], accept: {} };
 function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [sending, setSending] = useState(false);
-  const [consent, setConsent] = useState(false); // estado único e padronizado
+  const [consent, setConsent] = useState(false);
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState(initialErrors);
   const [doneCode, setDoneCode] = useState("");
@@ -477,18 +473,15 @@ function FormWizard({ open, onClose }) {
 
     setSending(true);
     try {
-      // Tracking vem do servidor
       const resp = await apiUpsertFull({
         company: form.company,
         members: form.members,
         consent
       });
-      setDoneCode(resp.kashId);   // <-- tracking oficial
-      setStep(3);                 // tela final
-    } catch (err) {
-      console.error(err);
-      // Mostra a mensagem real (HTTP/code/erro do servidor)
-      alert(`Falha ao enviar: ${err.message || err}`);
+      setDoneCode(resp.kashId);
+      setStep(3);
+    } catch (_) {
+      alert("Falha ao enviar. Tente novamente.");
     } finally {
       setSending(false);
     }
