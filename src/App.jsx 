@@ -1,23 +1,21 @@
-"use client";
+// src/App.jsx – KASH Solutions (SPA Vite/React) – visual preservado, build-friendly
+// Observações importantes para build no Vercel/Vite:
+// - Este arquivo deve estar em: src/App.jsx  (NÃO "srs")
+// - Em src/main.jsx, importe como: import App from './App.jsx'
+// - Não há imports além de "react"; nada que quebre o Rollup
 
-/**
- * KASH Solutions – página completa (Next.js App Router)
- * - Visual preservado (Tailwind).
- * - Hooks em client component (use client).
- * - Sem acessos a `window` no escopo de módulo.
- * - Envio para GAS com kashId + aliases e validações reforçadas.
- */
-
-import { useEffect, useMemo, useReducer, useState } from "react";
+import React, { useEffect, useMemo, useReducer, useState } from "react";
 
 /* ========================= CONFIG ========================= */
+// Use esta constante; evita tocar em window na importação (SSR-safe)
 const APPS_SCRIPT_URL =
   "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 
 /* ========================= UTILS ========================= */
 const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const phoneRe = /^[0-9+()\-\s]{8,}$/;           // compatível
-const zipRe   = /^\d{5}(-\d{4})?$/;              // ZIP 5 ou 9
+const phoneRe = /^[0-9+()\-\s]{8,}$/;
+const zipRe = /^\d{5}(-\d{4})?$/;
+
 const US_STATES = [
   "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY","LA","ME","MD",
   "MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND","OH","OK","OR","PA","RI","SC",
@@ -43,22 +41,20 @@ function isPercentTotalValid(members) {
   const sum = members.reduce((acc, m) => acc + (Number(m.percent || 0) || 0), 0);
   return Math.abs(sum - 100) < 0.001;
 }
-
-/* ========================= API (Apps Script) ========================= */
 function makeClientKashId() {
   const rand = Math.random().toString(36).slice(2, 12).toUpperCase();
   return `KASH-${Date.now()}-${rand}`;
 }
 
+/* ========================= API (Apps Script) ========================= */
 async function apiUpsertFull({ company, members, consent }) {
-  const url = APPS_SCRIPT_URL;
-  if (!url) throw new Error("Falha no envio.");
+  if (!APPS_SCRIPT_URL) throw new Error("Falha no envio.");
 
   const kashId = makeClientKashId();
   const payload = {
     action: "upsert",
     op: "ingest",
-    // aliases p/ compatibilidade
+    // aliases de tracking para máxima compatibilidade
     kashId,
     kashID: kashId,
     kash_id: kashId,
@@ -75,19 +71,20 @@ async function apiUpsertFull({ company, members, consent }) {
     source: "kashsolutions.us"
   };
 
+  // Timeout
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
+  const t = setTimeout(() => controller.abort(), 20000);
 
   let res;
   try {
-    res = await fetch(url, {
+    res = await fetch(APPS_SCRIPT_URL, {
       method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" }, // evita preflight; troque p/ application/json após CORS no GAS
+      headers: { "Content-Type": "text/plain;charset=utf-8" }, // evita preflight
       body: JSON.stringify(payload),
       signal: controller.signal
     });
   } finally {
-    clearTimeout(timeout);
+    clearTimeout(t);
   }
 
   if (!res.ok) throw new Error("Falha no envio.");
@@ -95,15 +92,18 @@ async function apiUpsertFull({ company, members, consent }) {
   // Preferir JSON
   try {
     const json = await res.clone().json();
-    const serverKash = (json && (json.kashId || (json.data && json.data.kashId))) || null;
+    const serverKash =
+      (json && (json.kashId || (json.data && json.data.kashId))) || null;
     if (json && json.ok !== false && serverKash) {
       return { ok: true, kashId: serverKash };
     }
-  } catch {/* continua */}
+  } catch (_) { /* continua */ }
 
-  // Fallback texto
+  // Fallback por texto
   const text = await res.text();
-  const m = text.match(/"kashId"\s*:\s*"([A-Za-z0-9\-_]{6,})"/) || text.match(/kash[-_ ]?id[:=]\s*([A-Z0-9\-]{6,})/i);
+  const m =
+    text.match(/"kashId"\s*:\s*"([A-Za-z0-9\-_]{6,})"/) ||
+    text.match(/kash[-_ ]?id[:=]\s*([A-Z0-9\-]{6,})/i);
   if (m && m[1]) return { ok: true, kashId: m[1] };
 
   throw new Error("Falha no envio.");
@@ -128,7 +128,6 @@ function KLogo({ size = 40 }) {
     </div>
   );
 }
-
 function CTAButton({ children, variant = "primary", onClick, type = "button", disabled = false }) {
   const base = "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed";
   const styles =
@@ -143,7 +142,6 @@ function CTAButton({ children, variant = "primary", onClick, type = "button", di
     </button>
   );
 }
-
 function SectionTitle({ title, subtitle }) {
   return (
     <div>
@@ -188,7 +186,6 @@ function DemoCalculator() {
     </div>
   );
 }
-
 function Hero({ onStart }) {
   return (
     <section className="pt-16 pb-10">
@@ -219,7 +216,6 @@ function Hero({ onStart }) {
     </section>
   );
 }
-
 function Services() {
   const items = [
     { t: "Abertura LLC Partnership", d: "Registro oficial na Flórida (Sunbiz)." },
@@ -243,7 +239,6 @@ function Services() {
     </section>
   );
 }
-
 function Pricing({ onStart }) {
   const plans = [
     { name: "Abertura LLC", price: "US$ 1,360", features: ["Endereço + Agente 12 meses", "EIN", "Operating Agreement"], cta: "Contratar", disabled: false },
@@ -273,7 +268,6 @@ function Pricing({ onStart }) {
     </section>
   );
 }
-
 function HowItWorks() {
   const steps = [
     { t: "Consulta", d: "Alinhamento de expectativas (opcional)." },
@@ -307,7 +301,7 @@ const initialForm = {
     email: "",
     phone: "",
     hasFloridaAddress: false,
-    usAddress: { line1: "", line2: "", city: "", state: "", zip: "" }, // state começa vazio quando tem endereço
+    usAddress: { line1: "", line2: "", city: "", state: "", zip: "" },
   },
   members: [
     { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" },
@@ -315,7 +309,6 @@ const initialForm = {
   ],
   accept: { responsibility: false, limitations: false }
 };
-
 function formReducer(state, action) {
   switch (action.type) {
     case "UPDATE_COMPANY":
@@ -432,7 +425,7 @@ function MemberCard({ index, data, onChange, onRemove, canRemove, errors }) {
   );
 }
 
-/* ========================= FORM WIZARD (MODAL) ========================= */
+/* ========================= FORM WIZARD ========================= */
 const initialErrors = { company: {}, members: [], accept: {} };
 
 function FormWizard({ open, onClose }) {
@@ -459,6 +452,7 @@ function FormWizard({ open, onClose }) {
       setErrors(errs);
       return false;
     }
+
     if (!company.companyName || company.companyName.length < 3) errs.company.companyName = "Informe o nome da LLC.";
     if (!emailRe.test(company.email || "")) errs.company.email = "E-mail inválido.";
     if (!phoneRe.test(company.phone || "")) errs.company.phone = "Telefone inválido.";
@@ -511,7 +505,7 @@ function FormWizard({ open, onClose }) {
       });
       setDoneCode(resp.kashId);
       setStep(3);
-    } catch {
+    } catch (_) {
       alert("Falha ao enviar. Tente novamente.");
     } finally {
       setSending(false);
@@ -520,10 +514,8 @@ function FormWizard({ open, onClose }) {
 
   const dateISO = useMemo(() => todayISO(), []);
 
-  if (!open) return null;
-
   return (
-    <div className="fixed inset-0 z-50" aria-hidden={!open}>
+    <div className={classNames("fixed inset-0 z-50", !open && "hidden")} aria-hidden={!open}>
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div className="absolute inset-0 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-4 pt-16 pb-10">
@@ -547,7 +539,6 @@ function FormWizard({ open, onClose }) {
                     />
                     <div className="text-red-400 text-xs">{errors.company.companyName || ""}</div>
                   </div>
-
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm text-slate-400">E-mail principal</label>
@@ -571,7 +562,6 @@ function FormWizard({ open, onClose }) {
                       <div className="text-red-400 text-xs">{errors.company.phone || ""}</div>
                     </div>
                   </div>
-
                   <div className="mt-2">
                     <label className="inline-flex items-center gap-2 text-sm text-slate-300">
                       <input
@@ -582,7 +572,6 @@ function FormWizard({ open, onClose }) {
                       <span>Possui endereço físico na Flórida?</span>
                     </label>
                   </div>
-
                   {form.company.hasFloridaAddress ? (
                     <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
                       <div className="text-slate-300 font-medium mb-2">Endereço da empresa (USA)</div>
@@ -605,7 +594,9 @@ function FormWizard({ open, onClose }) {
                           onChange={(e) => updateUS("state", e.target.value)}
                         >
                           <option value="">Selecione</option>
-                          {US_STATES.map((s) => <option key={s} value={s}>{s}</option>)}
+                          {US_STATES.map((s) => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
                         </select>
                         <input
                           className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
@@ -623,7 +614,7 @@ function FormWizard({ open, onClose }) {
                     </div>
                   ) : (
                     <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
-                      Não possui endereço na Flórida — usaremos o <b>endereço e agente da KASH por 12 meses</b>.
+                      Não possui endereço na Flórida - usaremos o <b>endereço e agente da KASH por 12 meses</b> incluídos no pacote.
                     </div>
                   )}
                 </div>
@@ -651,7 +642,7 @@ function FormWizard({ open, onClose }) {
                       checked={form.accept.responsibility}
                       onChange={(e) => toggleAccept("responsibility", e.target.checked)}
                     />
-                    <span>Declaro que todas as informações prestadas são verdadeiras e completas e assumo total responsabilidade.</span>
+                    <span>Declaro que todas as informações prestadas são verdadeiras e completas e assumo total responsabilidade civil e legal por elas.</span>
                   </label>
                   <label className={classNames("flex items-start gap-2", form.company.hasFloridaAddress && "opacity-50")}>
                     <input
@@ -662,10 +653,13 @@ function FormWizard({ open, onClose }) {
                     />
                     <span>Estou ciente de que endereço e agente da KASH são válidos por 12 meses.</span>
                   </label>
+                  {form.company.hasFloridaAddress && (
+                    <div className="text-[12px] text-slate-400 -mt-2">* Indisponível porque você informou endereço próprio na Flórida.</div>
+                  )}
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton onClick={() => { /* valida e avança */ if (validate()) setStep(2); }}>Continuar</CTAButton>
+                  <CTAButton onClick={() => { if (validate()) setStep(2); }}>Continuar</CTAButton>
                 </div>
               </div>
             )}
@@ -717,7 +711,9 @@ function FormWizard({ open, onClose }) {
                 <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <label className="flex items-start gap-2 text-sm text-slate-200">
                     <input type="checkbox" checked={consent} onChange={(e)=>setConsent(e.target.checked)} />
-                    <span>Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas.</span>
+                    <span>
+                      Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.
+                    </span>
                   </label>
                 </div>
 
@@ -747,7 +743,6 @@ function FormWizard({ open, onClose }) {
             )}
 
           </div>
-
           <div className="text-center text-[11px] text-slate-500 mt-3">Data: {dateISO}</div>
         </div>
       </div>
@@ -768,17 +763,8 @@ function Footer() {
 }
 
 /* ========================= APP ROOT ========================= */
-export default function Page() {
+export default function App() {
   const [open, setOpen] = useState(false);
-
-  // (Somente client) — se você quiser expor a URL no window.CONFIG sem SSR
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      window.CONFIG = window.CONFIG || {};
-      window.CONFIG.appsScriptUrl = APPS_SCRIPT_URL;
-    }
-  }, []);
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200">
       <Hero onStart={() => setOpen(true)} />
