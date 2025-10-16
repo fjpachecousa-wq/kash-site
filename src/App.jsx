@@ -47,45 +47,28 @@ function isPercentTotalValid(members) {
 
 /* ========================= API (Apps Script) ========================= */
 async function apiUpsertFull({ kashId, company, members, consent }) {
-  const url = (typeof window !== "undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) || "";
-  if (!url) throw new Error("Apps Script URL ausente");
-
-  const payload = {
-    action: "upsert",
-    kashId,
-    company,
-    members,
-    accepts: { consent: !!consent },
-    faseAtual: "Recebido",
-    subFase: "Dados coletados",
-    consentAt: new Date().toISOString(),
-    consentTextVersion: "v2025-10-11",
-    source: "kashsolutions.us"
-  };
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" }, // evita preflight CORS
+  // Envia para o Apps Script web app (doPost)
+  const res = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json;charset=UTF-8' },
     body: JSON.stringify(payload)
   });
-
   const text = await res.text();
-  try {
-    const j = JSON.parse(text);
-    if (j?.kashId) {
-      try { localStorage.setItem("kashId", String(j.kashId)); } catch {}
-    }
-  } catch {}
-  return text;
+  let j = null;
+  try { j = JSON.parse(text); } catch(_) {}
+  if (j && j.kashId) {
+    // Guarda o tracking oficial retornado pelo servidor
+    try { localStorage.setItem('kashId', j.kashId); } catch(_) {}
+  }
+  return j || { ok: res.ok, raw: text };
 }
 
 function getOrCreateKashId() {
-  try {
-    let k = localStorage.getItem("kashId");
-    if (!k) {
-      k = "KASH-" + Math.random().toString(36).slice(2, 8).toUpperCase();
-      localStorage.setItem("kashId", k);
-    }
+  // DEPRECATED: do not pre-generate tracking on client.
+  // Return value is null; the server will generate the official kashId on submit.
+  return null;
+}
+
     return k;
   } catch {
     return "KASH-" + Math.random().toString(36).slice(2, 8).toUpperCase();
@@ -478,14 +461,14 @@ function FormWizard({ open, onClose }) {
     }
     setSending(true);
     try {
-      const kashId = getOrCreateKashId();
-      await apiUpsertFull({
-        kashId,
+      // Não gere tracking no cliente; deixe o servidor emitir
+      const resp = await apiUpsertFull({
         company: form.company,
         members: form.members,
         consent
       });
-      setDoneCode(kashId);
+      const serverKashId = (resp && resp.kashId) ? resp.kashId : null;
+      setDoneCode(serverKashId || "(gerado)");
       setStep(3); // tela final
     } catch (err) {
       console.error(err);
@@ -752,4 +735,10 @@ export default function App() {
       <FormWizard open={open} onClose={() => setOpen(false)} />
     </div>
   );
+useEffect(() => {
+    if (open) {
+      try { localStorage.removeItem('kashId'); } catch(_) {}
+    }
+  }, [open]);
+
 }
