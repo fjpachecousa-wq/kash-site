@@ -503,7 +503,13 @@ try {
   const t = Math.random().toString(36).slice(2, 10).toUpperCase();
   kashId = `KASH-${yyyy}${mm}${dd}-${t}`;
 }
-      \1
+      await apiUpsertFull({
+        kashId,
+        company: form.company,
+        members: form.members,
+        consent
+      });
+      // Limpeza de memória + reinício da página após envio bem-sucedido (sem piscar popup)
       try { localStorage.removeItem("kashId"); } catch {}
       try { sessionStorage.clear(); } catch {}
       if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
