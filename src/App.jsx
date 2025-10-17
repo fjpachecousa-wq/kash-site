@@ -91,17 +91,7 @@ function getOrCreateKashId() {
 async function serverCreateCase({ company, members, consent }) {
   const res = await fetch("/api/create-case", {
     method: "POST",
-    headers: { "Content-Type": "application/json" }
-
-function handleClose() {
-  try { localStorage.removeItem("kashId"); } catch {}
-  try { sessionStorage.clear(); } catch {}
-  if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
-    window.location.reload();
-  }
-}
-
-,
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ company, members, consent }),
   });
   if (!res.ok) throw new Error("Falha ao criar kashId no servidor");
@@ -513,12 +503,21 @@ try {
   const t = Math.random().toString(36).slice(2, 10).toUpperCase();
   kashId = `KASH-${yyyy}${mm}${dd}-${t}`;
 }
-      await apiUpsertFull({
-        kashId,
-        company: form.company,
-        members: form.members,
-        consent
-      });
+      \1
+      try { localStorage.removeItem("kashId"); } catch {}
+      try { sessionStorage.clear(); } catch {}
+      if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
+        setTimeout(() => window.location.reload(), 60);
+      }
+
+      // Limpeza de memória + reinício da página após envio bem-sucedido
+      try { localStorage.removeItem("kashId"); } catch {}
+      try { sessionStorage.clear(); } catch {}
+      if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
+        // pequeno atraso para garantir flush/UX
+        setTimeout(() => window.location.reload(), 60);
+      }
+
       setDoneCode(kashId);
       setStep(3); // tela final
     } catch (err) {
@@ -539,7 +538,7 @@ try {
           <div className="rounded-2xl bg-slate-950/90 backdrop-blur border border-slate-800 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
               <div className="text-slate-300 font-medium">Formulário de Aplicação LLC</div>
-              <button className="text-slate-400 hover:text-slate-200" onClick={onClose}>Fechar</button>
+              <button className="text-slate-400 hover:text-slate-200" onClick={() => { onClose; location.reload(); }}>Fechar</button>
             </div>
 
             {step === 1 && (
