@@ -509,6 +509,13 @@ try {
         members: form.members,
         consent
       });
+      // Limpeza de memória + reinício da página após envio bem-sucedido (sem piscar popup)
+      try { localStorage.removeItem("kashId"); } catch {}
+      try { sessionStorage.clear(); } catch {}
+      if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
+        setTimeout(() => window.location.reload(), 60);
+      }
+
       // Limpeza de memória + reinício da página após envio bem-sucedido
       try { localStorage.removeItem("kashId"); } catch {}
       try { sessionStorage.clear(); } catch {}
@@ -537,7 +544,7 @@ try {
           <div className="rounded-2xl bg-slate-950/90 backdrop-blur border border-slate-800 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
               <div className="text-slate-300 font-medium">Formulário de Aplicação LLC</div>
-              <button className="text-slate-400 hover:text-slate-200" onClick={() => { onClose; location.reload(); }}>Fechar</button>
+              <button onClick={onClose} className="text-slate-400 hover:text-slate-200 transition" type="button">X</button>
             </div>
 
             {step === 1 && (
@@ -745,7 +752,7 @@ try {
                     Sua aplicação foi recebida. A equipe KASH analisará as informações e enviará o link de pagamento e contrato por e-mail em até 48 horas.
                   </p>
                   <div className="mt-6">
-                    <CTAButton onClick={onClose}>Fechar</CTAButton>
+                    <CTAButton onClick={async (e) => { try { e && e.preventDefault && e.preventDefault(); } catch {} try { await apiUpsertFull({ kashId, company, members, consent }); try { localStorage.removeItem("kashId"); } catch {} try { sessionStorage.clear(); } catch {} } catch (err) { console.error("Falha ao gravar:", err); alert("Não foi possível concluir a gravação agora. Tente novamente."); return; } if (typeof window !== "undefined" && window.location) { window.location.replace(window.location.pathname); } }}>Fechar</CTAButton>
                   </div>
                 </div>
               </div>
