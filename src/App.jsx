@@ -96,59 +96,6 @@ async function serverCreateCase({ company, members, consent }) {
   });
   if (!res.ok) throw new Error("Falha ao criar kashId no servidor");
   return res.json(); // { kashId }
-
-
-function handleClose(e) {
-  try { e && e.preventDefault && e.preventDefault(); } catch {}
-  try { setSending && setSending(true); } catch {}
-  (async () => {
-    try {
-      await apiUpsertFull({ kashId, company, members, consent });
-      try { localStorage.removeItem("kashId"); } catch {}
-      try { sessionStorage.clear(); } catch {}
-      if (typeof window !== "undefined" && window.location) {
-        window.location.replace(window.location.pathname);
-      }
-    } catch (err) {
-      console.error("Falha ao gravar antes de fechar:", err);
-      alert("Não foi possível concluir a gravação agora. Tente novamente.");
-      try { setSending && setSending(false); } catch {}
-      return;
-    }
-  })();
-}catch {}
-  try { setSending && setSending(true); } catch {}
-  (async () => {
-    try {
-      await apiUpsertFull({ kashId, company, members, consent });
-      if (typeof window !== "undefined" && window.location) {
-        
-      }
-    } catch (err) {
-      console.error("Falha ao gravar antes de fechar:", err);
-      alert("Não foi possível concluir a gravação agora. Tente novamente.");
-      try { setSending && setSending(false); } catch {}
-      return;
-    }
-  })();
-}catch {}
-
-  try { setSending && setSending(true); } catch {}
-  (async () => {
-    try {
-      await apiUpsertFull({ kashId, company, members, consent });
-      if (typeof window !== "undefined" && window.location) {
-
-      }
-    } catch (e) {
-      console.error("Falha ao gravar antes de fechar:", e);
-      alert("Não foi possível concluir a gravação agora. Tente novamente.");
-      try { setSending && setSending(false); } catch {}
-      return;
-    }
-  })();
-}
-
 }
 
     return k;
@@ -556,20 +503,18 @@ try {
   const t = Math.random().toString(36).slice(2, 10).toUpperCase();
   kashId = `KASH-${yyyy}${mm}${dd}-${t}`;
 }
-
-      // Limpeza de memória + reinício da página após envio bem-sucedido (sem piscar popup)
-      try { } catch {}
-      try { } catch {}
-      if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
-
-      }
-
+      await apiUpsertFull({
+        kashId,
+        company: form.company,
+        members: form.members,
+        consent
+      });
       // Limpeza de memória + reinício da página após envio bem-sucedido
       try { localStorage.removeItem("kashId"); } catch {}
       try { sessionStorage.clear(); } catch {}
       if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
         // pequeno atraso para garantir flush/UX
-
+        setTimeout(() => window.location.reload(), 60);
       }
 
       setDoneCode(kashId);
