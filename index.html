@@ -4,9 +4,19 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>KASH Solutions</title>
+
+    <!-- Tailwind CSS (CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- DaisyUI (CDN) -->
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.10/dist/full.min.css" rel="stylesheet">
+
+    <!-- IMPORTANTE: não carregue jsPDF por CDN aqui -->
+    <!-- <script src="...jspdf.umd.min.js"></script>  REMOVIDO -->
   </head>
-  <body>
+  <body class="bg-base-200">
     <div id="root"></div>
+    <!-- Em dev aponta para /src/main.jsx; em produção o Vercel/Vite reescreve para /assets/index-*.js -->
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>
