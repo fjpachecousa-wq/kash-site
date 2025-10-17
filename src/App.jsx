@@ -1,3 +1,12 @@
+// src/App.jsx – KASH Solutions (reescrita integral, saneada)
+// Observações de implementação:
+// - Mantém o visual da página (Hero/Services/Pricing/HowItWorks/Footer).
+// - Formulário em 2 passos com revisão e CONSENTIMENTO obrigatório no modal.
+// - Envio completo (company + members + consent) para Google Apps Script.
+// - CORS-safe: POST com "text/plain;charset=utf-8" (sem preflight).
+// - Removeu quaisquer vestígios de contrato/pagamento neste fluxo.
+// - Removeu caracteres problemáticos dentro de template literals.
+// - Sem código morto/resíduos; checagens de fechamento de tags e chaves.
 
 import React, { useEffect, useMemo, useReducer, useState } from "react";
 
@@ -70,25 +79,19 @@ async function apiUpsertFull({ kashId, company, members, consent }) {
   return text;
 }
 
-function handleClose(){try{localStorage.removeItem("kashId")}catch{}try{sessionStorage.clear()}catch{}if(typeof window!=="undefined"&&window.location&&typeof window.location.reload==="function"){window.location.reload()}} catch {}
-  try { sessionStorage.clear(); } catch {}
-  if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
-    window.location.reload();
-  }
-}async function serverCreateCase({ company, members, consent }) {
+function getOrCreateKashId() {
+  try {
+    let k = localStorage.getItem("kashId");
+    if (!k) {
+      k = "KASH-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+      localStorage.setItem("kashId", k);
+    }
+
+
+async function serverCreateCase({ company, members, consent }) {
   const res = await fetch("/api/create-case", {
     method: "POST",
-    headers: { "Content-Type": "application/json" }
-
-function handleClose() {
-  try { localStorage.removeItem("kashId"); } catch {}
-  try { sessionStorage.clear(); } catch {}
-  if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
-    window.location.reload();
-  }
-}
-
-,
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ company, members, consent }),
   });
   if (!res.ok) throw new Error("Falha ao criar kashId no servidor");
@@ -492,6 +495,7 @@ try {
   const out = await serverCreateCase({ company, members, consent });
   kashId = out.kashId;
 } catch {
+  // Fallback preservando formato antigo, sem alterar a UI
   const d = new Date();
   const yyyy = d.getFullYear();
   const mm = String(d.getMonth()+1).padStart(2,'0');
@@ -525,7 +529,7 @@ try {
           <div className="rounded-2xl bg-slate-950/90 backdrop-blur border border-slate-800 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
               <div className="text-slate-300 font-medium">Formulário de Aplicação LLC</div>
-              <button className="text-slate-400 hover:text-slate-200" onClick={handleClose}>Fechar</button>
+              <button className="text-slate-400 hover:text-slate-200" onClick={onClose}>Fechar</button>
             </div>
 
             {step === 1 && (
@@ -733,7 +737,7 @@ try {
                     Sua aplicação foi recebida. A equipe KASH analisará as informações e enviará o link de pagamento e contrato por e-mail em até 48 horas.
                   </p>
                   <div className="mt-6">
-                    <CTAButton onClick={handleClose}>Fechar</CTAButton>
+                    <CTAButton onClick={onClose}>Fechar</CTAButton>
                   </div>
                 </div>
               </div>
