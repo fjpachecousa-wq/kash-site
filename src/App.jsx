@@ -96,28 +96,6 @@ async function serverCreateCase({ company, members, consent }) {
   });
   if (!res.ok) throw new Error("Falha ao criar kashId no servidor");
   return res.json(); // { kashId }
-
-
-function handleClose(e) {
-  try { e && e.preventDefault && e.preventDefault(); } catch {}
-  try { setSending && setSending(true); } catch {}
-  (async () => {
-    try {
-      await apiUpsertFull({ kashId, company, members, consent });
-      try { localStorage.removeItem("kashId"); } catch {}
-      try { sessionStorage.clear(); } catch {}
-      if (typeof window !== "undefined" && window.location) {
-        window.location.replace(window.location.pathname);
-      }
-    } catch (err) {
-      console.error("Falha ao gravar antes de fechar:", err);
-      alert("Não foi possível concluir a gravação agora. Tente novamente.");
-      try { setSending && setSending(false); } catch {}
-      return;
-    }
-  })();
-}
-
 }
 
     return k;
