@@ -100,7 +100,6 @@ async function serverCreateCase({ company, members, consent }) {
 
 function handleClose(e) {
   try { e && e.preventDefault && e.preventDefault(); } catch {}
-
   try { setSending && setSending(true); } catch {}
   (async () => {
     try {
@@ -108,10 +107,10 @@ function handleClose(e) {
       try { localStorage.removeItem("kashId"); } catch {}
       try { sessionStorage.clear(); } catch {}
       if (typeof window !== "undefined" && window.location) {
-
+        window.location.replace(window.location.pathname);
       }
-    } catch (e) {
-      console.error("Falha ao gravar antes de fechar:", e);
+    } catch (err) {
+      console.error("Falha ao gravar antes de fechar:", err);
       alert("Não foi possível concluir a gravação agora. Tente novamente.");
       try { setSending && setSending(false); } catch {}
       return;
@@ -532,19 +531,12 @@ try {
         members: form.members,
         consent
       });
-      // Limpeza de memória + reinício da página após envio bem-sucedido (sem piscar popup)
-      try { localStorage.removeItem("kashId"); } catch {}
-      try { sessionStorage.clear(); } catch {}
-      if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
-
-      }
-
       // Limpeza de memória + reinício da página após envio bem-sucedido
       try { localStorage.removeItem("kashId"); } catch {}
       try { sessionStorage.clear(); } catch {}
       if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
         // pequeno atraso para garantir flush/UX
-
+        setTimeout(() => window.location.reload(), 60);
       }
 
       setDoneCode(kashId);
