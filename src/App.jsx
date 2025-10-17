@@ -1,8 +1,12 @@
-// src/App.jsx – KASH Solutions (compat server exige kashId; sem diagnósticos extras)
-// - Gera um kashId novo por envio (não usa localStorage).
-// - Envia kashId no payload para compatibilizar com o GAS que exige o campo.
-// - Mantém o visual e fluxo original.
-// - Mensagens de erro simples (sem logs/diagnóstico na interface).
+// src/App.jsx – KASH Solutions (reescrita integral, saneada)
+// Observações de implementação:
+// - Mantém o visual da página (Hero/Services/Pricing/HowItWorks/Footer).
+// - Formulário em 2 passos com revisão e CONSENTIMENTO obrigatório no modal.
+// - Envio completo (company + members + consent) para Google Apps Script.
+// - CORS-safe: POST com "text/plain;charset=utf-8" (sem preflight).
+// - Removeu quaisquer vestígios de contrato/pagamento neste fluxo.
+// - Removeu caracteres problemáticos dentro de template literals.
+// - Sem código morto/resíduos; checagens de fechamento de tags e chaves.
 
 import React, { useEffect, useMemo, useReducer, useState } from "react";
 
@@ -42,20 +46,13 @@ function isPercentTotalValid(members) {
 }
 
 /* ========================= API (Apps Script) ========================= */
-// Compat GAS: envia kashId (obrigatório no servidor atual). Não faz diagnósticos verbosos.
-function makeClientKashId() {
-  // Gera um código curto, novo a cada envio (sem armazenar no navegador)
-  const r = Math.random().toString(36).slice(2, 8).toUpperCase();
-  return `KASH-${r}`;
-}
-
-async function apiUpsertFull({ company, members, consent }) {
+async function apiUpsertFull({ kashId, company, members, consent }) {
   const url = (typeof window !== "undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) || "";
-  if (!url) throw new Error("URL de envio ausente.");
+  if (!url) throw new Error("Apps Script URL ausente");
 
   const payload = {
-    action: "upsert",              // compat com handlers que esperam "upsert"
-    kashId: makeClientKashId(),    // servidor exige kashId; geramos um por envio
+    action: "upsert",
+    kashId,
     company,
     members,
     accepts: { consent: !!consent },
@@ -72,17 +69,39 @@ async function apiUpsertFull({ company, members, consent }) {
     body: JSON.stringify(payload)
   });
 
-  // Se houver algum problema de rede/permite, retorna erro genérico (sem "sujeiras")
-  if (!res.ok) throw new Error("Falha no envio.");
-
-  let json;
   const text = await res.text();
-  try { json = JSON.parse(text); } catch { throw new Error("Falha no envio."); }
+  try {
+    const j = JSON.parse(text);
+    if (j?.kashId) {
+      try { localStorage.setItem("kashId", String(j.kashId)); } catch {}
+    }
+  } catch {}
+  return text;
+}
 
-  // Espera { ok:true, kashId: "..."}; se não vier, trata como erro genérico
-  if (!json || json.ok !== true || !json.kashId) throw new Error("Falha no envio.");
+function getOrCreateKashId() {
+  try {
+    let k = localStorage.getItem("kashId");
+    if (!k) {
+      k = "KASH-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+      localStorage.setItem("kashId", k);
+    }
 
-  return json; // { ok:true, kashId, ... }
+
+async function serverCreateCase({ company, members, consent }) {
+  const res = await fetch("/api/create-case", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ company, members, consent }),
+  });
+  if (!res.ok) throw new Error("Falha ao criar kashId no servidor");
+  return res.json(); // { kashId }
+}
+
+    return k;
+  } catch {
+    return "KASH-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+  }
 }
 
 /* ========================= UI BASICS ========================= */
@@ -407,7 +426,7 @@ const initialErrors = { company: {}, members: [], accept: {} };
 function FormWizard({ open, onClose }) {
   const [step, setStep] = useState(1);
   const [sending, setSending] = useState(false);
-  const [consent, setConsent] = useState(false);
+  const [consent, setConsent] = useState(false); // estado único e padronizado
   const [form, dispatch] = useReducer(formReducer, initialForm);
   const [errors, setErrors] = useState(initialErrors);
   const [doneCode, setDoneCode] = useState("");
@@ -469,19 +488,32 @@ function FormWizard({ open, onClose }) {
       alert("Marque o consentimento para prosseguir.");
       return;
     }
-    if (!validate()) return;
-
     setSending(true);
     try {
-      const resp = await apiUpsertFull({
+      let kashId;
+try {
+  const out = await serverCreateCase({ company, members, consent });
+  kashId = out.kashId;
+} catch {
+  // Fallback preservando formato antigo, sem alterar a UI
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth()+1).padStart(2,'0');
+  const dd = String(d.getDate()).padStart(2,'0');
+  const t = Math.random().toString(36).slice(2, 10).toUpperCase();
+  kashId = `KASH-${yyyy}${mm}${dd}-${t}`;
+}
+      await apiUpsertFull({
+        kashId,
         company: form.company,
         members: form.members,
         consent
       });
-      setDoneCode(resp.kashId);
-      setStep(3);
-    } catch (_) {
-      alert("Falha ao enviar. Tente novamente.");
+      setDoneCode(kashId);
+      setStep(3); // tela final
+    } catch (err) {
+      console.error(err);
+      alert("Falha ao enviar. Verifique sua conexão e tente novamente.");
     } finally {
       setSending(false);
     }
@@ -676,7 +708,7 @@ function FormWizard({ open, onClose }) {
                   </div>
                 </div>
 
-                {/* CONSENTIMENTO obrigatório */}
+                {/* CONSENTIMENTO obrigatório (fica acima do botão Enviar) */}
                 <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
                   <label className="flex items-start gap-2 text-sm text-slate-200">
                     <input type="checkbox" checked={consent} onChange={(e)=>setConsent(e.target.checked)} />

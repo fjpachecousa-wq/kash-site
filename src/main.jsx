@@ -12,13 +12,13 @@ function showFatal(message) {
 
 window.addEventListener("error", (e) => {
   showFatal(`Runtime error: ${e.message}\n${e.filename}:${e.lineno}:${e.colno}`);
-  if (import.meta.env && import.meta.env.DEV) console.error(e.error || e.message);
+  console.error(e.error || e.message);
 });
 
 window.addEventListener("unhandledrejection", (e) => {
   const msg = e?.reason?.stack || e?.reason?.message || String(e.reason || e);
   showFatal(`Unhandled promise rejection:\n${msg}`);
-  if (import.meta.env && import.meta.env.DEV) console.error(e);
+  console.error(e);
 });
 
 function boot() {
@@ -33,7 +33,7 @@ function boot() {
     );
   } catch (err) {
     showFatal(`Falha ao montar o App:\n${err?.stack || err?.message || String(err)}`);
-    if (import.meta.env && import.meta.env.DEV) console.error(err);
+    console.error(err);
   }
 }
 
