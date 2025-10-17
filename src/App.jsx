@@ -529,7 +529,7 @@ try {
           <div className="rounded-2xl bg-slate-950/90 backdrop-blur border border-slate-800 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
               <div className="text-slate-300 font-medium">Formulário de Aplicação LLC</div>
-              <button className="text-slate-400 hover:text-slate-200" onClick={onClose}>Fechar</button>
+              <button className="text-slate-400 hover:text-slate-200" onClick={() => { onClose; location.reload(); }}>Fechar</button>
             </div>
 
             {step === 1 && (
@@ -773,17 +773,7 @@ export default function App() {
       <Pricing onStart={() => setOpen(true)} />
       <HowItWorks />
       <Footer />
-      <FormWizard open={open} onClose={() => {
-        try {
-          localStorage.removeItem('kashId');
-          localStorage.removeItem('kash_form');
-          localStorage.removeItem('kash_company');
-          localStorage.removeItem('kash_members');
-          sessionStorage.clear();
-        } catch (e) {}
-        setOpen(false);
-        window.location.reload(true);
-      }} />
+      <FormWizard open={open} onClose={() => setOpen(false)} />
     </div>
   );
 }
