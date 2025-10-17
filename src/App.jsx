@@ -773,7 +773,17 @@ export default function App() {
       <Pricing onStart={() => setOpen(true)} />
       <HowItWorks />
       <Footer />
-      <FormWizard open={open} onClose={() => setOpen(false)} />
+      <FormWizard open={open} onClose={() => {
+        try {
+          localStorage.removeItem('kashId');
+          localStorage.removeItem('kash_form');
+          localStorage.removeItem('kash_company');
+          localStorage.removeItem('kash_members');
+          sessionStorage.clear();
+        } catch (e) {}
+        setOpen(false);
+        window.location.reload(true);
+      }} />
     </div>
   );
 }
