@@ -98,7 +98,9 @@ async function serverCreateCase({ company, members, consent }) {
   return res.json(); // { kashId }
 
 
-function handleClose() {
+function handleClose(e) {
+  try { e && e.preventDefault && e.preventDefault(); } catch {}
+
   try { setSending && setSending(true); } catch {}
   (async () => {
     try {
@@ -106,7 +108,7 @@ function handleClose() {
       try { localStorage.removeItem("kashId"); } catch {}
       try { sessionStorage.clear(); } catch {}
       if (typeof window !== "undefined" && window.location) {
-        window.location.replace(window.location.pathname);
+
       }
     } catch (e) {
       console.error("Falha ao gravar antes de fechar:", e);
