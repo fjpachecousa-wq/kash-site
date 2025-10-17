@@ -88,6 +88,28 @@ function getOrCreateKashId() {
     }
 
 
+
+
+async function serverCreateCase({ company, members, consent }) {
+  const res = await fetch("/api/create-case", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" }
+
+function handleClose() {
+  try { localStorage.removeItem("kashId"); } catch {}
+  try { sessionStorage.clear(); } catch {}
+  if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
+    window.location.reload();
+  }
+}
+
+,
+    body: JSON.stringify({ company, members, consent }),
+  });
+  if (!res.ok) throw new Error("Falha ao criar kashId no servidor");
+  return res.json(); // { kashId }
+}
+
 async function serverCreateCase({ company, members, consent }) {
   const res = await fetch("/api/create-case", {
     method: "POST",
@@ -512,7 +534,7 @@ try {
       setDoneCode(kashId);
       setStep(3); // tela final
     } catch (err) {
-      console.error(err);
+      if (import.meta.env && import.meta.env.DEV) console.error(err);
       alert("Falha ao enviar. Verifique sua conexão e tente novamente.");
     } finally {
       setSending(false);
