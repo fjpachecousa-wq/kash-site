@@ -669,7 +669,7 @@ try {
                     <span>Estou ciente de que endereço e agente da KASH são válidos por 12 meses.</span>
                   </label>
                   {form.company.hasFloridaAddress && (
-                    <div className="text-[12px] text-slate-400 -mt-2">* Indisponível porque você informou endereço próprio na Flórida.</div>
+                    <div className="text-[12px] text-slate-400">Endereço da KASH indisponível porque você informou endereço próprio na Flórida.</div>
                   )}
                 </div>
 
