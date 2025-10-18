@@ -512,17 +512,12 @@ try {
       // Limpeza de memória + reinício da página após envio bem-sucedido (sem piscar popup)
       try { localStorage.removeItem("kashId"); } catch {}
       try { sessionStorage.clear(); } catch {}
-      if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
-        setTimeout(() => window.location.reload(), 60);
-      }
+      
 
       // Limpeza de memória + reinício da página após envio bem-sucedido
       try { localStorage.removeItem("kashId"); } catch {}
       try { sessionStorage.clear(); } catch {}
-      if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
-        // pequeno atraso para garantir flush/UX
-        setTimeout(() => window.location.reload(), 60);
-      }
+      
 
       setDoneCode(kashId);
       setStep(3); // tela final
@@ -538,13 +533,13 @@ try {
 
   return (
     <div className={classNames("fixed inset-0 z-50", !open && "hidden")} aria-hidden={!open}>
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60" onClick={step === 3 ? undefined : onClose} />
       <div className="absolute inset-0 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-4 pt-16 pb-10">
           <div className="rounded-2xl bg-slate-950/90 backdrop-blur border border-slate-800 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
               <div className="text-slate-300 font-medium">Formulário de Aplicação LLC</div>
-              <button onClick={onClose} className="text-slate-400 hover:text-slate-200 transition" type="button">X</button>
+              {step !== 3 && (<button onClick={onClose} className="text-slate-400 hover:text-slate-200 transition" type="button">X</button>)}
             </div>
 
             {step === 1 && (
@@ -674,89 +669,60 @@ try {
                 </div>
 
                 <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton onClick={() => { if (validate()) setStep(2); }}>Continuar</CTAButton>
-                </div>
-              </div>
-            )}
-
-            {step === 2 && (
-              <div className="p-6">
-                <h4 className="text-slate-100 font-medium">2/2 - Conferência antes do envio</h4>
-
-                <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-                  <div className="text-slate-300 font-medium">Empresa</div>
-                  <div className="mt-2 text-sm text-slate-400">
-                    <div><span className="text-slate-500">Nome: </span>{form.company.companyName || "-"}</div>
-                    <div className="grid md:grid-cols-2 gap-x-6">
-                      <div><span className="text-slate-500">E-mail: </span>{form.company.email || "-"}</div>
-                      <div><span className="text-slate-500">Telefone: </span>{form.company.phone || "-"}</div>
-                    </div>
-                    {form.company.hasFloridaAddress ? (
-                      <div className="mt-1">
-                        <div className="text-slate-400">Endereço informado:</div>
-                        <div>{form.company.usAddress.line1}</div>
-                        <div>{form.company.usAddress.city}, {form.company.usAddress.state} {form.company.usAddress.zip}</div>
-                      </div>
-                    ) : (
-                      <div className="mt-1">Será utilizado o endereço e agente da KASH por 12 meses.</div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 mt-4">
-                  <div className="text-slate-300 font-medium">Sócios</div>
-                  <div className="mt-2 space-y-3 text-sm text-slate-400">
-                    {form.members.map((m, i) => (
-                      <div key={i}>
-                        <div className="font-medium text-slate-300">Sócio {i + 1}: {m.fullName || "-"}</div>
-                        <div className="grid md:grid-cols-2 gap-x-6 gap-y-1">
-                          <div><span className="text-slate-500">E-mail: </span>{m.email || "-"}</div>
-                          <div><span className="text-slate-500">Telefone: </span>{m.phone || "-"}</div>
-                          <div><span className="text-slate-500">Documento: </span>{m.passport || "-"}</div>
-                          <div><span className="text-slate-500">Órgão emissor: </span>{m.issuer || "-"}</div>
-                          <div><span className="text-slate-500">Validade doc.: </span>{m.docExpiry || "-"}</div>
-                          <div><span className="text-slate-500">Nascimento: </span>{m.birthdate || "-"}</div>
-                          <div><span className="text-slate-500">Participação: </span>{m.percent || "-"}%</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* CONSENTIMENTO obrigatório (fica acima do botão Enviar) */}
-                <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
-                  <label className="flex items-start gap-2 text-sm text-slate-200">
-                    <input type="checkbox" checked={consent} onChange={(e)=>setConsent(e.target.checked)} />
-                    <span>
-                      Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.
-                    </span>
-                  </label>
-                </div>
-
-                <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
-                  <CTAButton onClick={handleSubmit} disabled={!consent || sending}>
-                    {sending ? "Enviando..." : "Enviar"}
-                  </CTAButton>
-                </div>
-              </div>
-            )}
-
-            {step === 3 && (
-              <div className="p-6">
-                <div className="text-center">
-                  <h4 className="text-slate-100 font-medium">Dados enviados com sucesso</h4>
-                  <p className="text-slate-400 mt-2">Seu código de acompanhamento (tracking):</p>
-                  <div className="mt-2 text-emerald-400 text-xl font-bold">{doneCode}</div>
-                  <p className="text-slate-400 mt-4">
-                    Sua aplicação foi recebida. A equipe KASH analisará as informações e enviará o link de pagamento e contrato por e-mail em até 48 horas.
-                  </p>
-                  <div className="mt-6">
-                    <CTAButton onClick={async (e) => { try { e && e.preventDefault && e.preventDefault(); } catch {} try { await apiUpsertFull({ kashId, company, members, consent }); try { localStorage.removeItem("kashId"); } catch {} try { sessionStorage.clear(); } catch {} } catch (err) { console.error("Falha ao gravar:", err); alert("Não foi possível concluir a gravação agora. Tente novamente."); return; } if (typeof window !== "undefined" && window.location) { window.location.replace(window.location.pathname); } }}>Fechar</CTAButton>
+                  <CTAButton onClick={() => {
+    try { localStorage.removeItem("kashId"); } catch {}
+    try { sessionStorage.clear(); } catch {}
+    // Reset internal wizard state to avoid sticky "step 3" on reopen
+    try { setDoneCode && setDoneCode(""); } catch {}
+    try { setStep && setStep(1); } catch {}
+    try { dispatch && dispatch({ type: "RESET_FORM" }); } catch {}
+    try { setErrors && typeof initialErrors !== "undefined" && setErrors(initialErrors); } catch {}
+    try { setConsent && setConsent(false); } catch {}
+    if (typeof onClose === "function") onClose();
+}}>Fechar</CTAButton>
                   </div>
                 </div>
               </div>
             )}
+
+{step === 3 && (
+  <div className="p-6">
+    <div className="text-center">
+      <h4 className="text-slate-100 font-medium">Dados enviados com sucesso</h4>
+      <p className="text-slate-400 mt-2">Seu código de acompanhamento (tracking):</p>
+      <div className="mt-2 text-emerald-400 text-xl font-bold">{doneCode}</div>
+
+      <div className="mt-6 flex items-center justify-center gap-3">
+        <CTAButton
+          variant="ghost"
+          onClick={async () => {
+            try { await navigator.clipboard.writeText(String(doneCode || "")); } catch {}
+          }}
+        >
+          Copiar código
+        </CTAButton>
+
+        <CTAButton
+          onClick={() => {
+            try { localStorage.removeItem("kashId"); } catch {}
+            try { sessionStorage.clear(); } catch {}
+            // Reset interno para não 'grudar' ao reabrir
+            try { setDoneCode(""); } catch {}
+            try { setStep(1); } catch {}
+            try { dispatch && dispatch({ type: "RESET_FORM" }); } catch {}
+            try { setErrors && typeof initialErrors !== "undefined" && setErrors(initialErrors); } catch {}
+            try { setConsent && setConsent(false); } catch {}
+            if (typeof onClose === "function") onClose();
+          }}
+        >
+          Concluir
+        </CTAButton>
+      </div>
+    </div>
+  </div>
+)}
+
+
 
           </div>
           <div className="text-center text-[11px] text-slate-500 mt-3">Data: {dateISO}</div>
