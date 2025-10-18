@@ -512,12 +512,17 @@ try {
       // Limpeza de memória + reinício da página após envio bem-sucedido (sem piscar popup)
       try { localStorage.removeItem("kashId"); } catch {}
       try { sessionStorage.clear(); } catch {}
-      
+      if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
+        setTimeout(() => window.location.reload(), 60);
+      }
 
       // Limpeza de memória + reinício da página após envio bem-sucedido
       try { localStorage.removeItem("kashId"); } catch {}
       try { sessionStorage.clear(); } catch {}
-      
+      if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
+        // pequeno atraso para garantir flush/UX
+        setTimeout(() => window.location.reload(), 60);
+      }
 
       setDoneCode(kashId);
       setStep(3); // tela final
@@ -539,7 +544,7 @@ try {
           <div className="rounded-2xl bg-slate-950/90 backdrop-blur border border-slate-800 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
               <div className="text-slate-300 font-medium">Formulário de Aplicação LLC</div>
-              {step !== 3 && (<button onClick={onClose} className="text-slate-400 hover:text-slate-200 transition" type="button">X</button>)}
+              <button onClick={onClose} className="text-slate-400 hover:text-slate-200 transition" type="button">X</button>
             </div>
 
             {step === 1 && (
@@ -684,45 +689,6 @@ try {
                 </div>
               </div>
             )}
-
-{step === 3 && (
-  <div className="p-6">
-    <div className="text-center">
-      <h4 className="text-slate-100 font-medium">Dados enviados com sucesso</h4>
-      <p className="text-slate-400 mt-2">Seu código de acompanhamento (tracking):</p>
-      <div className="mt-2 text-emerald-400 text-xl font-bold">{doneCode}</div>
-
-      <div className="mt-6 flex items-center justify-center gap-3">
-        <CTAButton
-          variant="ghost"
-          onClick={async () => {
-            try { await navigator.clipboard.writeText(String(doneCode || "")); } catch {}
-          }}
-        >
-          Copiar código
-        </CTAButton>
-
-        <CTAButton
-          onClick={() => {
-            try { localStorage.removeItem("kashId"); } catch {}
-            try { sessionStorage.clear(); } catch {}
-            // Reset interno para não 'grudar' ao reabrir
-            try { setDoneCode(""); } catch {}
-            try { setStep(1); } catch {}
-            try { dispatch && dispatch({ type: "RESET_FORM" }); } catch {}
-            try { setErrors && typeof initialErrors !== "undefined" && setErrors(initialErrors); } catch {}
-            try { setConsent && setConsent(false); } catch {}
-            if (typeof onClose === "function") onClose();
-          }}
-        >
-          Concluir
-        </CTAButton>
-      </div>
-    </div>
-  </div>
-)}
-
-
 
           </div>
           <div className="text-center text-[11px] text-slate-500 mt-3">Data: {dateISO}</div>
