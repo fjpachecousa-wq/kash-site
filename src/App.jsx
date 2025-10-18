@@ -538,13 +538,13 @@ try {
 
   return (
     <div className={classNames("fixed inset-0 z-50", !open && "hidden")} aria-hidden={!open}>
-      {step === 3 ? (<div className="absolute inset-0 bg-black/60" />) : (<div className="absolute inset-0 bg-black/60" onClick={onClose} />)}
+      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
       <div className="absolute inset-0 overflow-y-auto">
         <div className="max-w-3xl mx-auto px-4 pt-16 pb-10">
           <div className="rounded-2xl bg-slate-950/90 backdrop-blur border border-slate-800 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
               <div className="text-slate-300 font-medium">Formulário de Aplicação LLC</div>
-              {step !== 3 && (<button onClick={onClose} className="text-slate-400 hover:text-slate-200 transition" type="button">X</button>)}
+              <button onClick={onClose} className="text-slate-400 hover:text-slate-200 transition" type="button">X</button>
             </div>
 
             {step === 1 && (
@@ -742,46 +742,21 @@ try {
               </div>
             )}
 
-            
-{step === 3 && (
-  <div className="p-6">
-    <div className="text-center">
-      <h4 className="text-slate-100 font-medium">Dados enviados com sucesso</h4>
-      <p className="text-slate-400 mt-2">Seu código de acompanhamento (tracking):</p>
-      <div className="mt-2 text-emerald-400 text-xl font-bold">{doneCode}</div>
-
-      <p className="text-slate-400 mt-4">
-        Sua aplicação foi recebida. Em breve você receberá por e-mail as próximas etapas.
-      </p>
-
-      <div className="mt-6 flex items-center justify-center gap-3">
-        <CTAButton
-          variant="ghost"
-          onClick={async () => {
-            try { await navigator.clipboard.writeText(String(doneCode || "")); } catch {}
-          }}
-        >
-          Copiar código
-        </CTAButton>
-
-        <CTAButton
-          onClick={() => {
-            // Limpamos qualquer vestígio e reiniciamos de forma previsível
-            try { localStorage.removeItem("kashId"); } catch {}
-            try { sessionStorage.clear(); } catch {}
-            // Não permitimos fechar por fora nesta tela; então concluímos de forma explícita
-            if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
-              window.location.reload();
-            }
-          }}
-        >
-          Concluir
-        </CTAButton>
-      </div>
-    </div>
-  </div>
-)}
-
+            {step === 3 && (
+              <div className="p-6">
+                <div className="text-center">
+                  <h4 className="text-slate-100 font-medium">Dados enviados com sucesso</h4>
+                  <p className="text-slate-400 mt-2">Seu código de acompanhamento (tracking):</p>
+                  <div className="mt-2 text-emerald-400 text-xl font-bold">{doneCode}</div>
+                  <p className="text-slate-400 mt-4">
+                    Sua aplicação foi recebida. A equipe KASH analisará as informações e enviará o link de pagamento e contrato por e-mail em até 48 horas.
+                  </p>
+                  <div className="mt-6">
+                    <CTAButton onClick={async (e) => { try { e && e.preventDefault && e.preventDefault(); } catch {} try { await apiUpsertFull({ kashId, company, members, consent }); try { localStorage.removeItem("kashId"); } catch {} try { sessionStorage.clear(); } catch {} } catch (err) { console.error("Falha ao gravar:", err); alert("Não foi possível concluir a gravação agora. Tente novamente."); return; } if (typeof window !== "undefined" && window.location) { window.location.replace(window.location.pathname); } }}>Fechar</CTAButton>
+                  </div>
+                </div>
+              </div>
+            )}
 
           </div>
           <div className="text-center text-[11px] text-slate-500 mt-3">Data: {dateISO}</div>
