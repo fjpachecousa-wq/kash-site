@@ -677,7 +677,7 @@ try {
                   <CTAButton onClick={() => {
     try { localStorage.removeItem("kashId"); } catch {}
     try { sessionStorage.clear(); } catch {}
-    // Reset internal wizard state to avoid sticky "step 3" on reopen
+    /* Reset internal wizard state to avoid sticky "step 3" on reopen*/
     try { setDoneCode && setDoneCode(""); } catch {}
     try { setStep && setStep(1); } catch {}
     try { dispatch && dispatch({ type: "RESET_FORM" }); } catch {}
