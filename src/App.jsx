@@ -311,7 +311,7 @@ function formReducer(state, action) {
     case "UPDATE_US_ADDRESS":
       return { ...state, company: { ...state.company, usAddress: { ...state.company.usAddress, [action.field]: action.value } } };
     case "UPDATE_MEMBER":
-      return { ...state, members: state.members.map((m, i) => (i === action.index ? { ...m, [action.field]: action.value } : m)) };
+      return { ...state, members: state.members.map((m, i) => i === action.index ? { ...m, [action.field]: action.value } : m) };
     case "ADD_MEMBER":
       return { ...state, members: [...state.members, { fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "" }] };
     case "REMOVE_MEMBER":
@@ -669,9 +669,9 @@ try {
                     <span>Estou ciente de que endereço e agente da KASH são válidos por 12 meses.</span>
                   </label>
                   {form.company.hasFloridaAddress && (
-                    <div className="text-[12px] text-slate-400 -mt-2">* Indisponível porque você informou endereço próprio na Flórida.</div>
+                  {form.company.hasFloridaAddress && (
+                    <div className="text-[12px] text-slate-400">Endereço da KASH indisponível porque você informou endereço próprio na Flórida.</div>
                   )}
-                </div>
 
                 <div className="mt-6 flex justify-end gap-3">
                   <CTAButton onClick={() => {
