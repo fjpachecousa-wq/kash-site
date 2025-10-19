@@ -752,7 +752,7 @@ try {
                     Sua aplicação foi recebida. A equipe KASH analisará as informações e enviará o link de pagamento e contrato por e-mail em até 48 horas.
                   </p>
                   <div className="mt-6">
-                    <CTAButton onClick={async (e) => { try { e && e.preventDefault && e.preventDefault(); } catch {} try { await apiUpsertFull({ kashId, company, members, consent }); try { localStorage.removeItem("kashId"); } catch {} try { sessionStorage.clear(); } catch {} } catch (err) { console.error("Falha ao gravar:", err); alert("Não foi possível concluir a gravação agora. Tente novamente."); return; } if (typeof window !== "undefined" && window.location) { window.location.replace(window.location.pathname); } }}>Fechar</CTAButton>
+                    <CTAButton catch {} try { await apiUpsertFull({ kashId, company, members, consent }); try { localStorage.removeItem("kashId"); } catch {} try { sessionStorage.clear(); } catch {} } catch (err) { console.error("Falha ao gravar:", err); alert("Não foi possível concluir a gravação agora. Tente novamente."); return; } if (typeof window !== "undefined" && window.location) { window.location.replace(window.location.pathname); } }}>Fechar</CTAButton>
                   </div>
                 </div>
               </div>
