@@ -529,7 +529,8 @@ function FormWizard({ open, onClose }) {
     try { 
       try { localStorage.removeItem("kashId"); } catch {} 
       try { sessionStorage.clear(); } catch {} 
-      onClose(); // *** CORREÇÃO APLICADA: FECHA O MODAL SEM RECARREGAR A PÁGINA ***
+      setStep(1); // <-- CORREÇÃO: Reseta o passo para 1
+      onClose(); // FECHA O MODAL SEM RECARREGAR A PÁGINA
       // window.location.replace(window.location.pathname); <-- REMOVIDO
     } catch (err) { 
       console.error("Falha ao fechar:", err); 
