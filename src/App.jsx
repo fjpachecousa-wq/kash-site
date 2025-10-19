@@ -1,63 +1,4 @@
-Obrigado pela análise detalhada. O problema de o pop-up de "Tracking" (passo 3 do `FormWizard`) "piscar" e desaparecer após o envio bem-sucedido é causado pelo uso da função `window.location.reload()` ou `window.location.replace()` dentro da lógica de sucesso do `handleSubmit` e no botão "Fechar" do passo 3.
-
-## Diagnóstico Técnico
-
-1.  **Causa em `handleSubmit` (sucesso):**
-
-    ```javascript
-    // ... dentro de handleSubmit
-    try { localStorage.removeItem("kashId"); } catch {}
-    try { sessionStorage.clear(); } catch {}
-    if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
-      setTimeout(() => window.location.reload(), 60); // <-- CAUSA 1 (recarga de página)
-    }
-    // ... código duplicado (apenas a recarga em si estava com 60ms)
-    // ...
-    setDoneCode(kashId);
-    setStep(3); // tela final
-    // ...
-    ```
-
-    A chamada a `window.location.reload()` (mesmo com um `setTimeout` de 60ms) recarrega a página inteira, eliminando o estado atual do React, incluindo o `setOpen(true)` que mantém o modal aberto, o que causa o "flash" e fechamento. O passo 3 não chega a ser totalmente estabilizado.
-
-2.  **Causa no botão "Fechar" (passo 3):**
-
-    ```javascript
-    // ... no botão "Fechar" do passo 3
-    <CTAButton onClick={async (e) => { 
-        // ... (lógica de gravação e limpeza)
-        if (typeof window !== "undefined" && window.location) { 
-            window.location.replace(window.location.pathname); // <-- CAUSA 2 (recarga/substituição de página)
-        } 
-    }}>Fechar</CTAButton>
-    ```
-
-    Similarmente, a chamada a `window.location.replace()` tem o mesmo efeito de recarregar a página, fechando o modal.
-
-## Solução
-
-A solução é **remover todas as chamadas a `window.location.reload()` e `window.location.replace()`** do fluxo de envio bem-sucedido (`handleSubmit`) e do botão "Fechar" do passo 3.
-
-1.  Em `handleSubmit`, após definir o `kashId` e o `setStep(3)`, a função deve simplesmente parar, deixando o modal no passo 3.
-2.  O botão "Fechar" do passo 3 deve, em vez de recarregar a página, chamar a função `onClose` que foi passada ao `FormWizard` (a qual define `setOpen(false)` no componente `App`), fechando o modal. A limpeza da memória (`localStorage.removeItem`, `sessionStorage.clear`) deve ser mantida.
-
-O arquivo `App.jsx` corrigido está abaixo.
-
------
-
-## App.jsx Corrigido
-
-```javascript
 // src/App.jsx – KASH Solutions (reescrita integral, saneada)
-// Observações de implementação:
-// - Mantém o visual da página (Hero/Services/Pricing/HowItWorks/Footer).
-// - Formulário em 2 passos com revisão e CONSENTIMENTO obrigatório no modal.
-// - Envio completo (company + members + consent) para Google Apps Script.
-// - CORS-safe: POST com "text/plain;charset=utf-8" (sem preflight).
-// - Removeu quaisquer vestígios de contrato/pagamento neste fluxo.
-// - Removeu caracteres problemáticos dentro de template literals.
-// - Sem código morto/resíduos; checagens de fechamento de tags e chaves.
-// - CORREÇÃO: Removida a recarga de página após envio (window.location.reload/replace) para manter o popup de tracking no passo 3 aberto.
 
 import React, { useEffect, useMemo, useReducer, useState } from "react";
 
@@ -560,12 +501,18 @@ function FormWizard({ open, onClose }) {
         consent
       });
       
-      // Limpeza de memória mantida, mas a recarga de página removida
+      // Limpeza de memória mantida.
       try { localStorage.removeItem("kashId"); } catch {}
       try { sessionStorage.clear(); } catch {}
 
       setDoneCode(kashId);
       setStep(3); // Mantém o usuário no modal do passo 3
+      
+      // *** CORREÇÃO APLICADA: REMOVIDA A RECARGA DE PÁGINA AQUI ***
+      // if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
+      //   setTimeout(() => window.location.reload(), 60); 
+      // }
+      
     } catch (err) {
       console.error(err);
       alert("Falha ao enviar. Verifique sua conexão e tente novamente.");
@@ -576,17 +523,16 @@ function FormWizard({ open, onClose }) {
 
   const dateISO = useMemo(() => todayISO(), []);
 
-  // Handler para o botão 'Fechar' do passo 3
+  // Handler para o botão 'Fechar' do passo 3 (Tracking)
   async function handleCloseStep3() {
+    // Apenas executa a limpeza e fecha o modal (comportamento desejado)
     try { 
-      // Não é mais necessário chamar apiUpsertFull novamente aqui, mas mantemos a limpeza da memória.
-      // O kashId já foi gravado em handleSubmit.
       try { localStorage.removeItem("kashId"); } catch {} 
       try { sessionStorage.clear(); } catch {} 
-      onClose(); // Fecha o modal!
+      onClose(); // *** CORREÇÃO APLICADA: FECHA O MODAL SEM RECARREGAR A PÁGINA ***
+      // window.location.replace(window.location.pathname); <-- REMOVIDO
     } catch (err) { 
       console.error("Falha ao fechar:", err); 
-      // Se a limpeza falhar (improvável), apenas fecha o modal.
       onClose(); 
     }
   }
@@ -807,7 +753,7 @@ function FormWizard({ open, onClose }) {
                     Sua aplicação foi recebida. A equipe KASH analisará as informações e enviará o link de pagamento e contrato por e-mail em até 48 horas.
                   </p>
                   <div className="mt-6">
-                    {/* Botão de fechar corrigido para chamar handleCloseStep3, que por sua vez chama onClose() */}
+                    {/* Chama o handler que limpa a memória e fecha o modal (onClose) */}
                     <CTAButton onClick={handleCloseStep3}>Fechar</CTAButton>
                   </div>
                 </div>
@@ -848,4 +794,3 @@ export default function App() {
     </div>
   );
 }
-```
