@@ -1,3 +1,53 @@
+Obrigado pela análise detalhada. O problema de o pop-up de "Tracking" (passo 3 do `FormWizard`) "piscar" e desaparecer após o envio bem-sucedido é causado pelo uso da função `window.location.reload()` ou `window.location.replace()` dentro da lógica de sucesso do `handleSubmit` e no botão "Fechar" do passo 3.
+
+## Diagnóstico Técnico
+
+1.  **Causa em `handleSubmit` (sucesso):**
+
+    ```javascript
+    // ... dentro de handleSubmit
+    try { localStorage.removeItem("kashId"); } catch {}
+    try { sessionStorage.clear(); } catch {}
+    if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
+      setTimeout(() => window.location.reload(), 60); // <-- CAUSA 1 (recarga de página)
+    }
+    // ... código duplicado (apenas a recarga em si estava com 60ms)
+    // ...
+    setDoneCode(kashId);
+    setStep(3); // tela final
+    // ...
+    ```
+
+    A chamada a `window.location.reload()` (mesmo com um `setTimeout` de 60ms) recarrega a página inteira, eliminando o estado atual do React, incluindo o `setOpen(true)` que mantém o modal aberto, o que causa o "flash" e fechamento. O passo 3 não chega a ser totalmente estabilizado.
+
+2.  **Causa no botão "Fechar" (passo 3):**
+
+    ```javascript
+    // ... no botão "Fechar" do passo 3
+    <CTAButton onClick={async (e) => { 
+        // ... (lógica de gravação e limpeza)
+        if (typeof window !== "undefined" && window.location) { 
+            window.location.replace(window.location.pathname); // <-- CAUSA 2 (recarga/substituição de página)
+        } 
+    }}>Fechar</CTAButton>
+    ```
+
+    Similarmente, a chamada a `window.location.replace()` tem o mesmo efeito de recarregar a página, fechando o modal.
+
+## Solução
+
+A solução é **remover todas as chamadas a `window.location.reload()` e `window.location.replace()`** do fluxo de envio bem-sucedido (`handleSubmit`) e do botão "Fechar" do passo 3.
+
+1.  Em `handleSubmit`, após definir o `kashId` e o `setStep(3)`, a função deve simplesmente parar, deixando o modal no passo 3.
+2.  O botão "Fechar" do passo 3 deve, em vez de recarregar a página, chamar a função `onClose` que foi passada ao `FormWizard` (a qual define `setOpen(false)` no componente `App`), fechando o modal. A limpeza da memória (`localStorage.removeItem`, `sessionStorage.clear`) deve ser mantida.
+
+O arquivo `App.jsx` corrigido está abaixo.
+
+-----
+
+## App.jsx Corrigido
+
+```javascript
 // src/App.jsx – KASH Solutions (reescrita integral, saneada)
 // Observações de implementação:
 // - Mantém o visual da página (Hero/Services/Pricing/HowItWorks/Footer).
@@ -7,6 +57,7 @@
 // - Removeu quaisquer vestígios de contrato/pagamento neste fluxo.
 // - Removeu caracteres problemáticos dentro de template literals.
 // - Sem código morto/resíduos; checagens de fechamento de tags e chaves.
+// - CORREÇÃO: Removida a recarga de página após envio (window.location.reload/replace) para manter o popup de tracking no passo 3 aberto.
 
 import React, { useEffect, useMemo, useReducer, useState } from "react";
 
@@ -86,7 +137,11 @@ function getOrCreateKashId() {
       k = "KASH-" + Math.random().toString(36).slice(2, 8).toUpperCase();
       localStorage.setItem("kashId", k);
     }
-
+    return k;
+  } catch {
+    return "KASH-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+  }
+}
 
 async function serverCreateCase({ company, members, consent }) {
   const res = await fetch("/api/create-case", {
@@ -96,12 +151,6 @@ async function serverCreateCase({ company, members, consent }) {
   });
   if (!res.ok) throw new Error("Falha ao criar kashId no servidor");
   return res.json(); // { kashId }
-}
-
-    return k;
-  } catch {
-    return "KASH-" + Math.random().toString(36).slice(2, 8).toUpperCase();
-  }
 }
 
 /* ========================= UI BASICS ========================= */
@@ -491,34 +540,32 @@ function FormWizard({ open, onClose }) {
     setSending(true);
     try {
       let kashId;
-try {
-  const out = await serverCreateCase({ company, members, consent });
-  kashId = out.kashId;
-} catch {
-  // Fallback preservando formato antigo, sem alterar a UI
-  const d = new Date();
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth()+1).padStart(2,'0');
-  const dd = String(d.getDate()).padStart(2,'0');
-  const t = Math.random().toString(36).slice(2, 10).toUpperCase();
-  kashId = `KASH-${yyyy}${mm}${dd}-${t}`;
-}
+      try {
+        const out = await serverCreateCase({ company: form.company, members: form.members, consent });
+        kashId = out.kashId;
+      } catch {
+        // Fallback preservando formato antigo, sem alterar a UI
+        const d = new Date();
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth()+1).padStart(2,'0');
+        const dd = String(d.getDate()).padStart(2,'0');
+        const t = Math.random().toString(36).slice(2, 10).toUpperCase();
+        kashId = `KASH-${yyyy}${mm}${dd}-${t}`;
+      }
+      
       await apiUpsertFull({
         kashId,
         company: form.company,
         members: form.members,
         consent
       });
-      // Limpeza de memória + reinício da página após envio bem-sucedido
+      
+      // Limpeza de memória mantida, mas a recarga de página removida
       try { localStorage.removeItem("kashId"); } catch {}
       try { sessionStorage.clear(); } catch {}
-      if (typeof window !== "undefined" && window.location && typeof window.location.reload === "function") {
-        // pequeno atraso para garantir flush/UX
-        setTimeout(() => window.location.reload(), 60);
-      }
 
       setDoneCode(kashId);
-      setStep(3); // tela final
+      setStep(3); // Mantém o usuário no modal do passo 3
     } catch (err) {
       console.error(err);
       alert("Falha ao enviar. Verifique sua conexão e tente novamente.");
@@ -529,6 +576,21 @@ try {
 
   const dateISO = useMemo(() => todayISO(), []);
 
+  // Handler para o botão 'Fechar' do passo 3
+  async function handleCloseStep3() {
+    try { 
+      // Não é mais necessário chamar apiUpsertFull novamente aqui, mas mantemos a limpeza da memória.
+      // O kashId já foi gravado em handleSubmit.
+      try { localStorage.removeItem("kashId"); } catch {} 
+      try { sessionStorage.clear(); } catch {} 
+      onClose(); // Fecha o modal!
+    } catch (err) { 
+      console.error("Falha ao fechar:", err); 
+      // Se a limpeza falhar (improvável), apenas fecha o modal.
+      onClose(); 
+    }
+  }
+
   return (
     <div className={classNames("fixed inset-0 z-50", !open && "hidden")} aria-hidden={!open}>
       <div className="absolute inset-0 bg-black/60" onClick={onClose} />
@@ -537,7 +599,7 @@ try {
           <div className="rounded-2xl bg-slate-950/90 backdrop-blur border border-slate-800 overflow-hidden">
             <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
               <div className="text-slate-300 font-medium">Formulário de Aplicação LLC</div>
-              <button className="text-slate-400 hover:text-slate-200" onClick={() => { onClose; location.reload(); }}>Fechar</button>
+              <button onClick={onClose} className="text-slate-400 hover:text-slate-200 transition" type="button">X</button>
             </div>
 
             {step === 1 && (
@@ -745,7 +807,8 @@ try {
                     Sua aplicação foi recebida. A equipe KASH analisará as informações e enviará o link de pagamento e contrato por e-mail em até 48 horas.
                   </p>
                   <div className="mt-6">
-                    <CTAButton onClick={async (e) => { try { e && e.preventDefault && e.preventDefault(); } catch {} try { await apiUpsertFull({ kashId: doneCode, company: form?.company, members: form?.members, consent }); try { localStorage.removeItem("kashId"); } catch {} try { sessionStorage.clear(); } catch {} } catch (err) { console.error("Falha ao gravar:", err); alert("Não foi possível concluir a gravação agora. Tente novamente."); return; } }}>Fechar</CTAButton>
+                    {/* Botão de fechar corrigido para chamar handleCloseStep3, que por sua vez chama onClose() */}
+                    <CTAButton onClick={handleCloseStep3}>Fechar</CTAButton>
                   </div>
                 </div>
               </div>
@@ -785,3 +848,4 @@ export default function App() {
     </div>
   );
 }
+```
