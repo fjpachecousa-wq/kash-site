@@ -308,6 +308,8 @@ function formReducer(state, action) {
       return { ...state, members: state.members.filter((_, i) => i !== action.index) };
     case "TOGGLE_ACCEPT":
       return { ...state, accept: { ...state.accept, [action.key]: action.value } };
+    case "RESET_FORM": // <-- NOVA AÇÃO: Retorna o estado inicial
+      return initialForm;
     default:
       return state;
   }
@@ -529,7 +531,13 @@ function FormWizard({ open, onClose }) {
     try { 
       try { localStorage.removeItem("kashId"); } catch {} 
       try { sessionStorage.clear(); } catch {} 
-      setStep(1); // <-- CORREÇÃO: Reseta o passo para 1
+      
+      // *** CORREÇÕES ADICIONADAS ***
+      dispatch({ type: "RESET_FORM" }); // Reseta o estado do formulário para o initialForm
+      setStep(1); // Reseta o passo para 1 (visível)
+      setConsent(false); // Reseta o estado do consentimento para falso
+      // *****************************
+
       onClose(); // FECHA O MODAL SEM RECARREGAR A PÁGINA
       // window.location.replace(window.location.pathname); <-- REMOVIDO
     } catch (err) { 
