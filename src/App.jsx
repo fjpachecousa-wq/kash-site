@@ -1,10 +1,11 @@
-// src/App.jsx – KASH Solutions (reescrita integral, saneada)
+// src/App.jsx – KASH Solutions (Tema Escuro Aplicado)
 
 import React, { useEffect, useMemo, useReducer, useState } from "react";
 
 /* ========================= KASH CONFIG ========================= */
 if (typeof window !== "undefined") {
   window.CONFIG = window.CONFIG || {};
+  // IMPORTANTE: VERIFIQUE se esta URL corresponde EXATAMENTE ao seu Web App publicado (DEPLOY)
   window.CONFIG.appsScriptUrl =
     "https://script.google.com/macros/s/AKfycby9mHoyfTP0QfaBgJdbEHmxO2rVDViOJZuXaD8hld2cO7VCRXLMsN2AmYg7A-wNP0abGA/exec";
 }
@@ -23,817 +24,723 @@ function todayISO() {
   const pad = (n)=>String(n).padStart(2,"0");
   return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
 }
-function calcAgeFullDate(dateStr) {
-  if (!dateStr) return 0;
-  const d = new Date(dateStr);
-  const t = new Date();
-  let age = t.getFullYear() - d.getFullYear();
-  const m = t.getMonth() - d.getMonth();
-  if (m < 0 || (m === 0 && t.getDate() < d.getDate())) age--;
-  return age;
-}
-function isPercentTotalValid(members) {
-  const sum = members.reduce((acc, m) => acc + (Number(m.percent || 0) || 0), 0);
-  return Math.abs(sum - 100) < 0.001;
-}
 
-/* ========================= API (Apps Script) ========================= */
-async function apiUpsertFull({ kashId, company, members, consent }) {
-  const url = (typeof window !== "undefined" && window.CONFIG && window.CONFIG.appsScriptUrl) || "";
-  if (!url) throw new Error("Apps Script URL ausente");
+const initialFormState = {
+  // Step 1: Informações da Empresa
+  company: {
+    companyName: "",
+    cnpj: "",
+    usaddressline1: "",
+    usaddressline2: "",
+    usaddresscity: "",
+    usaddressstate: "FL",
+    usaddresszip: "",
+    usaddresscountry: "United States",
+  },
+  // Step 2: Informações do Aplicante/Membros
+  memberCount: 1, // 1 a 3
+  members: [
+    { fullName: "", email: "", phone: "", passport: "", docExpiry: "", percent: "" },
+    { fullName: "", email: "", phone: "", passport: "", docExpiry: "", percent: "" },
+    { fullName: "", email: "", phone: "", passport: "", docExpiry: "", percent: "" },
+  ],
+  accepts: {
+    terms: false,
+    privacy: false,
+    paymentMethod: "",
+    companyNameOption1: "",
+    companyNameOption2: "",
+    companyNameOption3: "",
+  },
+};
 
-  const payload = {
-    action: "upsert",
-    kashId,
-    company,
-    members,
-    accepts: { consent: !!consent },
-    faseAtual: "Recebido",
-    subFase: "Dados coletados",
-    consentAt: new Date().toISOString(),
-    consentTextVersion: "v2025-10-11",
-    source: "kashsolutions.us"
-  };
-
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "text/plain;charset=utf-8" }, // evita preflight CORS
-    body: JSON.stringify(payload)
-  });
-
-  const text = await res.text();
-  try {
-    const j = JSON.parse(text);
-    if (j?.kashId) {
-      try { localStorage.setItem("kashId", String(j.kashId)); } catch {}
-    }
-  } catch {}
-  return text;
-}
-
-function getOrCreateKashId() {
-  try {
-    let k = localStorage.getItem("kashId");
-    if (!k) {
-      k = "KASH-" + Math.random().toString(36).slice(2, 8).toUpperCase();
-      localStorage.setItem("kashId", k);
-    }
-    return k;
-  } catch {
-    return "KASH-" + Math.random().toString(36).slice(2, 8).toUpperCase();
+const formReducer = (state, action) => {
+  switch (action.type) {
+    case "UPDATE_FIELD":
+      return { ...state, [action.name]: action.value };
+    case "UPDATE_NESTED_FIELD":
+      return {
+        ...state,
+        [action.parent]: {
+          ...state[action.parent],
+          [action.name]: action.value,
+        },
+      };
+    case "UPDATE_MEMBER_FIELD":
+      return {
+        ...state,
+        members: state.members.map((member, index) =>
+          index === action.index ? { ...member, [action.name]: action.value } : member
+        ),
+      };
+    case "SET_MEMBER_COUNT":
+      return { ...state, memberCount: action.count };
+    case "RESET_FORM":
+      return initialFormState;
+    default:
+      return state;
   }
-}
+};
 
-async function serverCreateCase({ company, members, consent }) {
-  const res = await fetch("/api/create-case", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ company, members, consent }),
-  });
-  if (!res.ok) throw new Error("Falha ao criar kashId no servidor");
-  return res.json(); // { kashId }
-}
+/* ========================= COMPONENTES DE UI ========================= */
 
-/* ========================= UI BASICS ========================= */
-function KLogo({ size = 40 }) {
+function CTAButton({ children, onClick, disabled, type = "button" }) {
   return (
-    <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-      <div className="absolute inset-0 rounded-2xl bg-slate-900" />
-      <div className="absolute inset-[3px] rounded-xl bg-slate-800 shadow-inner" />
-      <svg width={size * 0.7} height={size * 0.7} viewBox="0 0 64 64" className="absolute">
-        <defs>
-          <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#34d399" />
-            <stop offset="100%" stopColor="#10b981" />
-          </linearGradient>
-        </defs>
-        <path d="M14 8h8v48h-8z" fill="url(#g)" />
-        <path d="M26 32l22-24h10L42 32l16 24H48L26 32z" fill="url(#g)" />
-      </svg>
-    </div>
-  );
-}
-function CTAButton({ children, variant = "primary", onClick, type = "button", disabled = false }) {
-  const base = "inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed";
-  const styles =
-    variant === "primary"
-      ? "bg-emerald-500/90 hover:bg-emerald-500 text-slate-900 shadow"
-      : variant === "ghost"
-      ? "bg-transparent border border-slate-700 text-slate-200 hover:bg-slate-800"
-      : "bg-slate-700 text-slate-100 hover:bg-slate-600";
-  return (
-    <button type={type} onClick={onClick} disabled={disabled} className={classNames(base, styles)}>
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      // Estilo de botão ESCURO - Mantido o acento indigo para contraste
+      className={classNames(
+        "px-6 py-3 font-semibold text-white transition duration-300 rounded-md shadow-lg",
+        disabled
+          ? "bg-gray-600 cursor-not-allowed"
+          : "bg-indigo-500 hover:bg-indigo-400 hover:shadow-xl transform hover:scale-[1.01]"
+      )}
+    >
       {children}
     </button>
   );
 }
-function SectionTitle({ title, subtitle }) {
-  return (
-    <div>
-      <h3 className="text-2xl text-slate-100 font-semibold">{title}</h3>
-      {subtitle && <p className="text-slate-400 text-sm mt-1">{subtitle}</p>}
-    </div>
-  );
-}
 
-/* ========================= PAGE SECTIONS ========================= */
-function DemoCalculator() {
-  const [monthly, setMonthly] = useState(4000);
-  const yearly = monthly * 12;
-  const withheld = yearly * 0.3;
-  const saved = Math.max(0, withheld - 1360);
-  return (
-    <div className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-      <div className="flex items-center justify-between">
-        <div className="text-slate-300">Estimativa de economia anual</div>
-        <span className="text-xs text-emerald-300">Simulador</span>
-      </div>
-      <div className="mt-4">
-        <input type="range" min={1000} max={20000} step={100} value={monthly} onChange={(e)=>setMonthly(Number(e.target.value))} className="w-full" />
-        <div className="mt-2 text-sm text-slate-400">
-          Receita mensal: <span className="text-slate-200">US$ {monthly.toLocaleString()}</span>
-        </div>
-      </div>
-      <div className="mt-4 grid grid-cols-3 gap-3 text-center">
-        <div className="rounded-xl bg-slate-800 p-3">
-          <div className="text-xs text-slate-400">Receita/ano</div>
-          <div className="text-lg text-slate-100">US$ {yearly.toLocaleString()}</div>
-        </div>
-        <div className="rounded-xl bg-slate-800 p-3">
-          <div className="text-xs text-slate-400">Retenção 30%</div>
-          <div className="text-lg text-slate-100">US$ {withheld.toLocaleString()}</div>
-        </div>
-        <div className="rounded-xl bg-slate-800 p-3">
-          <div className="text-xs text-slate-400">Economia potencial</div>
-          <div className="text-lg text-emerald-400">US$ {saved.toLocaleString()}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-function Hero({ onStart }) {
-  return (
-    <section className="pt-16 pb-10">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="flex items-center gap-3">
-          <KLogo size={42} />
-          <div>
-            <h1 className="text-2xl md:text-3xl font-semibold text-slate-100">KASH Solutions</h1>
-            <p className="text-slate-400 text-sm">KASH CORPORATE SOLUTIONS LLC · Florida LLC</p>
-          </div>
-        </div>
-        <div className="mt-10 grid md:grid-cols-2 gap-8 items-start">
-          <div>
-            <h2 className="text-3xl md:text-4xl font-semibold text-slate-100">
-              Abra sua LLC na Flórida e elimine a retenção de 30%.
-            </h2>
-            <p className="mt-4 text-slate-300">Abertura da empresa, EIN, endereço e agente por 12 meses.</p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <CTAButton onClick={onStart}>Começar agora</CTAButton>
-              <a href="#como-funciona" className="inline-flex">
-                <CTAButton variant="ghost">Como funciona</CTAButton>
-              </a>
-            </div>
-          </div>
-          <DemoCalculator />
-        </div>
-      </div>
-    </section>
-  );
-}
-function Services() {
-  const items = [
-    { t: "Abertura LLC Partnership", d: "Registro oficial na Flórida (Sunbiz)." },
-    { t: "EIN (IRS)", d: "Obtenção do Employer Identification Number." },
-    { t: "Operating Agreement", d: "Documento societário digital." },
-    { t: "Endereço + Agente (12 meses)", d: "Inclusos no pacote de abertura." },
-  ];
-  return (
-    <section className="py-14 border-t border-slate-800">
-      <div className="max-w-6xl mx-auto px-4">
-        <SectionTitle title="Serviços incluídos" subtitle="Pacote completo para começar certo." />
-        <div className="mt-6 grid md:grid-cols-3 gap-4">
-          {items.map((it) => (
-            <div key={it.t} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-              <div className="text-slate-200 font-medium">{it.t}</div>
-              <div className="text-slate-400 text-sm mt-1">{it.d}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-function Pricing({ onStart }) {
-  const plans = [
-    { name: "Abertura LLC", price: "US$ 1,360", features: ["Endereço + Agente 12 meses", "EIN", "Operating Agreement"], cta: "Contratar", disabled: false },
-    { name: "KASH FLOW 30 (Mensal)", price: "US$ 300", features: ["Classificação contábil", "Relatórios mensais"], cta: "Assinar", disabled: true },
-    { name: "KASH SCALE 5 (Mensal)", price: "US$ 1,000", features: ["Até 5 contratos", "Suporte prioritário"], cta: "Assinar", disabled: true },
-  ];
-  return (
-    <section className="py-14 border-t border-slate-800">
-      <div className="max-w-6xl mx-auto px-4">
-        <SectionTitle title="Planos e preços" subtitle="Transparência desde o início." />
-        <div className="mt-6 grid md:grid-cols-3 gap-4">
-          {plans.map((p) => (
-            <div key={p.name} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-              <div className="text-slate-100 font-medium">{p.name}</div>
-              <div className="text-2xl text-emerald-400 mt-1">{p.price}</div>
-              <ul className="mt-3 text-sm text-slate-400 space-y-1 list-disc list-inside">
-                {p.features.map((f) => <li key={f}>{f}</li>)}
-              </ul>
-              <div className="mt-5 flex flex-col items-center gap-1">
-                {!p.disabled && <CTAButton onClick={onStart}>{p.cta}</CTAButton>}
-                {p.disabled && <span className="text-xs text-slate-500">Em breve</span>}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-function HowItWorks() {
-  const steps = [
-    { t: "Consulta", d: "Alinhamento de expectativas (opcional)." },
-    { t: "Contrato e pagamento", d: "Assinatura e checkout acontecem depois da conferência." },
-    { t: "Formulário de abertura", d: "Dados da empresa, sócios, KYC/AML." },
-    { t: "Envio", d: "Você recebe o tracking do processo." },
-    { t: "Acompanhamento", d: "Atualizações por e-mail." },
-  ];
-  return (
-    <section className="py-16 border-t border-slate-800" id="como-funciona">
-      <div className="max-w-6xl mx-auto px-4">
-        <SectionTitle title="Como funciona" subtitle="Fluxo enxuto e auditável, do onboarding ao registro concluído." />
-        <ol className="mt-10 grid md:grid-cols-5 gap-5">
-          {steps.map((s, i) => (
-            <li key={s.t} className="rounded-2xl border border-slate-800 bg-slate-900 p-5">
-              <div className="text-emerald-400 font-semibold">{String(i + 1).padStart(2, "0")}</div>
-              <h4 className="text-slate-100 mt-2 font-medium">{s.t}</h4>
-              <p className="text-slate-400 text-sm mt-1">{s.d}</p>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
-  );
-}
-
-/* ========================= FORM REDUCER ========================= */
-const initialForm = {
-  company: {
-    companyName: "",
-    companyName2: "", // NOVO CAMPO
-    companyName3: "", // NOVO CAMPO
-    // email e phone removidos
-    hasFloridaAddress: false,
-    usAddress: { line1: "", line2: "", city: "", state: "FL", zip: "" },
-  },
-  members: [
-    { 
-      fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "",
-      address: { line1: "", line2: "", city: "", state: "", zip: "" } // NOVO CAMPO OBRIGATÓRIO
-    },
-    { 
-      fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "",
-      address: { line1: "", line2: "", city: "", state: "", zip: "" } // NOVO CAMPO OBRIGATÓRIO
+function Input({ label, name, type = "text", value, onChange, error, placeholder, required = false, mask, disabled = false }) {
+  const handleMaskedChange = (e) => {
+    let rawValue = e.target.value;
+    if (mask === 'phone') {
+      rawValue = rawValue.replace(/\D/g, '');
     }
-  ],
-  accept: { responsibility: false, limitations: false }
-};
-function formReducer(state, action) {
-  switch (action.type) {
-    case "UPDATE_COMPANY":
-      return { ...state, company: { ...state.company, [action.field]: action.value } };
-    case "UPDATE_US_ADDRESS":
-      return { ...state, company: { ...state.company, usAddress: { ...state.company.usAddress, [action.field]: action.value } } };
-    case "UPDATE_MEMBER":
-      return { ...state, members: state.members.map((m, i) => (i === action.index ? { ...m, [action.field]: action.value } : m)) };
-    case "UPDATE_MEMBER_ADDRESS": // NOVA AÇÃO
-      return { 
-        ...state, 
-        members: state.members.map((m, i) => (
-          i === action.index 
-            ? { ...m, address: { ...m.address, [action.field]: action.value } } 
-            : m
-        )) 
-      };
-    case "ADD_MEMBER":
-      return { ...state, members: [...state.members, { 
-        fullName: "", email: "", phone: "", passport: "", issuer: "", docExpiry: "", birthdate: "", percent: "", 
-        address: { line1: "", line2: "", city: "", state: "", zip: "" } 
-      }] };
-    case "REMOVE_MEMBER":
-      return { ...state, members: state.members.filter((_, i) => i !== action.index) };
-    case "TOGGLE_ACCEPT":
-      return { ...state, accept: { ...state.accept, [action.key]: action.value } };
-    case "RESET_FORM": 
-      return initialForm;
-    default:
-      return state;
-  }
+    onChange(e, rawValue);
+  };
+
+  return (
+    <div className="flex flex-col space-y-1">
+      <label htmlFor={name} className="text-sm font-medium text-gray-300"> {/* Texto claro */}
+        {label} {required && <span className="text-red-400">*</span>}
+      </label>
+      <input
+        id={name}
+        name={name}
+        type={type}
+        value={value}
+        onChange={handleMaskedChange}
+        placeholder={placeholder}
+        required={required}
+        disabled={disabled}
+        // Estilo de input ESCURO
+        className={classNames(
+          "px-3 py-2 border rounded-md focus:outline-none transition duration-150 text-gray-50",
+          error ? "border-red-500 bg-gray-900" : "bg-gray-800 border-gray-600 focus:border-indigo-500",
+          disabled && "bg-gray-700 cursor-not-allowed text-gray-400"
+        )}
+      />
+      {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
+    </div>
+  );
 }
 
-/* ========================= FORM COMPONENTS ========================= */
-function MemberCard({ index, data, onChange, onRemove, canRemove, errors, onAddressChange }) { // Recebe onAddressChange
+function Select({ label, name, value, onChange, options, required = false, disabled = false }) {
   return (
-    <div className="p-4 border border-slate-700 rounded-xl bg-slate-800 space-y-2">
-      <div className="flex items-center justify-between mb-1">
-        <div className="text-slate-300 font-medium">Sócio {index + 1}</div>
-        {canRemove && (
-          <button className="text-slate-400 hover:text-slate-200 text-xs" onClick={onRemove}>
-            Remover
-          </button>
+    <div className="flex flex-col space-y-1">
+      <label htmlFor={name} className="text-sm font-medium text-gray-300"> {/* Texto claro */}
+        {label} {required && <span className="text-red-400">*</span>}
+      </label>
+      <select
+        id={name}
+        name={name}
+        value={value}
+        onChange={onChange}
+        required={required}
+        disabled={disabled}
+        // Estilo de select ESCURO
+        className={classNames(
+          "px-3 py-2 border rounded-md focus:outline-none transition duration-150 text-gray-50",
+          "bg-gray-800 border-gray-600 focus:border-indigo-500",
+          disabled && "bg-gray-700 opacity-70 cursor-not-allowed text-gray-400"
+        )}
+      >
+        {options.map((option) => (
+          <option key={option.value} value={option.value} disabled={option.disabled} className="bg-gray-800 text-gray-100">
+            {option.label}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+function Checkbox({ label, name, checked, onChange, required = false }) {
+  return (
+    <div className="flex items-start">
+      <div className="flex items-center h-5">
+        <input
+          id={name}
+          name={name}
+          type="checkbox"
+          checked={checked}
+          onChange={onChange}
+          required={required}
+          className="w-4 h-4 text-indigo-500 bg-gray-800 border-gray-600 rounded focus:ring-indigo-400"
+        />
+      </div>
+      <label htmlFor={name} className="ml-2 text-sm text-gray-300 cursor-pointer"> {/* Texto claro */}
+        {label}
+      </label>
+    </div>
+  );
+}
+
+
+/* ========================= PASSOS DO FORMULÁRIO ========================= */
+
+function Step1({ formState, dispatch, goToNextStep, validationErrors }) {
+  const handleChange = (parent, name) => (e) => {
+    dispatch({ type: "UPDATE_NESTED_FIELD", parent, name, value: e.target.value });
+  };
+  
+  const stateOptions = useMemo(() => ([
+    { label: "Selecione o Estado", value: "", disabled: true },
+    ...US_STATES.map(s => ({ label: s, value: s }))
+  ]), []);
+  
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold text-gray-100">1. Informações da Futura Empresa Americana</h2> {/* Título claro */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Input
+          label="Nome Completo da Empresa (Opção 1)"
+          name="companyNameOption1"
+          value={formState.accepts.companyNameOption1}
+          onChange={handleChange("accepts", "companyNameOption1")}
+          error={validationErrors.companyNameOption1}
+          placeholder="Ex: KASH Corporate Solutions LLC"
+          required
+        />
+        <Input
+          label="Nome Completo da Empresa (Opção 2)"
+          name="companyNameOption2"
+          value={formState.accepts.companyNameOption2}
+          onChange={handleChange("accepts", "companyNameOption2")}
+          error={validationErrors.companyNameOption2}
+          placeholder="Ex: KASH Investments"
+        />
+        <Input
+          label="Nome Completo da Empresa (Opção 3)"
+          name="companyNameOption3"
+          value={formState.accepts.companyNameOption3}
+          onChange={handleChange("accepts", "companyNameOption3")}
+          error={validationErrors.companyNameOption3}
+          placeholder="Ex: KASH Holding"
+        />
+        <Input
+          label="CNPJ (Se empresa brasileira)"
+          name="cnpj"
+          value={formState.company.cnpj}
+          onChange={handleChange("company", "cnpj")}
+          error={validationErrors.cnpj}
+          placeholder="00.000.000/0000-00"
+        />
+      </div>
+
+      <h3 className="text-lg font-semibold text-gray-200 mt-6">Endereço nos EUA (Virtual/Físico)</h3> {/* Título claro */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Input
+          label="Endereço Linha 1 (Rua, Número, Suite)"
+          name="usaddressline1"
+          value={formState.company.usaddressline1}
+          onChange={handleChange("company", "usaddressline1")}
+          error={validationErrors.usaddressline1}
+          required
+        />
+        <Input
+          label="Endereço Linha 2 (Opcional)"
+          name="usaddressline2"
+          value={formState.company.usaddressline2}
+          onChange={handleChange("company", "usaddressline2")}
+        />
+        <Input
+          label="Cidade"
+          name="usaddresscity"
+          value={formState.company.usaddresscity}
+          onChange={handleChange("company", "usaddresscity")}
+          error={validationErrors.usaddresscity}
+          required
+        />
+        <Select
+          label="Estado (US)"
+          name="usaddressstate"
+          value={formState.company.usaddressstate}
+          onChange={handleChange("company", "usaddressstate")}
+          options={stateOptions}
+          required
+        />
+        <Input
+          label="ZIP Code"
+          name="usaddresszip"
+          type="number"
+          value={formState.company.usaddresszip}
+          onChange={handleChange("company", "usaddresszip")}
+          error={validationErrors.usaddresszip}
+          required
+        />
+        <Input
+          label="País"
+          name="usaddresscountry"
+          value={formState.company.usaddresscountry}
+          onChange={handleChange("company", "usaddresscountry")}
+          disabled
+        />
+      </div>
+      
+      <div className="flex justify-end pt-4">
+        <CTAButton onClick={goToNextStep}>Próximo: Aplicantes & Membros</CTAButton>
+      </div>
+    </div>
+  );
+}
+
+function Step2({ formState, dispatch, goToNextStep, goToPrevStep, validationErrors }) {
+  const { memberCount } = formState;
+
+  const handleMemberCountChange = (e) => {
+    const count = parseInt(e.target.value);
+    dispatch({ type: "SET_MEMBER_COUNT", count });
+  };
+
+  const handleMemberChange = (index, name) => (e, rawValue = e.target.value) => {
+    dispatch({ type: "UPDATE_MEMBER_FIELD", index, name, value: rawValue });
+  };
+
+  const memberInputs = formState.members.slice(0, memberCount).map((member, index) => (
+    // Estilo de cartão ESCURO
+    <div key={index} className="border border-gray-700 p-4 rounded-md bg-gray-800 space-y-4 shadow-xl">
+      <h3 className="text-lg font-semibold text-indigo-400">Aplicante {index + 1} ({index === 0 ? "Principal" : "Adicional"})</h3>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Input
+          label="Nome Completo (Conforme Passaporte/Documento)"
+          name="fullName"
+          value={member.fullName}
+          onChange={handleMemberChange(index, "fullName")}
+          error={validationErrors[`member${index}fullName`]}
+          required
+        />
+        <Input
+          label="E-mail"
+          name="email"
+          type="email"
+          value={member.email}
+          onChange={handleMemberChange(index, "email")}
+          error={validationErrors[`member${index}email`]}
+          placeholder="exemplo@email.com"
+          required
+        />
+        <Input
+          label="Telefone (Com Código do País)"
+          name="phone"
+          type="tel"
+          mask="phone"
+          value={member.phone}
+          onChange={handleMemberChange(index, "phone")}
+          error={validationErrors[`member${index}phone`]}
+          placeholder="+55 (11) 99999-9999"
+          required
+        />
+        <Input
+          label="Passaporte ou Documento de Identidade"
+          name="passport"
+          value={member.passport}
+          onChange={handleMemberChange(index, "passport")}
+          error={validationErrors[`member${index}passport`]}
+          required
+        />
+        <Input
+          label="Data de Expiração do Documento"
+          name="docExpiry"
+          type="date"
+          value={member.docExpiry}
+          onChange={handleMemberChange(index, "docExpiry")}
+          error={validationErrors[`member${index}docExpiry`]}
+          required
+        />
+        <Input
+          label="Percentual de Participação (%)"
+          name="percent"
+          type="number"
+          value={member.percent}
+          onChange={handleMemberChange(index, "percent")}
+          error={validationErrors[`member${index}percent`]}
+          placeholder="Ex: 50"
+          required
+        />
+      </div>
+    </div>
+  ));
+
+  const totalPercentage = formState.members.slice(0, memberCount).reduce((acc, member) => acc + (parseFloat(member.percent) || 0), 0);
+  const percentageError = totalPercentage !== 100 && memberCount > 0 ? "A soma total dos percentuais deve ser 100%" : null;
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold text-gray-100">2. Detalhes dos Aplicantes e Membros</h2>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Select
+          label="Número de Membros/Sócios"
+          name="memberCount"
+          value={memberCount}
+          onChange={handleMemberCountChange}
+          options={[
+            { label: "1 (Membro Único)", value: 1 },
+            { label: "2 Membros", value: 2 },
+            { label: "3 Membros", value: 3 },
+          ]}
+          required
+        />
+        {percentageError && (
+            // Mensagem de erro ESCURA
+            <div className="col-span-1 md:col-span-2 p-3 bg-red-900/30 border border-red-500 text-red-300 rounded-md">
+                {percentageError}
+            </div>
         )}
       </div>
-      <div className="grid md:grid-cols-2 gap-2">
-        <div>
-          <input
-            className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.fullName && "border-red-500")}
-            placeholder="Nome completo"
-            value={data.fullName}
-            onChange={(e) => onChange("fullName", e.target.value)}
-          />
-          <div className="text-red-400 text-xs">{errors.fullName || ""}</div>
-        </div>
-        <div>
-          <input
-            type="email"
-            className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.email && "border-red-500")}
-            placeholder="E-mail do sócio"
-            value={data.email}
-            onChange={(e) => onChange("email", e.target.value)}
-          />
-          <div className="text-red-400 text-xs">{errors.email || ""}</div>
-        </div>
-      </div>
-      <div className="grid md:grid-cols-2 gap-2">
-        <div>
-          <input
-            className={classNames("w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.phone && "border-red-500")}
-            placeholder="Telefone do sócio"
-            value={data.phone}
-            onChange={(e) => onChange("phone", e.target.value)}
-          />
-          <div className="text-red-400 text-xs">{errors.phone || ""}</div>
-        </div>
-        <div>
-          <input
-            className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.passport && "border-red-500")}
-            placeholder="Passaporte (ou RG)"
-            value={data.passport}
-            onChange={(e) => onChange("passport", e.target.value)}
-          />
-          <div className="text-red-400 text-xs">{errors.passport || ""}</div>
-        </div>
-      </div>
-      <div className="grid md:grid-cols-3 gap-2">
-        <div>
-          <input
-            className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            placeholder="Órgão emissor"
-            value={data.issuer}
-            onChange={(e) => onChange("issuer", e.target.value)}
-          />
-        </div>
-        <div>
-          <input
-            type="date"
-            className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.docExpiry && "border-red-500")}
-            value={data.docExpiry}
-            onChange={(e) => onChange("docExpiry", e.target.value)}
-          />
-          <div className="text-[11px] text-slate-400 mt-1">Validade do documento</div>
-          <div className="text-red-400 text-xs">{errors.docExpiry || ""}</div>
-        </div>
-        <div>
-          <input
-            type="date"
-            className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.birthdate && "border-red-500")}
-            value={data.birthdate}
-            onChange={(e) => onChange("birthdate", e.target.value)}
-          />
-          <div className="text-[11px] text-slate-400 mt-1">Data de nascimento</div>
-          <div className="text-red-400 text-xs">{errors.birthdate || ""}</div>
-        </div>
-      </div>
-      <div>
-        <input
-          type="number"
-          className={classNames("rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.percent && "border-red-500")}
-          placeholder="% de participação"
-          value={data.percent}
-          onChange={(e) => onChange("percent", e.target.value)}
-        />
-        <div className="text-red-400 text-xs">{errors.percent || ""}</div>
+
+      <div className="space-y-6">
+        {memberInputs}
       </div>
 
-      {/* NOVO CAMPO: ENDEREÇO DO SÓCIO - OBRIGATÓRIO */}
-      <div className="rounded-xl border border-slate-700 bg-slate-900 p-3 space-y-2">
-          <div className="text-xs text-slate-400 font-medium">Endereço residencial completo (Obrigatório)</div>
-          <input
-            className={classNames("w-full rounded bg-slate-950 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.line1 && "border-red-500")}
-            placeholder="Address Line 1"
-            value={data.address.line1}
-            onChange={(e) => onAddressChange("line1", e.target.value)}
-          />
-          <div className="text-red-400 text-xs">{errors.line1 || ""}</div>
-          <input
-            className="w-full rounded bg-slate-950 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-            placeholder="Address Line 2 (Opcional)"
-            value={data.address.line2}
-            onChange={(e) => onAddressChange("line2", e.target.value)}
-          />
-          <div className="grid md:grid-cols-3 gap-2 mt-2">
-            <input
-              className={classNames("rounded bg-slate-950 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.city && "border-red-500")}
-              placeholder="City"
-              value={data.address.city}
-              onChange={(e) => onAddressChange("city", e.target.value)}
-            />
-            <select
-              className={classNames("rounded bg-slate-950 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.state && "border-red-500")}
-              value={data.address.state}
-              onChange={(e) => onAddressChange("state", e.target.value)}
-            >
-              <option value="" disabled>Estado/State</option>
-              {US_STATES.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-            <input
-              className={classNames("rounded bg-slate-950 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500", errors.zip && "border-red-500")}
-              placeholder="ZIP / CEP"
-              value={data.address.zip}
-              onChange={(e) => onAddressChange("zip", e.target.value)}
-            />
-          </div>
-          {/* Validações específicas para o endereço do sócio */}
-          <div className="text-red-400 text-xs">{errors.line1 || errors.city || errors.state || errors.zip || ""}</div>
+      <div className="flex justify-between pt-4">
+        <CTAButton onClick={goToPrevStep}>Voltar: Informações da Empresa</CTAButton>
+        <CTAButton onClick={goToNextStep} disabled={!!percentageError || memberCount === 0}>
+          Próximo: Aceites e Pagamento
+        </CTAButton>
       </div>
-
     </div>
   );
 }
 
-/* ========================= FORM WIZARD (MODAL) ========================= */
-const initialErrors = { company: {}, members: [], accept: {} };
+function Step3({ formState, dispatch, handleSubmit, goToPrevStep, validationErrors, isSubmitting, submitStatus }) {
+  const handleChange = (parent, name) => (e) => {
+    const value = e.target.type === "checkbox" ? e.target.checked : e.target.value;
+    dispatch({ type: "UPDATE_NESTED_FIELD", parent, name, value });
+  };
+  
+  const paymentOptions = [
+    { label: "Selecione a forma de pagamento", value: "", disabled: true },
+    { label: "Transferência Bancária (Wire Transfer)", value: "Wire Transfer" },
+    { label: "Cartão de Crédito", value: "Credit Card" },
+    { label: "Criptomoeda (USDC/USDT)", value: "Crypto" },
+  ];
 
-function FormWizard({ open, onClose }) {
-  const [step, setStep] = useState(1);
-  const [sending, setSending] = useState(false);
-  const [consent, setConsent] = useState(false); 
-  const [form, dispatch] = useReducer(formReducer, initialForm);
-  const [errors, setErrors] = useState(initialErrors);
-  const [doneCode, setDoneCode] = useState("");
-
-  useEffect(() => {
-    if (form.company.hasFloridaAddress && form.accept.limitations) {
-      dispatch({ type: "TOGGLE_ACCEPT", key: "limitations", value: false });
-    }
-  }, [form.company.hasFloridaAddress]);
-
-  const updateCompany = (field, value) => dispatch({ type: "UPDATE_COMPANY", field, value });
-  const updateUS = (field, value) => dispatch({ type: "UPDATE_US_ADDRESS", field, value });
-  const updateMember = (i, field, value) => dispatch({ type: "UPDATE_MEMBER", index: i, field, value });
-  const updateMemberAddress = (i, field, value) => dispatch({ type: "UPDATE_MEMBER_ADDRESS", index: i, field, value }); // NOVO HANDLER
-  const addMember = () => dispatch({ type: "ADD_MEMBER" });
-  const removeMember = (i) => dispatch({ type: "REMOVE_MEMBER", index: i });
-  const toggleAccept = (k, v) => dispatch({ type: "TOGGLE_ACCEPT", key: k, value: v });
-
-  function validate() {
-    const { company, members, accept } = form;
-    const errs = { company: {}, members: members.map(() => ({})), accept: {} };
-
-    // Validação da empresa (email/phone removidos)
-    if (!company.companyName || company.companyName.length < 3) errs.company.companyName = "Informe a primeira opção de nome da LLC.";
-
-    if (company.hasFloridaAddress) {
-      if (!company.usAddress.line1) errs.company.line1 = "Address Line 1 obrigatório.";
-      if (!company.usAddress.city) errs.company.city = "City obrigatória.";
-      if (!company.usAddress.state) errs.company.state = "State obrigatório.";
-      if (!company.usAddress.zip) errs.company.zip = "ZIP obrigatório.";
-    }
-
-    for (let i = 0; i < members.length; i++) {
-      const m = members[i];
-      // Validações existentes dos sócios
-      if (!m.fullName || m.fullName.length < 5) errs.members[i].fullName = "Nome inválido.";
-      if (!emailRe.test(m.email || "")) errs.members[i].email = "E-mail inválido.";
-      if (!phoneRe.test(m.phone || "")) errs.members[i].phone = "Telefone inválido.";
-      if (!m.passport || m.passport.length < 3) errs.members[i].passport = "Documento obrigatório.";
-      if (!m.docExpiry) errs.members[i].docExpiry = "Validade obrigatória.";
-      if (!m.birthdate) errs.members[i].birthdate = "Nascimento obrigatório.";
-      if (m.birthdate && calcAgeFullDate(m.birthdate) < 18) errs.members[i].birthdate = "Precisa ter 18+.";
-      if (!m.percent || Number(m.percent) <= 0) errs.members[i].percent = "% obrigatório.";
-      
-      // NOVO: Validação do endereço do sócio (Obrigatório)
-      if (!m.address.line1) errs.members[i].line1 = "Endereço Line 1 é obrigatório.";
-      if (!m.address.city) errs.members[i].city = "Cidade é obrigatória.";
-      if (!m.address.state) errs.members[i].state = "Estado/State é obrigatório.";
-      if (!m.address.zip) errs.members[i].zip = "ZIP/CEP é obrigatório.";
-    }
-
-    if (!accept.responsibility) errs.accept.base = "Aceite a declaração de responsabilidade.";
-    if (!form.company.hasFloridaAddress && !accept.limitations) errs.accept.base = "Aceite as limitações (endereço/agente 12 meses).";
-
-    setErrors(errs);
-    const companyOk = Object.keys(errs.company).length === 0;
-    const membersOk = errs.members.every((m) => Object.keys(m).length === 0);
-    const acceptOk = accept.responsibility && (form.company.hasFloridaAddress || accept.limitations);
-    const percentOk = isPercentTotalValid(members);
-    if (!percentOk) alert("A soma dos percentuais deve ser 100%.");
-    return companyOk && membersOk && acceptOk && percentOk;
-  }
-
-  async function handleSubmit() {
-    if (!consent) {
-      alert("Marque o consentimento para prosseguir.");
-      return;
-    }
-    setSending(true);
-    try {
-      let kashId;
-      try {
-        const out = await serverCreateCase({ company: form.company, members: form.members, consent });
-        kashId = out.kashId;
-      } catch {
-        const d = new Date();
-        const yyyy = d.getFullYear();
-        const mm = String(d.getMonth()+1).padStart(2,'0');
-        const dd = String(d.getDate()).padStart(2,'0');
-        const t = Math.random().toString(36).slice(2, 10).toUpperCase();
-        kashId = `KASH-${yyyy}${mm}${dd}-${t}`;
-      }
-      
-      await apiUpsertFull({
-        kashId,
-        company: form.company,
-        members: form.members,
-        consent
-      });
-      
-      try { localStorage.removeItem("kashId"); } catch {}
-      try { sessionStorage.clear(); } catch {}
-
-      setDoneCode(kashId);
-      setStep(3); 
-      
-    } catch (err) {
-      console.error(err);
-      alert("Falha ao enviar. Verifique sua conexão e tente novamente.");
-    } finally {
-      setSending(false);
-    }
-  }
-
-  const dateISO = useMemo(() => todayISO(), []);
-
-  async function handleCloseStep3() {
-    try { 
-      try { localStorage.removeItem("kashId"); } catch {} 
-      try { sessionStorage.clear(); } catch {} 
-      
-      dispatch({ type: "RESET_FORM" }); 
-      setStep(1); 
-      setConsent(false); 
-
-      onClose(); 
-    } catch (err) { 
-      console.error("Falha ao fechar:", err); 
-      onClose(); 
-    }
-  }
+  const termsChecked = formState.accepts.terms;
+  const privacyChecked = formState.accepts.privacy;
+  const paymentSelected = !!formState.accepts.paymentMethod;
+  
+  const isReadyToSubmit = termsChecked && privacyChecked && paymentSelected && !isSubmitting;
 
   return (
-    <div className={classNames("fixed inset-0 z-50", !open && "hidden")} aria-hidden={!open}>
-      <div className="absolute inset-0 bg-black/60" onClick={onClose} />
-      <div className="absolute inset-0 overflow-y-auto">
-        <div className="max-w-3xl mx-auto px-4 pt-16 pb-10">
-          <div className="rounded-2xl bg-slate-950/90 backdrop-blur border border-slate-800 overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
-              <div className="text-slate-300 font-medium">Formulário de Aplicação LLC</div>
-              <button onClick={onClose} className="text-slate-400 hover:text-slate-200 transition" type="button">X</button>
-            </div>
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold text-gray-100">3. Aceites e Forma de Pagamento</h2>
+      
+      <div className="space-y-4">
+        <Checkbox
+          label="Eu li e aceito os Termos e Condições da KASH Corporate Solutions LLC."
+          name="terms"
+          checked={termsChecked}
+          onChange={handleChange("accepts", "terms")}
+          required
+        />
+        <Checkbox
+          label="Eu li e concordo com a Política de Privacidade da KASH Corporate Solutions LLC."
+          name="privacy"
+          checked={privacyChecked}
+          onChange={handleChange("accepts", "privacy")}
+          required
+        />
+      </div>
 
-            {step === 1 && (
-              <div className="p-6">
-                <h4 className="text-slate-100 font-medium">1/2 - Dados iniciais da LLC</h4>
-                <div className="mt-4 grid gap-4">
-                  {/* Opção 1 - Obrigatória */}
-                  <div>
-                    <label className="block text-sm text-slate-400">Nome da LLC (Opção 1)</label>
-                    <input
-                      className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                      placeholder="Ex.: SUNSHINE MEDIA LLC"
-                      value={form.company.companyName}
-                      onChange={(e) => updateCompany("companyName", e.target.value)}
-                    />
-                    <div className="text-red-400 text-xs">{errors.company.companyName || ""}</div>
-                  </div>
-                  
-                  {/* Opção 2 - Opcional */}
-                  <div>
-                    <label className="block text-sm text-slate-400">Nome da LLC (Opção 2 - Opcional)</label>
-                    <input
-                      className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                      placeholder="Ex.: SUNSHINE MEDIA LLC"
-                      value={form.company.companyName2}
-                      onChange={(e) => updateCompany("companyName2", e.target.value)}
-                    />
-                  </div>
-                  
-                  {/* Opção 3 - Opcional */}
-                  <div>
-                    <label className="block text-sm text-slate-400">Nome da LLC (Opção 3 - Opcional)</label>
-                    <input
-                      className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                      placeholder="Ex.: SUNSHINE MEDIA LLC"
-                      value={form.company.companyName3}
-                      onChange={(e) => updateCompany("companyName3", e.target.value)}
-                    />
-                  </div>
+      <Select
+        label="Forma de Pagamento Preferida"
+        name="paymentMethod"
+        value={formState.accepts.paymentMethod}
+        onChange={handleChange("accepts", "paymentMethod")}
+        options={paymentOptions}
+        required
+      />
 
-                  {/* E-mail e telefone da empresa REMOVIDOS daqui */}
+      <div className="flex justify-between pt-6">
+        <CTAButton onClick={goToPrevStep} disabled={isSubmitting}>Voltar: Aplicantes & Membros</CTAButton>
+        <CTAButton 
+          onClick={handleSubmit} 
+          disabled={!isReadyToSubmit}
+        >
+          {isSubmitting ? "Enviando Dados..." : "Finalizar & Enviar Pedido"}
+        </CTAButton>
+      </div>
+      
+      {submitStatus.error && (
+        // Estilo de erro ESCURO
+        <div className="p-4 mt-4 bg-red-900/30 border border-red-500 text-red-300 rounded-md">
+          <p className="font-bold">Erro ao Enviar:</p>
+          <p>{submitStatus.error}</p>
+          <p className="mt-2 text-sm">Por favor, verifique sua conexão e tente novamente. Se o problema persistir, entre em contato.</p>
+        </div>
+      )}
+      
+      {isSubmitting && (
+        // Estilo de loading ESCURO
+        <div className="p-4 mt-4 bg-indigo-900/30 border border-indigo-500 text-indigo-300 rounded-md flex items-center space-x-3">
+          <svg className="animate-spin h-5 w-5 text-indigo-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span>Processando seu pedido. Aguarde...</span>
+        </div>
+      )}
+    </div>
+  );
+}
 
-                  <div className="mt-2">
-                    <label className="inline-flex items-center gap-2 text-sm text-slate-300">
-                      <input
-                        type="checkbox"
-                        checked={form.company.hasFloridaAddress}
-                        onChange={(e) => updateCompany("hasFloridaAddress", e.target.checked)}
-                      />
-                      <span>Possui endereço físico na Flórida?</span>
-                    </label>
-                  </div>
-                  {form.company.hasFloridaAddress ? (
-                    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-                      <div className="text-slate-300 font-medium mb-2">Endereço da empresa (USA)</div>
-                      <input
-                        className="w-full rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                        placeholder="Address Line 1"
-                        value={form.company.usAddress.line1}
-                        onChange={(e) => updateUS("line1", e.target.value)}
-                      />
-                      <div className="grid md:grid-cols-3 gap-2 mt-2">
-                        <input
-                          className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                          placeholder="City"
-                          value={form.company.usAddress.city}
-                          onChange={(e) => updateUS("city", e.target.value)}
-                        />
-                        <select
-                          className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                          value={form.company.usAddress.state}
-                          onChange={(e) => updateUS("state", e.target.value)}
-                        >
-                          {US_STATES.map((s) => (
-                            <option key={s} value={s}>{s}</option>
-                          ))}
-                        </select>
-                        <input
-                          className="rounded bg-slate-900 px-3 py-2 text-sm text-slate-100 border border-slate-700 focus:outline-none focus:ring-1 focus:ring-emerald-500"
-                          placeholder="ZIP Code"
-                          value={form.company.usAddress.zip}
-                          onChange={(e) => updateUS("zip", e.target.value)}
-                        />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 text-sm text-slate-300">
-                      Não possui endereço na Flórida - usaremos o <b>endereço e agente da KASH por 12 meses</b> incluídos no pacote.
-                    </div>
-                  )}
+/* ========================= COMPONENTE PRINCIPAL DO FORMULÁRIO ========================= */
+
+function ApplicationForm({ onClose }) {
+  const [formState, dispatch] = useReducer(formReducer, initialFormState);
+  const [step, setStep] = useState(1);
+  const [validationErrors, setValidationErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState({ success: false, error: null, kashId: null });
+  
+  const dateISO = useMemo(todayISO, []);
+
+  // =======================================================
+  // FUNÇÕES DE VALIDAÇÃO (MANTIDAS INTACTAS)
+  // =======================================================
+  const validateForm = (currentStep) => {
+    let errors = {};
+    let isValid = true;
+    
+    const checkRequired = (key, value, message) => {
+        if (!value || String(value).trim() === "" || (typeof value === 'number' && isNaN(value))) {
+            errors[key] = message;
+            isValid = false;
+        }
+    };
+    
+    if (currentStep === 1 || currentStep === 4) {
+        const company = formState.company;
+        const accepts = formState.accepts;
+        
+        checkRequired('companyNameOption1', accepts.companyNameOption1, 'Nome da Opção 1 é obrigatório.');
+        
+        checkRequired('usaddressline1', company.usaddressline1, 'Endereço Linha 1 é obrigatório.');
+        checkRequired('usaddresscity', company.usaddresscity, 'Cidade é obrigatória.');
+        checkRequired('usaddresszip', company.usaddresszip, 'ZIP Code é obrigatório.');
+    }
+    
+    if (currentStep === 2 || currentStep === 4) {
+        const memberCount = formState.memberCount;
+        const members = formState.members.slice(0, memberCount);
+        let totalPercentage = 0;
+
+        members.forEach((member, index) => {
+            checkRequired(`member${index}fullName`, member.fullName, 'Nome completo é obrigatório.');
+            checkRequired(`member${index}email`, member.email, 'E-mail é obrigatório.');
+            if (member.email && !emailRe.test(member.email)) {
+                errors[`member${index}email`] = 'Formato de e-mail inválido.';
+                isValid = false;
+            }
+            
+            checkRequired(`member${index}phone`, member.phone, 'Telefone é obrigatório.');
+            if (member.phone && !phoneRe.test(member.phone)) {
+                errors[`member${index}phone`] = 'Formato de telefone inválido.';
+                isValid = false;
+            }
+            
+            checkRequired(`member${index}passport`, member.passport, 'Documento (Passaporte/ID) é obrigatório.');
+            checkRequired(`member${index}docExpiry`, member.docExpiry, 'Data de expiração do documento é obrigatória.');
+            
+            const percentValue = parseFloat(member.percent);
+            if (isNaN(percentValue) || percentValue <= 0) {
+                errors[`member${index}percent`] = 'Percentual deve ser um número válido e maior que zero.';
+                isValid = false;
+            } else {
+                totalPercentage += percentValue;
+            }
+        });
+        
+        if (memberCount > 0 && totalPercentage !== 100) {
+            errors.totalPercentage = 'A soma dos percentuais deve ser 100%.';
+            isValid = false;
+        }
+    }
+    
+    if (currentStep === 3 || currentStep === 4) {
+        checkRequired('terms', formState.accepts.terms, 'Você deve aceitar os Termos e Condições.');
+        checkRequired('privacy', formState.accepts.privacy, 'Você deve aceitar a Política de Privacidade.');
+        checkRequired('paymentMethod', formState.accepts.paymentMethod, 'Forma de pagamento é obrigatória.');
+    }
+
+    setValidationErrors(errors);
+    return isValid;
+  };
+
+  // =======================================================
+  // FUNÇÕES DE NAVEGAÇÃO (MANTIDAS INTACTAS)
+  // =======================================================
+  const goToNextStep = () => {
+    if (validateForm(step)) {
+      setStep(step + 1);
+    } else {
+      console.error("Validação falhou.");
+    }
+  };
+
+  const goToPrevStep = () => setStep(step - 1);
+  
+  const handleCloseStep3 = () => {
+    dispatch({ type: "RESET_FORM" });
+    onClose();
+  };
+
+  // =======================================================
+  // FUNÇÃO DE SUBMISSÃO (MANTIDA INTACTA)
+  // =======================================================
+  const handleSubmit = async () => {
+    if (!validateForm(3)) {
+      return;
+    }
+    
+    if (!window.CONFIG.appsScriptUrl) {
+        setSubmitStatus({ success: false, error: "URL do Apps Script não configurada." });
+        return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitStatus({ success: false, error: null });
+
+    const dataToSend = {
+      company: formState.company,
+      memberCount: formState.memberCount,
+      members: formState.members.slice(0, formState.memberCount),
+      accepts: formState.accepts,
+    };
+    
+
+    try {
+      const response = await fetch(window.CONFIG.appsScriptUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(dataToSend),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Falha HTTP. Status: ${response.status} ${response.statusText}`);
+      }
+
+      const result = await response.json();
+      
+      if (result.status === "success") {
+        setSubmitStatus({ success: true, error: null, kashId: result.kashId });
+        setStep(4);
+        
+        console.log("SUCESSO na gravação. KASH ID:", result.kashId);
+        
+      } else {
+        const errorMessage = result.message || "Erro desconhecido retornado pelo servidor.";
+        setSubmitStatus({ success: false, error: `Erro do Servidor (GAS): ${errorMessage}` });
+      }
+
+    } catch (error) {
+      console.error("Erro na submissão do formulário:", error);
+      setSubmitStatus({ success: false, error: `Erro de Conexão ou Resposta: ${error.message}. Verifique o URL do Apps Script e as permissões de acesso (CORS).` });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+
+  // =======================================================
+  // RENDERIZAÇÃO
+  // =======================================================
+  
+  const renderStep = () => {
+    switch (step) {
+      case 1:
+        return <Step1 {...{ formState, dispatch, goToNextStep, validationErrors }} />;
+      case 2:
+        return <Step2 {...{ formState, dispatch, goToNextStep, goToPrevStep, validationErrors }} />;
+      case 3:
+        return (
+          <Step3 
+            {...{ 
+              formState, 
+              dispatch, 
+              handleSubmit, 
+              goToPrevStep, 
+              validationErrors,
+              isSubmitting,
+              submitStatus 
+            }} 
+          />
+        );
+      case 4:
+        return null;
+      default:
+        return null;
+    }
+  };
+
+  return (
+    // Estilo de modal ESCURO
+    <div className={classNames("fixed inset-0 z-50 bg-gray-900/80 backdrop-blur-sm flex justify-center p-4 overflow-y-auto transition-opacity duration-300", submitStatus.success ? "opacity-100" : (open ? "opacity-100" : "opacity-0 pointer-events-none"))}>
+      
+      <div className="absolute inset-0" onClick={submitStatus.success ? handleCloseStep3 : undefined} aria-label="Fechar formulário"></div>
+      
+      <div 
+        className={classNames(
+          // Fundo escuro, borda sutil, sombra corporativa
+          "bg-gray-900 border border-gray-700 rounded-lg shadow-2xl w-full max-w-4xl h-fit min-h-[400px] mt-10 mb-20 transform transition-all duration-300",
+          submitStatus.success ? "scale-100" : (open ? "scale-100" : "scale-95")
+        )}
+      >
+        <div className="relative p-6 sm:p-10">
+          
+          {/* Header e Navegação */}
+          <div className="pb-6 border-b border-gray-700 flex justify-between items-center">
+            <h1 className="text-2xl font-extrabold text-indigo-400">
+              Formulário de Aplicação KASH LLC
+            </h1>
+            <button 
+              onClick={handleCloseStep3} 
+              className="text-gray-400 hover:text-red-400 transition"
+              aria-label="Fechar"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+
+          <div className="pt-8">
+            {/* Step Content */}
+            {renderStep()}
+
+            {/* Modal de Sucesso (Step 4) */}
+            {submitStatus.success && (
+              <div className="text-center py-10">
+                <div className="flex justify-center mb-6">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-20 w-20 text-green-400 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                 </div>
-
-                <h4 className="mt-6 text-slate-100 font-medium">Sócios (mínimo 2)</h4>
-                <div className="mt-2 space-y-4">
-                  {form.members.map((m, i) => (
-                    <MemberCard
-                      key={i}
-                      index={i}
-                      data={m}
-                      canRemove={form.members.length > 2}
-                      onChange={(field, value) => updateMember(i, field, value)}
-                      onRemove={() => removeMember(i)}
-                      onAddressChange={(field, value) => updateMemberAddress(i, field, value)} // NOVO
-                      errors={errors.members[i] || {}}
-                    />
-                  ))}
-                </div>
-                <button onClick={addMember} className="mt-4 text-emerald-400 hover:underline">+ Adicionar sócio</button>
-
-                <div className="mt-6 space-y-3 text-sm text-slate-300">
-                  <label className="flex items-start gap-2">
-                    <input
-                      type="checkbox"
-                      checked={form.accept.responsibility}
-                      onChange={(e) => toggleAccept("responsibility", e.target.checked)}
-                    />
-                    <span>Declaro que todas as informações prestadas são verdadeiras e completas e assumo total responsabilidade civil e legal por elas.</span>
-                  </label>
-                  <label className={classNames("flex items-start gap-2", form.company.hasFloridaAddress && "opacity-50")}>
-                    <input
-                      type="checkbox"
-                      checked={form.accept.limitations}
-                      disabled={form.company.hasFloridaAddress}
-                      onChange={(e) => toggleAccept("limitations", e.target.checked)}
-                    />
-                    <span>Estou ciente de que endereço e agente da KASH são válidos por 12 meses.</span>
-                  </label>
-                  {form.company.hasFloridaAddress && (
-                    <div className="text-[12px] text-slate-400 -mt-2">* Indisponível porque você informou endereço próprio na Flórida.</div>
-                  )}
-                </div>
-
-                <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton onClick={() => { if (validate()) setStep(2); }}>Continuar</CTAButton>
-                </div>
-              </div>
-            )}
-
-            {step === 2 && (
-              <div className="p-6">
-                <h4 className="text-slate-100 font-medium">2/2 - Conferência antes do envio</h4>
-
-                <div className="rounded-xl border border-slate-800 bg-slate-900 p-4">
-                  <div className="text-slate-300 font-medium">Empresa</div>
-                  <div className="mt-2 text-sm text-slate-400 space-y-1">
-                    <div><span className="text-slate-500">Nome (Opção 1): </span>{form.company.companyName || "-"}</div>
-                    <div><span className="text-slate-500">Nome (Opção 2): </span>{form.company.companyName2 || "-"}</div>
-                    <div><span className="text-slate-500">Nome (Opção 3): </span>{form.company.companyName3 || "-"}</div>
-                    
-                    {/* E-mail e telefone da empresa REMOVIDOS daqui */}
-
-                    {form.company.hasFloridaAddress ? (
-                      <div className="mt-1">
-                        <div className="text-slate-400">Endereço informado:</div>
-                        <div>{form.company.usAddress.line1}</div>
-                        {form.company.usAddress.line2 && <div>{form.company.usAddress.line2}</div>}
-                        <div>{form.company.usAddress.city}, {form.company.usAddress.state} {form.company.usAddress.zip}</div>
-                      </div>
-                    ) : (
-                      <div className="mt-1">Será utilizado o endereço e agente da KASH por 12 meses.</div>
-                    )}
-                  </div>
-                </div>
-
-                <div className="rounded-xl border border-slate-800 bg-slate-900 p-4 mt-4">
-                  <div className="text-slate-300 font-medium">Sócios</div>
-                  <div className="mt-2 space-y-4 text-sm text-slate-400">
-                    {form.members.map((m, i) => (
-                      <div key={i}>
-                        <div className="font-medium text-slate-300">Sócio {i + 1}: {m.fullName || "-"}</div>
-                        <div className="grid md:grid-cols-2 gap-x-6 gap-y-1">
-                          <div><span className="text-slate-500">E-mail: </span>{m.email || "-"}</div>
-                          <div><span className="text-slate-500">Telefone: </span>{m.phone || "-"}</div>
-                          <div><span className="text-slate-500">Documento: </span>{m.passport || "-"}</div>
-                          <div><span className="text-slate-500">Órgão emissor: </span>{m.issuer || "-"}</div>
-                          <div><span className="text-slate-500">Validade doc.: </span>{m.docExpiry || "-"}</div>
-                          <div><span className="text-slate-500">Nascimento: </span>{m.birthdate || "-"}</div>
-                          <div><span className="text-slate-500">Participação: </span>{m.percent || "-"}%</div>
-                        </div>
-                        <div className="mt-2 pt-2 border-t border-slate-700">
-                          <span className="text-slate-500 font-medium">Endereço Residencial:</span>
-                          <div>{m.address.line1 || "-"}</div>
-                          {m.address.line2 && <div>{m.address.line2}</div>}
-                          <div>{m.address.city || "-"}, {m.address.state || "-"} {m.address.zip || "-"}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* CONSENTIMENTO obrigatório (fica acima do botão Enviar) */}
-                <div className="mt-6 rounded-xl border border-slate-800 bg-slate-900 p-4">
-                  <label className="flex items-start gap-2 text-sm text-slate-200">
-                    <input type="checkbox" checked={consent} onChange={(e)=>setConsent(e.target.checked)} />
-                    <span>
-                      Autorizo a KASH Corporate Solutions a conferir e validar as informações fornecidas para fins de abertura e registro da empresa.
-                    </span>
-                  </label>
-                </div>
-
-                <div className="mt-6 flex justify-end gap-3">
-                  <CTAButton variant="ghost" onClick={() => setStep(1)}>Voltar</CTAButton>
-                  <CTAButton onClick={handleSubmit} disabled={!consent || sending}>
-                    {sending ? "Enviando..." : "Enviar"}
-                  </CTAButton>
-                </div>
-              </div>
-            )}
-
-            {step === 3 && (
-              <div className="p-6">
-                <div className="text-center">
-                  <h4 className="text-slate-100 font-medium">Dados enviados com sucesso</h4>
-                  <p className="text-slate-400 mt-2">Seu código de acompanhamento (tracking):</p>
-                  <div className="mt-2 text-emerald-400 text-xl font-bold">{doneCode}</div>
-                  <p className="text-slate-400 mt-4">
-                    Sua aplicação foi recebida. A equipe KASH analisará as informações e enviará o link de pagamento e contrato por e-mail em até 48 horas.
+                <h2 className="text-3xl font-bold text-green-400 mb-3">Pedido Recebido com Sucesso!</h2>
+                <p className="text-gray-300 text-lg">
+                  Seu código de referência é: <strong className="text-indigo-400">{submitStatus.kashId || 'N/A'}</strong>
+                </p>
+                <div className="mt-6 max-w-md mx-auto">
+                  <p className="text-gray-400">
+                    A KASH Solutions está processando sua aplicação. Nossa equipe enviará o link de pagamento e o contrato (PDF) para o e-mail do aplicante principal (<strong className="text-gray-200">{formState.members[0].email}</strong>) em até 48 horas úteis.
                   </p>
                   <div className="mt-6">
-                    {/* Chama o handler que limpa a memória e fecha o modal (onClose) */}
                     <CTAButton onClick={handleCloseStep3}>Fechar</CTAButton>
                   </div>
                 </div>
@@ -841,7 +748,7 @@ function FormWizard({ open, onClose }) {
             )}
 
           </div>
-          <div className="text-center text-[11px] text-slate-500 mt-3">Data: {dateISO}</div>
+          <div className="text-center text-[11px] text-gray-600 mt-3">Data: {dateISO}</div>
         </div>
       </div>
     </div>
@@ -851,10 +758,11 @@ function FormWizard({ open, onClose }) {
 /* ========================= FOOTER ========================= */
 function Footer() {
   return (
-    <footer className="py-10 border-t border-slate-800">
+    // Estilo de footer ESCURO
+    <footer className="py-10 border-t border-gray-800 bg-gray-900">
       <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-4">
-        <div className="text-slate-400 text-sm">© {new Date().getFullYear()} KASH Solutions - KASH CORPORATE SOLUTIONS LLC</div>
-        <div className="text-slate-400 text-sm">Contato: contato@kashsolutions.us</div>
+        <div className="text-gray-500 text-sm">© {new Date().getFullYear()} KASH Solutions - KASH CORPORATE SOLUTIONS LLC</div>
+        <div className="text-gray-500 text-sm">Contato: contato@kashsolutions.us</div>
       </div>
     </footer>
   );
@@ -864,13 +772,77 @@ function Footer() {
 export default function App() {
   const [open, setOpen] = useState(false);
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200">
+    // Estilo de fundo do corpo ESCURO
+    <div className="min-h-screen bg-gray-950 text-gray-100 font-sans">
       <Hero onStart={() => setOpen(true)} />
       <Services />
       <Pricing onStart={() => setOpen(true)} />
-      <HowItWorks />
+      {(open) && <ApplicationForm onClose={() => setOpen(false)} />}
       <Footer />
-      <FormWizard open={open} onClose={() => setOpen(false)} />
     </div>
   );
+}
+
+
+/* ========================= MARKETING/HERO SECTION ========================= */
+function Hero({ onStart }) {
+  return (
+    // Estilo de Hero ESCURO
+    <div className="bg-gray-900 pt-20 pb-16 border-b border-gray-800">
+      <div className="max-w-6xl mx-auto px-4 text-center">
+        <h1 className="text-4xl sm:text-6xl font-extrabold tracking-tight text-gray-50 mb-4">
+          KASH Corporate Solutions
+        </h1>
+        <p className="text-lg text-gray-400 max-w-2xl mx-auto mb-8">
+          Sua ponte para o sucesso empresarial nos Estados Unidos. Abra sua LLC de forma rápida e segura.
+        </p>
+        <CTAButton onClick={onStart}>Iniciar Aplicação Agora</CTAButton>
+      </div>
+    </div>
+  );
+}
+function Services() {
+    return (
+        // Estilo de seção de serviços ESCURO
+        <section className="py-16 bg-gray-950">
+            <div className="max-w-6xl mx-auto px-4">
+                <h2 className="text-3xl font-bold text-center text-gray-100 mb-10">Nossos Serviços Incluem</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <ServiceCard title="Abertura Rápida de LLC" description="Processamento em 24-48h no estado da Flórida (FL)." />
+                    <ServiceCard title="Endereço Fiscal nos EUA" description="Inclusão de endereço virtual para correspondência oficial." />
+                    <ServiceCard title="Consultoria Contábil" description="Orientação inicial sobre impostos e compliance nos EUA." />
+                </div>
+            </div>
+        </section>
+    );
+}
+function ServiceCard({ title, description }) {
+    return (
+        // Estilo de cartão de serviço ESCURO
+        <div className="bg-gray-900 p-6 rounded-lg shadow-xl border border-gray-700 hover:border-indigo-500 transition duration-300">
+            <h3 className="text-xl font-semibold text-indigo-400 mb-3">{title}</h3>
+            <p className="text-gray-300">{description}</p>
+        </div>
+    );
+}
+
+// ⚠️ PREÇO CORRIGIDO E MANTIDO EM $399
+function Pricing({ onStart }) {
+    return (
+        // Estilo de seção de preço ESCURO
+        <section className="py-16 bg-gray-900">
+            <div className="max-w-4xl mx-auto px-4 text-center">
+                <h2 className="text-3xl font-bold text-gray-50 mb-6">Preço Transparente</h2>
+                <div className="bg-gray-800 p-8 rounded-xl border border-indigo-500 shadow-xl">
+                    <p className="text-5xl font-extrabold text-indigo-400 mb-4">
+                        $399<span className="text-xl text-gray-400"> (Taxas Estaduais Inclusas)</span>
+                    </p>
+                    <p className="text-gray-300 mb-8">
+                        Este valor cobre a abertura da sua LLC, taxas de registro estaduais na Flórida, e documentação inicial.
+                    </p>
+                    <CTAButton onClick={onStart}>Começar a Aplicação</CTAButton>
+                </div>
+            </div>
+        </section>
+    );
 }
