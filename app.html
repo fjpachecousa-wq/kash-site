@@ -889,11 +889,6 @@
     margin-bottom: 8px;
     color: var(--kash-green-deep);
   }
-  .login-logo span {
-    color: var(--kash-green-deep);
-    -webkit-text-fill-color: var(--kash-green-deep);
-    background: none;
-  }
   .login-tagline {
     font-family: 'Space Mono', monospace;
     font-size: 0.65rem;
@@ -1290,7 +1285,7 @@ strong,
 <div id="loginScreen" style="display:none;">
   <div class="login-box" style="max-width:440px;">
     <div class="login-logo">
-      <span style="color:var(--green-neon);">KA</span><img src="https://wqrtviggoletikvtuvmp.supabase.co/storage/v1/object/public/assets/kash-logo.png" alt="S" style="height:0.85em;width:auto;vertical-align:-0.1em;margin:0 -2px;"><span style="background:linear-gradient(180deg,#e8e8e8 0%,#c0c0c0 50%,#888 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">H</span>
+      <span style="color:var(--green-neon);">KA</span><img src="https://wqrtviggoletikvtuvmp.supabase.co/storage/v1/object/public/assets/kash-logo.png" alt="S" style="height:0.85em;width:auto;vertical-align:-0.1em;margin:0 -2px;"><span style="color:var(--kash-green-deep);">H</span>
     </div>
     <div class="login-tagline">Microinvest. Macroresults.</div>
 
@@ -1327,7 +1322,7 @@ strong,
 <div id="paywallScreen" style="display:none;">
   <div class="login-box" style="max-width:480px;">
     <div class="login-logo">
-      <span style="color:var(--green-neon);">KA</span><img src="https://wqrtviggoletikvtuvmp.supabase.co/storage/v1/object/public/assets/kash-logo.png" alt="S" style="height:0.85em;width:auto;vertical-align:-0.1em;margin:0 -2px;"><span style="background:linear-gradient(180deg,#e8e8e8 0%,#c0c0c0 50%,#888 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">H</span>
+      <span style="color:var(--green-neon);">KA</span><img src="https://wqrtviggoletikvtuvmp.supabase.co/storage/v1/object/public/assets/kash-logo.png" alt="S" style="height:0.85em;width:auto;vertical-align:-0.1em;margin:0 -2px;"><span style="color:var(--kash-green-deep);">H</span>
     </div>
     <div class="login-tagline" style="margin-bottom:24px;" id="paywallTagline">Pro · $9.99/mo</div>
     <div style="font-family:'Space Mono',monospace;font-size:0.7rem;color:var(--kash-muted);letter-spacing:1px;line-height:2;margin-bottom:28px;text-align:left;" id="paywallFeatures">
@@ -1366,7 +1361,7 @@ strong,
 <div id="accountClosedScreen" style="display:none;">
   <div class="login-box" style="max-width:480px;">
     <div class="login-logo">
-      <span style="color:var(--green-neon);">KA</span><img src="https://wqrtviggoletikvtuvmp.supabase.co/storage/v1/object/public/assets/kash-logo.png" alt="S" style="height:0.85em;width:auto;vertical-align:-0.1em;margin:0 -2px;"><span style="background:linear-gradient(180deg,#e8e8e8 0%,#c0c0c0 50%,#888 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">H</span>
+      <span style="color:var(--green-neon);">KA</span><img src="https://wqrtviggoletikvtuvmp.supabase.co/storage/v1/object/public/assets/kash-logo.png" alt="S" style="height:0.85em;width:auto;vertical-align:-0.1em;margin:0 -2px;"><span style="color:var(--kash-green-deep);">H</span>
     </div>
     <div class="login-tagline" style="margin-bottom:20px;color:#ef4444;">Account Closed</div>
     <div style="font-family:'Space Mono',monospace;font-size:0.75rem;color:var(--silver);letter-spacing:0.5px;line-height:1.8;margin-bottom:24px;">
@@ -2747,8 +2742,8 @@ function renderOverview() {
   if (subEl) subEl.textContent = g.date ? `📅 Deadline: ${new Date(g.date + 'T12:00:00').toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'})}` : '';
 
   const rowStyle   = 'display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);';
-  const labelStyle = "font-family:'Space Mono',monospace;font-size:0.85rem;color:rgba(255,253,248,0.88);letter-spacing:0.5px;";
-  const valStyle   = "font-family:'Space Mono',monospace;font-size:0.85rem;font-weight:700;color:rgba(255,253,248,0.88)!important;";
+  const labelStyle = "font-family:'Space Mono',monospace;font-size:0.98rem;color:rgba(255,253,248,0.88);letter-spacing:0.5px;";
+  const valStyle   = "font-family:'Space Mono',monospace;font-size:1.05rem;font-weight:700;color:rgba(255,253,248,0.88)!important;";
 
   const metrics = [
     { label: 'Current balance',           value: fmt(estimatedBalance) },
