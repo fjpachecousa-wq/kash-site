@@ -4409,23 +4409,13 @@ async function fetchStatement(useCacheOnly) {
       const isZero = amount === 0;
       const displayAmount = Math.abs(amount).toFixed(2);
 
-      let color, sign;
-      if (isZero) {
-        color = 'var(--silver)';
-        sign = '';
-      } else if (isFeeOrTax) {
-        color = '#ef4444';
-        sign = '-';
-      } else {
-        color = 'var(--green-neon)';
-        sign = '+';
-      }
+      const sign = isZero ? '' : (isFeeOrTax ? '-' : '+');
       const cleanName = _cleanTxnName(t.name) || (t.subtype || t.type || '—').replace(/_/g, ' ');
       const dateDisplay = new Date(t.date + 'T12:00:00').toLocaleDateString('en-US');
 
       return `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
         <td style="padding:8px 4px;color:var(--white);">${dateDisplay}</td>
-        <td style="padding:8px 4px;color:${color};">${sign}$${displayAmount}</td>
+        <td style="padding:8px 4px;color:var(--kash-text);">${sign}$${displayAmount}</td>
         <td style="padding:8px 4px;color:rgba(192,192,192,0.3);">—</td>
         <td style="padding:8px 4px;color:#888;">${cleanName}</td>
       </tr>`;
