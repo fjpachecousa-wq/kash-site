@@ -1930,15 +1930,15 @@ tr:hover td {
     <div class="modal-title">✏️ Edit Transaction</div>
     <div class="form-group" style="margin-bottom:14px;">
       <label>Date</label>
-      <input type="text" id="editContribDate" placeholder="MM/DD/YYYY" maxlength="10" autocomplete="off" oninput="maskDateInput(this)" style="width:100%;background:rgba(0,0,0,0.5);border:1px solid var(--green-dark);border-radius:7px;padding:8px 10px;font-family:'Space Mono',monospace;letter-spacing:1px;font-size:0.85rem;color:var(--white);outline:none;box-sizing:border-box;">
+      <input type="text" id="editContribDate" placeholder="MM/DD/YYYY" maxlength="10" autocomplete="off" oninput="maskDateInput(this)" style="width:100%;background:rgba(255,255,255,0.72);border:1px solid var(--kash-border-strong);box-shadow:inset 0 1px 0 rgba(255,255,255,0.75);border-radius:7px;padding:8px 10px;font-family:'Space Mono',monospace;letter-spacing:1px;font-size:0.85rem;color:var(--kash-text);outline:none;box-sizing:border-box;">
     </div>
     <div class="form-group" style="margin-bottom:14px;">
       <label>Amount ($)</label>
-      <input type="number" id="editContribAmount" step="0.01" min="0" style="width:100%;background:rgba(0,0,0,0.5);border:1px solid var(--green-dark);border-radius:7px;padding:8px 10px;font-family:'Space Mono',monospace;font-size:0.85rem;color:var(--white);outline:none;box-sizing:border-box;">
+      <input type="number" id="editContribAmount" step="0.01" min="0" style="width:100%;background:rgba(255,255,255,0.72);border:1px solid var(--kash-border-strong);box-shadow:inset 0 1px 0 rgba(255,255,255,0.75);border-radius:7px;padding:8px 10px;font-family:'Space Mono',monospace;font-size:0.85rem;color:var(--kash-text);outline:none;box-sizing:border-box;">
     </div>
     <div class="form-group" style="margin-bottom:20px;">
       <label>Type</label>
-      <select id="editContribTypeSelect" style="width:100%;background:rgba(0,0,0,0.5);border:1px solid var(--green-dark);border-radius:7px;padding:8px 10px;font-family:'Inter',sans-serif;font-size:0.85rem;color:var(--white);outline:none;box-sizing:border-box;"></select>
+      <select id="editContribTypeSelect" style="width:100%;background:rgba(255,255,255,0.72);border:1px solid var(--kash-border-strong);box-shadow:inset 0 1px 0 rgba(255,255,255,0.75);border-radius:7px;padding:8px 10px;font-family:'Inter',sans-serif;font-size:0.85rem;color:var(--kash-text);outline:none;box-sizing:border-box;"></select>
     </div>
     <div class="btn-row">
       <button class="btn btn-primary" onclick="saveContributionType()">💾 Save</button>
@@ -1976,7 +1976,7 @@ tr:hover td {
       <label style="display:flex;align-items:center;gap:6px;">Type (required)
         <span onclick="openChartOfAccountsModal()" title="Manage Types" style="cursor:pointer;font-size:0.85rem;line-height:1;">⚙️</span>
       </label>
-      <select id="note-goal" style="width:100%;background:rgba(0,0,0,0.5);border:1px solid var(--green-dark);border-radius:7px;padding:8px 10px;font-family:'Inter',sans-serif;font-size:0.85rem;color:var(--white);outline:none;box-sizing:border-box;">
+      <select id="note-goal" style="width:100%;background:rgba(255,255,255,0.72);border:1px solid var(--kash-border-strong);box-shadow:inset 0 1px 0 rgba(255,255,255,0.75);border-radius:7px;padding:8px 10px;font-family:'Inter',sans-serif;font-size:0.85rem;color:var(--kash-text);outline:none;box-sizing:border-box;">
       </select>
     </div>
     <div class="btn-row">
@@ -3080,17 +3080,17 @@ function renderGoalPanel() {
       </div>
       ${view === 'goal' ? `
       <div class="no-print" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
-        <select id="myGoalTypeFilter" onchange="setMyGoalFilter('type', this.value)" style="width:auto;background:rgba(0,0,0,0.5);border:1px solid var(--green-dark);border-radius:6px;padding:5px 8px;font-family:'Space Mono',monospace;font-size:0.68rem;color:var(--white);outline:none;">
+        <select id="myGoalTypeFilter" onchange="setMyGoalFilter('type', this.value)" style="width:auto;background:rgba(255,255,255,0.72);border:1px solid var(--kash-border-strong);box-shadow:inset 0 1px 0 rgba(255,255,255,0.75);border-radius:6px;padding:5px 8px;font-family:'Space Mono',monospace;font-size:0.68rem;color:var(--kash-text);outline:none;">
           <option value="">All Types</option>
           ${(state.chartOfAccounts || []).map(t => `<option value="${t}" ${window._myGoalTypeFilter === t ? 'selected' : ''}>${t}</option>`).join('')}
         </select>
         <label style="display:flex;align-items:center;gap:4px;font-family:'Space Mono',monospace;font-size:0.68rem;color:var(--kash-muted);">
           From
-          <input type="date" id="myGoalDateFrom" value="${window._myGoalDateFrom || ''}" onchange="setMyGoalFilter('dateFrom', this.value)" style="background:rgba(0,0,0,0.5);border:1px solid var(--green-dark);border-radius:6px;padding:4px 6px;font-family:'Space Mono',monospace;font-size:0.68rem;color:var(--white);outline:none;">
+          <input type="date" id="myGoalDateFrom" value="${window._myGoalDateFrom || ''}" onchange="setMyGoalFilter('dateFrom', this.value)" style="background:rgba(255,255,255,0.72);border:1px solid var(--kash-border-strong);box-shadow:inset 0 1px 0 rgba(255,255,255,0.75);border-radius:6px;padding:4px 6px;font-family:'Space Mono',monospace;font-size:0.68rem;color:var(--kash-text);outline:none;">
         </label>
         <label style="display:flex;align-items:center;gap:4px;font-family:'Space Mono',monospace;font-size:0.68rem;color:var(--kash-muted);">
           To
-          <input type="date" id="myGoalDateTo" value="${window._myGoalDateTo || ''}" onchange="setMyGoalFilter('dateTo', this.value)" style="background:rgba(0,0,0,0.5);border:1px solid var(--green-dark);border-radius:6px;padding:4px 6px;font-family:'Space Mono',monospace;font-size:0.68rem;color:var(--white);outline:none;">
+          <input type="date" id="myGoalDateTo" value="${window._myGoalDateTo || ''}" onchange="setMyGoalFilter('dateTo', this.value)" style="background:rgba(255,255,255,0.72);border:1px solid var(--kash-border-strong);box-shadow:inset 0 1px 0 rgba(255,255,255,0.75);border-radius:6px;padding:4px 6px;font-family:'Space Mono',monospace;font-size:0.68rem;color:var(--kash-text);outline:none;">
         </label>
         ${(window._myGoalTypeFilter || window._myGoalDateFrom || window._myGoalDateTo) ? `<button class="btn btn-secondary btn-sm" style="padding:3px 10px;font-size:0.65rem;" onclick="clearMyGoalFilters()">✖ Clear Filters</button>` : ''}
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-family:'Space Mono',monospace;font-size:0.7rem;color:var(--kash-muted);">
@@ -3178,7 +3178,7 @@ function renderChartOfAccountsList() {
   const list = state.chartOfAccounts || [];
   wrap.innerHTML = list.map((t, i) => `
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
-      <input type="text" value="${t}" onchange="editChartOfAccountItem(${i}, this.value)" style="flex:1;background:rgba(0,0,0,0.5);border:1px solid var(--green-dark);border-radius:6px;padding:6px 10px;color:var(--white);font-family:'Inter',sans-serif;font-size:0.85rem;">
+      <input type="text" value="${t}" onchange="editChartOfAccountItem(${i}, this.value)" style="flex:1;background:rgba(255,255,255,0.72);border:1px solid var(--kash-border-strong);box-shadow:inset 0 1px 0 rgba(255,255,255,0.75);border-radius:6px;padding:6px 10px;color:var(--kash-text);font-family:'Inter',sans-serif;font-size:0.85rem;">
       <button class="icon-btn icon-btn-del" onclick="removeChartOfAccountItem(${i})" title="Remove">🗑</button>
     </div>`).join('') || '<div style="color:var(--silver);font-size:0.8rem;">No types yet — add one below.</div>';
 }
