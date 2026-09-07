@@ -1589,7 +1589,7 @@ tr:hover td {
       <strong id="headerName">—</strong>
       <span id="headerDate"></span>
     </div>
-    <button class="btn btn-sm no-print" onclick="toggleProfileCard()" style="font-size:0.75rem;padding:6px 14px;border-color:rgba(57,255,20,0.3);color:#000;background:#fff;" title="Investor Profile">👤 Profile</button>
+    <button class="btn btn-secondary btn-sm no-print" onclick="toggleProfileCard()" style="font-size:0.75rem;padding:6px 14px;" title="Investor Profile">👤 Profile</button>
     <button class="btn-logout no-print" id="appLogoutBtn" onclick="logoutUser()">Sign Out</button>
   </div>
 </header>
@@ -1610,8 +1610,8 @@ tr:hover td {
         <div class="card-title" style="margin-bottom:2px;">👤 Investor Profile</div>
       </div>
       <div style="display:flex;gap:8px;">
-        <button class="btn btn-sm" id="editProfileBtn" onclick="toggleEditProfile()" style="font-size:0.75rem;padding:4px 12px;">✏️ Edit</button>
-        <button class="btn btn-sm" onclick="toggleProfileCard()" style="font-size:0.75rem;padding:4px 12px;border-color:rgba(239,68,68,0.4);color:rgba(239,68,68,0.8);">✕ Close</button>
+        <button class="btn btn-secondary btn-sm" id="editProfileBtn" onclick="toggleEditProfile()" style="font-size:0.75rem;padding:4px 12px;">✏️ Edit</button>
+        <button class="btn btn-secondary btn-sm" onclick="toggleProfileCard()" style="font-size:0.75rem;padding:4px 12px;">✕ Close</button>
       </div>
     </div>
     <div class="form-row four">
@@ -1668,7 +1668,7 @@ tr:hover td {
 
     <div class="btn-row" id="profileSaveRow" style="display:none;">
       <button class="btn btn-primary btn-sm" onclick="saveProfile()">💾 Save Profile</button>
-      <button class="btn btn-sm" onclick="cancelEditProfile()">Cancel</button>
+      <button class="btn btn-secondary btn-sm" onclick="cancelEditProfile()">Cancel</button>
     </div>
   </div>
 
@@ -1692,7 +1692,7 @@ tr:hover td {
             <div id="plaidStatus" style="font-size:0.72rem;color:var(--silver);margin-top:2px;">Not connected</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
-            <button id="plaidConnectBtn" class="btn btn-sm" onclick="connectPlaid()" style="border-color:rgba(57,255,20,0.4);color:var(--green-neon);">🔌 Connect</button>
+            <button id="plaidConnectBtn" class="btn btn-secondary btn-sm" onclick="connectPlaid()">🔌 Connect</button>
             <button id="plaidDisconnectBtn" class="btn btn-sm btn-danger" onclick="disconnectPlaid()" style="display:none;">Disconnect</button>
             <span id="plaidSyncBtn" style="display:none;"></span>
           </div>
@@ -3055,7 +3055,7 @@ function renderGoalPanel() {
       <div style="margin-top:14px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
           <div style="font-family:'Inter',sans-serif;font-size:0.95rem;color:var(--white);font-weight:600;">📈 Progress — Goal ${fmt(g.target)}</div>
-          <button class="btn btn-sm" style="font-size:0.65rem;padding:3px 10px;" onclick="openEditGoalModal()">✏️ Edit Goal</button>
+          <button class="btn btn-secondary btn-sm" style="font-size:0.65rem;padding:3px 10px;" onclick="openEditGoalModal()">✏️ Edit Goal</button>
         </div>
         <div class="progress-wrap">
           <div class="progress-label"><span>${fmt(st.totalInvested)} / ${fmt(g.target)}</span><span>${st.pct.toFixed(1)}%</span></div>
