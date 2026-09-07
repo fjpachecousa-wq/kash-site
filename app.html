@@ -1077,61 +1077,10 @@
   --kash-gold: #C8A24A;
 }
 
-/* Cards / panels — 3 pontos abaixo ainda tem cor escrita direto no HTML da pagina, deixados para o final por decisao do Fernando (2026-09-07) */
-#plaidSection,
-#statementContent,
-#totalBanner > div {
-  background: var(--kash-surface) !important;
-  color: var(--kash-text) !important;
-  border: 1px solid var(--kash-border) !important;
-  box-shadow: var(--kash-shadow-soft) !important;
-  backdrop-filter: blur(14px);
-}
-
-#plaidInstitutionLabel {
-  color: var(--kash-green-deep) !important;
-  text-shadow: none !important;
-  letter-spacing: 2.2px !important;
-}
-
-/* Hero / goal banner overrides for inline dark styles */
-#totalBanner > div:first-child,
-#totalBanner [style*="background:linear-gradient(160deg"] {
-  background:
-    radial-gradient(circle at 78% 36%, rgba(200,162,74,0.18), transparent 26%),
-    linear-gradient(135deg, #0F3D2E 0%, #082A24 100%) !important;
-  border: 1px solid rgba(200,162,74,0.28) !important;
-  color: #FFFDF8 !important;
-  box-shadow: 0 20px 50px rgba(15,46,46,0.18) !important;
-}
-
-#totalBanner > div:first-child * {
-  text-shadow: none !important;
-}
-
-#ovGoalHeader,
-#ovProgressPct {
-  color: #C8A24A !important;
-  text-shadow: none !important;
-}
-
-#ovGoalSub,
-#ovProgressLabel,
-#ovMetricsRows,
-#ovMetricsRows * {
-  color: rgba(255,253,248,0.88) !important;
-}
-
+/* Hero / goal banner — imagem de fundo (watermark) continua via CSS, resto ja vem certo do HTML */
 #totalBanner img {
   opacity: .12 !important;
   filter: grayscale(1) brightness(2.2) drop-shadow(0 14px 34px rgba(0,0,0,.12)) !important;
-}
-
-#totalBanner > div:nth-child(2) {
-  background: rgba(255,253,248,0.80) !important;
-  border: 1px solid var(--kash-border) !important;
-  color: var(--kash-text) !important;
-  box-shadow: var(--kash-shadow-soft) !important;
 }
 
 /* Typography / text */
@@ -1736,10 +1685,10 @@ tr:hover td {
       </div>
 
       <!-- ══ PLAID SYNC SECTION (owner only) ══ -->
-      <div id="plaidSection" style="display:none;background:linear-gradient(135deg,rgba(57,255,20,0.04),rgba(0,0,0,0.4));border:1px solid rgba(57,255,20,0.2);border-radius:12px;padding:20px;margin-bottom:24px;">
+      <div id="plaidSection" style="display:none;background:var(--kash-surface);color:var(--kash-text);border:1px solid var(--kash-border);box-shadow:var(--kash-shadow-soft);backdrop-filter:blur(14px);border-radius:12px;padding:20px;margin-bottom:24px;">
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
           <div>
-            <div id="plaidInstitutionLabel" style="font-family:'Orbitron',sans-serif;font-size:1rem;color:var(--green-neon);letter-spacing:2px;">🔗 BROKERAGE SYNC</div>
+            <div id="plaidInstitutionLabel" style="font-family:'Orbitron',sans-serif;font-size:1rem;color:var(--kash-green-deep);letter-spacing:2.2px;">🔗 BROKERAGE SYNC</div>
             <div id="plaidStatus" style="font-size:0.72rem;color:var(--silver);margin-top:2px;">Not connected</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
@@ -1778,7 +1727,7 @@ tr:hover td {
     <div id="totalBanner" style="display:none;">
 
       <!-- SINGLE GOAL PANEL -->
-      <div style="background:linear-gradient(160deg,rgba(57,255,20,0.06) 0%,rgba(0,0,0,0.75) 70%);border:1px solid rgba(57,255,20,0.25);border-radius:14px;padding:22px 26px;margin-bottom:12px;position:relative;overflow:hidden;min-height:200px;">
+      <div style="background:radial-gradient(circle at 78% 36%, rgba(200,162,74,0.18), transparent 26%), linear-gradient(135deg, #0F3D2E 0%, #082A24 100%);border:1px solid rgba(200,162,74,0.28);color:#FFFDF8;box-shadow:0 20px 50px rgba(15,46,46,0.18);border-radius:14px;padding:22px 26px;margin-bottom:12px;position:relative;overflow:hidden;min-height:200px;">
 
         <!-- Content (z-index:1 para ficar sobre o watermark) -->
         <div style="position:relative;z-index:1;">
@@ -1786,8 +1735,8 @@ tr:hover td {
           <!-- Goal header -->
           <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:20px;">
             <div>
-              <div id="ovGoalHeader" style="font-family:'Orbitron',sans-serif;font-size:1.4rem;letter-spacing:3px;color:var(--green-neon);text-shadow:0 0 12px rgba(57,255,20,0.35);margin-bottom:4px;">GOAL</div>
-              <div id="ovGoalSub" style="font-family:'Space Mono',monospace;font-size:0.75rem;color:var(--kash-muted);"></div>
+              <div id="ovGoalHeader" style="font-family:'Orbitron',sans-serif;font-size:1.4rem;letter-spacing:3px;color:var(--kash-gold);text-shadow:none;margin-bottom:4px;">GOAL</div>
+              <div id="ovGoalSub" style="font-family:'Space Mono',monospace;font-size:0.75rem;color:rgba(255,253,248,0.88);"></div>
             </div>
           
           </div>
@@ -1801,7 +1750,7 @@ tr:hover td {
       </div>
 
       <!-- Stats footer -->
-      <div style="background:rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.06);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+      <div style="background:rgba(255,253,248,0.80);border:1px solid var(--kash-border);color:var(--kash-text);box-shadow:var(--kash-shadow-soft);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
         <div style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--silver);letter-spacing:1px;">
           <span style="color:var(--gold);font-weight:700;">About Active Goal</span>
           &nbsp;·&nbsp;
@@ -1911,7 +1860,7 @@ tr:hover td {
       </div>
     </div>
 
-    <div id="statementContent" style="background:rgba(0,0,0,0.3);border:1px solid rgba(57,255,20,0.15);border-radius:12px;padding:20px;">
+    <div id="statementContent" style="background:var(--kash-surface);color:var(--kash-text);border:1px solid var(--kash-border);box-shadow:var(--kash-shadow-soft);backdrop-filter:blur(14px);border-radius:12px;padding:20px;">
       <div style="font-size:0.8rem;color:var(--silver);text-align:center;padding:20px;">Loading statement...</div>
     </div>
 
@@ -2991,29 +2940,29 @@ function renderOverview() {
   if (subEl) subEl.textContent = g.date ? `📅 Deadline: ${new Date(g.date + 'T12:00:00').toLocaleDateString('en-US', {month:'long', day:'numeric', year:'numeric'})}` : '';
 
   const rowStyle   = 'display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);';
-  const labelStyle = 'font-family:"Space Mono",monospace;font-size:0.85rem;color:var(--silver);letter-spacing:0.5px;';
-  const valStyle   = 'font-family:"Space Mono",monospace;font-size:0.85rem;font-weight:700;';
+  const labelStyle = 'font-family:"Space Mono",monospace;font-size:0.85rem;color:rgba(255,253,248,0.88);letter-spacing:0.5px;';
+  const valStyle   = 'font-family:"Space Mono",monospace;font-size:0.85rem;font-weight:700;color:rgba(255,253,248,0.88);';
 
   const metrics = [
-    { label: 'Current balance',           value: fmt(estimatedBalance),      color: 'var(--green-neon)' },
-    { label: 'Still needed',              value: fmt(falta),                 color: '#fbbf24' },
-    { label: 'Days remaining',            value: diasRestantes + ' days',    color: 'var(--silver-light)' },
-    { label: 'Daily contribution needed', value: '$' + aporteNec.toFixed(2), color: estimatedBalance >= g.target ? '#22c55e' : 'var(--green-neon)' },
-    { label: '📅 Scheduled',              value: fmt(scheduledTotalOv),      color: 'var(--silver-light)' },
-    { label: '⏳ Pending',                value: fmt(pendingDueTotalOv),     color: '#f59e0b' },
+    { label: 'Current balance',           value: fmt(estimatedBalance) },
+    { label: 'Still needed',              value: fmt(falta) },
+    { label: 'Days remaining',            value: diasRestantes + ' days' },
+    { label: 'Daily contribution needed', value: '$' + aporteNec.toFixed(2) },
+    { label: '📅 Scheduled',              value: fmt(scheduledTotalOv) },
+    { label: '⏳ Pending',                value: fmt(pendingDueTotalOv) },
   ];
 
   document.getElementById('ovMetricsRows').innerHTML = metrics.map(m => {
     const row = `<div style="${rowStyle}">
       <span style="${labelStyle}">${m.label}</span>
-      <strong style="${valStyle}color:${m.color};">${m.value}</strong>
+      <strong style="${valStyle}">${m.value}</strong>
     </div>`;
     const note = (m.label === 'Daily contribution needed' && netAindaNaoCoberto <= 0 && (scheduledTotalOv + pendingDueTotalOv) > 0)
-      ? `<div style="font-family:'Space Mono',monospace;font-size:0.62rem;color:var(--kash-muted);padding:0 0 6px;">Already covered by the scheduled deposits below.</div>`
+      ? `<div style="font-family:'Space Mono',monospace;font-size:0.62rem;color:rgba(255,253,248,0.88);padding:0 0 6px;">Already covered by the scheduled deposits below.</div>`
       : '';
     return row + note;
   }).join('') + (estimatedBalance === 0 ? `
-    <div style="font-family:'Space Mono',monospace;font-size:0.62rem;color:rgba(251,191,36,0.7);padding:8px 0;letter-spacing:0.5px;">
+    <div style="font-family:'Space Mono',monospace;font-size:0.62rem;color:rgba(255,253,248,0.88);padding:8px 0;letter-spacing:0.5px;">
       ⚠ No contributions recorded yet.
     </div>` : '');
 
