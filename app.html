@@ -493,7 +493,7 @@
   }
 
   tr:hover td { background: rgba(57,255,20,0.04); }
-  .amount-cell { color: var(--green-neon); font-weight: 700; }
+  .amount-cell { color: var(--kash-text); font-weight: 700; }
   .running-cell { color: var(--gold); }
 
   .icon-btn {
@@ -1121,7 +1121,6 @@ th {
 .kpi-value,
 .ov-num,
 .ov-pct,
-.amount-cell,
 .passive-pill span {
   color: var(--kash-green-bright) !important;
   text-shadow: none !important;
@@ -1302,7 +1301,6 @@ tr:hover td {
 }
 
 /* Keep positive money values visually green */
-.amount-cell,
 .port-value[style*="22c55e"],
 [style*="color:#22c55e"],
 [style*="color: #22c55e"] {
@@ -2990,7 +2988,7 @@ function renderGoalPanel() {
             ${(window._reconciliationSuggestions || []).map(s => `
               <tr style="background:rgba(57,255,20,0.03);border-bottom:1px dashed rgba(57,255,20,0.15);">
                 <td>${new Date(s.date+'T12:00:00').toLocaleDateString('en-US')}</td>
-                <td class="amount-cell" style="${s.isDebit ? 'color:#ef4444;' : ''}">${s.isDebit ? '-' : ''}${fmt(s.amount)}</td>
+                <td class="amount-cell">${s.isDebit ? '-' : '+'}${fmt(s.amount)}</td>
                 <td class="running-cell" style="color:rgba(192,192,192,0.3);">—</td>
                 <td style="color:#888;">${s.name}</td>
                 <td class="no-print">
@@ -3007,7 +3005,7 @@ function renderGoalPanel() {
               return pageRows.map(r => `
                 <tr>
                   <td>${new Date(r.date+'T12:00:00').toLocaleDateString('en-US')}</td>
-                  <td class="amount-cell">${fmt(r.amount)}${r.pending ? (r.date > todayStr() ? `<span style="font-family:'Space Mono',monospace;font-size:0.58rem;background:rgba(94,106,99,0.05);color:var(--kash-muted);border:1px solid rgba(94,106,99,0.3);border-radius:4px;padding:1px 5px;margin-left:4px;letter-spacing:1px;">📅 SCHEDULED</span>` : (businessDaysLate(r.date) >= 5 ? `<span style="font-family:'Space Mono',monospace;font-size:0.58rem;background:rgba(239,68,68,0.08);color:#dc2626;border:1px solid rgba(239,68,68,0.4);border-radius:4px;padding:1px 5px;margin-left:4px;letter-spacing:1px;">❌ FAIL</span>` : `<span style="font-family:'Space Mono',monospace;font-size:0.58rem;background:rgba(251,191,36,0.05);color:#f59e0b;border:1px solid rgba(251,191,36,0.3);border-radius:4px;padding:1px 5px;margin-left:4px;letter-spacing:1px;">⏳ PENDING</span>`)) : ''}
+                  <td class="amount-cell">${r.amount < 0 ? '-' : '+'}${fmt(Math.abs(r.amount))}${r.pending ? (r.date > todayStr() ? `<span style="font-family:'Space Mono',monospace;font-size:0.58rem;background:rgba(94,106,99,0.05);color:var(--kash-muted);border:1px solid rgba(94,106,99,0.3);border-radius:4px;padding:1px 5px;margin-left:4px;letter-spacing:1px;">📅 SCHEDULED</span>` : (businessDaysLate(r.date) >= 5 ? `<span style="font-family:'Space Mono',monospace;font-size:0.58rem;background:rgba(239,68,68,0.08);color:#dc2626;border:1px solid rgba(239,68,68,0.4);border-radius:4px;padding:1px 5px;margin-left:4px;letter-spacing:1px;">❌ FAIL</span>` : `<span style="font-family:'Space Mono',monospace;font-size:0.58rem;background:rgba(251,191,36,0.05);color:#f59e0b;border:1px solid rgba(251,191,36,0.3);border-radius:4px;padding:1px 5px;margin-left:4px;letter-spacing:1px;">⏳ PENDING</span>`)) : ''}
                   </td>
                   <td class="running-cell">${fmt(r.running)}</td>
                   <td style="color:#888;">${r.note||'—'}${r.fromPlaid?' <span title="Imported from Statement">🔗</span>':''}</td>
