@@ -2412,7 +2412,7 @@ function renderOverview() {
         const [uy, um, ud] = c.date.split('-');
         return `<div class="port-row">
           <span class="port-label">${um}/${ud}/${uy} · ${c.note}</span>
-          <span class="port-value" style="color:var(--kash-gold);">${fmt(c.amount)}</span>
+          <span class="port-value">${fmt(c.amount)}</span>
         </div>`;
       }).join('');
     } else {
