@@ -1277,11 +1277,11 @@
         <div style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--silver);letter-spacing:1px;">
           <span style="color:var(--gold);font-weight:700;">About Active Goal</span>
           &nbsp;·&nbsp;
-          Scheduled: <strong style="color:var(--kash-muted);" id="ovTotalScheduled">0</strong>
+          Scheduled: <strong id="ovTotalScheduled">0</strong>
           &nbsp;·&nbsp;
-          Pending: <strong style="color:#f59e0b;" id="ovTotalPending">0</strong>
+          Pending: <strong id="ovTotalPending">0</strong>
           &nbsp;·&nbsp;
-          Not completed: <strong style="color:#dc2626;" id="ovTotalFail">0</strong>
+          Not completed: <strong id="ovTotalFail">0</strong>
         </div>
       </div>
 
@@ -2539,23 +2539,23 @@ function renderGoalPanel() {
   const valStyle   = 'font-family:"Space Mono",monospace;font-size:0.85rem;font-weight:700;';
 
   const goalRows = `
-    <div style="${rowStyle}"><span style="${labelStyle}">GOAL Balance</span><strong style="${valStyle}color:${Math.abs(st.totalInvested - getStatementTotal()) < 0.005 ? 'var(--green-neon)' : '#eab308'};">${fmt(st.totalInvested)}</strong></div>
-    <div style="${rowStyle}"><span style="${labelStyle}">${(localStorage.getItem('plaid_institution_name') || 'Brokerage').toUpperCase()} Balance</span><strong style="${valStyle}color:var(--green-neon);">${fmt(getStatementTotal())}</strong></div>
-    <div style="${rowStyle}"><span style="${labelStyle}">Remaining to Goal</span><strong style="${valStyle}color:#eab308;">${fmt(st.remaining)}</strong></div>
-    <div style="${rowStyle}"><span style="${labelStyle}">📅 Scheduled</span><strong style="${valStyle}color:var(--silver);">${fmt(scheduledTotal)}</strong></div>
-    <div style="${rowStyle}"><span style="${labelStyle}">⏳ Pending</span><strong style="${valStyle}color:#f59e0b;">${fmt(pendingDueTotal)}</strong></div>
-    <div style="${rowStyle}"><span style="${labelStyle}">Days Left</span><strong style="${valStyle}color:var(--green-neon);">${st.daysLeft}</strong></div>
-    <div style="${rowStyle}"><span style="${labelStyle}">Recommended Daily</span><strong style="${valStyle}color:var(--green-neon);">${fmt(adjustedSuggestedDaily)}</strong></div>
+    <div style="${rowStyle}"><span style="${labelStyle}">GOAL Balance</span><strong style="${valStyle}">${fmt(st.totalInvested)}</strong></div>
+    <div style="${rowStyle}"><span style="${labelStyle}">${(localStorage.getItem('plaid_institution_name') || 'Brokerage').toUpperCase()} Balance</span><strong style="${valStyle}">${fmt(getStatementTotal())}</strong></div>
+    <div style="${rowStyle}"><span style="${labelStyle}">Remaining to Goal</span><strong style="${valStyle}">${fmt(st.remaining)}</strong></div>
+    <div style="${rowStyle}"><span style="${labelStyle}">📅 Scheduled</span><strong style="${valStyle}">${fmt(scheduledTotal)}</strong></div>
+    <div style="${rowStyle}"><span style="${labelStyle}">⏳ Pending</span><strong style="${valStyle}">${fmt(pendingDueTotal)}</strong></div>
+    <div style="${rowStyle}"><span style="${labelStyle}">Days Left</span><strong style="${valStyle}">${st.daysLeft}</strong></div>
+    <div style="${rowStyle}"><span style="${labelStyle}">Recommended Daily</span><strong style="${valStyle}">${fmt(adjustedSuggestedDaily)}</strong></div>
   `;
 
   const statementRows = `
-    <div style="${rowStyle}"><span style="${labelStyle}">GOAL Balance</span><strong style="${valStyle}color:${Math.abs(st.totalInvested - getStatementTotal()) < 0.005 ? 'var(--green-neon)' : '#eab308'};">${fmt(st.totalInvested)}</strong></div>
-    <div style="${rowStyle}"><span style="${labelStyle}">${(localStorage.getItem('plaid_institution_name') || 'Brokerage').toUpperCase()} Balance</span><strong style="${valStyle}color:var(--green-neon);">${fmt(getStatementTotal())}</strong></div>
-    <div style="${rowStyle}"><span style="${labelStyle}">Dividends</span><strong style="${valStyle}color:var(--green-neon);">${fmt(getStatementDividends())}</strong></div>
-    <div style="${rowStyle}"><span style="${labelStyle}">🔗 Last Sync (${((localStorage.getItem('plaid_institution_name') || 'Brokerage')).toUpperCase()})</span><strong style="${valStyle}color:var(--silver);font-size:0.75rem;">${(() => { const ls = parseInt(localStorage.getItem('plaid_last_sync') || '0'); return ls ? new Date(ls).toLocaleString('en-US', {month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit', second:'2-digit'}) : '—'; })()}</strong></div>
-    <div style="${rowStyle}"><span style="${labelStyle}">⏭️ Next Sync (${((localStorage.getItem('plaid_institution_name') || 'Brokerage')).toUpperCase()})</span><strong style="${valStyle}color:var(--silver);font-size:0.75rem;">${computeNextSyncLabel()}</strong></div>
-    <div style="${rowStyle}"><span style="${labelStyle}">Days Left</span><strong style="${valStyle}color:var(--green-neon);">${st.daysLeft}</strong></div>
-    <div style="${rowStyle}"><span style="${labelStyle}">Recommended Daily</span><strong style="${valStyle}color:var(--green-neon);">${fmt(adjustedSuggestedDaily)}</strong></div>
+    <div style="${rowStyle}"><span style="${labelStyle}">GOAL Balance</span><strong style="${valStyle}">${fmt(st.totalInvested)}</strong></div>
+    <div style="${rowStyle}"><span style="${labelStyle}">${(localStorage.getItem('plaid_institution_name') || 'Brokerage').toUpperCase()} Balance</span><strong style="${valStyle}">${fmt(getStatementTotal())}</strong></div>
+    <div style="${rowStyle}"><span style="${labelStyle}">Dividends</span><strong style="${valStyle}">${fmt(getStatementDividends())}</strong></div>
+    <div style="${rowStyle}"><span style="${labelStyle}">🔗 Last Sync (${((localStorage.getItem('plaid_institution_name') || 'Brokerage')).toUpperCase()})</span><strong style="${valStyle}font-size:0.75rem;">${(() => { const ls = parseInt(localStorage.getItem('plaid_last_sync') || '0'); return ls ? new Date(ls).toLocaleString('en-US', {month:'short', day:'numeric', year:'numeric', hour:'numeric', minute:'2-digit', second:'2-digit'}) : '—'; })()}</strong></div>
+    <div style="${rowStyle}"><span style="${labelStyle}">⏭️ Next Sync (${((localStorage.getItem('plaid_institution_name') || 'Brokerage')).toUpperCase()})</span><strong style="${valStyle}font-size:0.75rem;">${computeNextSyncLabel()}</strong></div>
+    <div style="${rowStyle}"><span style="${labelStyle}">Days Left</span><strong style="${valStyle}">${st.daysLeft}</strong></div>
+    <div style="${rowStyle}"><span style="${labelStyle}">Recommended Daily</span><strong style="${valStyle}">${fmt(adjustedSuggestedDaily)}</strong></div>
   `;
 
   const myGoalFilteredRows = (() => {
