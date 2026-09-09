@@ -898,13 +898,6 @@
   .legal-footer a { color: var(--kash-green-bright); cursor: pointer; text-decoration: none; }
   .legal-footer a:hover { text-decoration: underline; }
 
-
-/* ========================================================================
-   KASH SOLUTIONS — VISUAL THEME OVERRIDE
-   Scope: appearance only. No IDs, JS functions, Supabase/Plaid scripts,
-   onclick handlers, pagination logic, or business rules were changed.
-   ======================================================================== */
-
 :root {
   --kash-bg: #F5F2E8;
   --kash-surface: rgba(255,255,255,0.74);
@@ -2556,7 +2549,7 @@ function renderGoalPanel() {
 
   container.innerHTML = `<div>
     ${alertHtml}
-    <div class="kpi" style="text-align:left;padding:18px 22px;margin-bottom:20px;">
+    <div class="kpi" style="text-align:left;padding:18px 22px;margin-bottom:20px;background:var(--kash-surface-solid);">
       ${view === 'goal' ? goalRows : statementRows}
       <div style="margin-top:14px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
