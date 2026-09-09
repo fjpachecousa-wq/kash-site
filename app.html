@@ -3870,7 +3870,7 @@ async function renderPlaidHoldings(data) {
   const _fmtPct = v => v === null ? '—' : (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
   const _pctColor = v => v === null ? 'var(--kash-silver)' : v >= 0 ? 'var(--kash-green-deep)' : '#ef4444';
 
-  const assetCard = `<div style="background:rgba(0,0,0,0.3);border:1px solid rgba(57,255,20,0.2);border-radius:10px;padding:16px;margin:20px 0;">
+  const assetCard = `<div style="background:var(--kash-surface);border:1px solid var(--kash-border);border-radius:10px;padding:16px;margin:20px 0;">
     <div style="font-family:'Orbitron',sans-serif;font-size:1rem;letter-spacing:2px;color:var(--kash-green-deep);margin-bottom:12px;">📊 Asset Portfolio</div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
       <div style="text-align:center;background:var(--kash-cream);border:1px solid var(--kash-green);border-radius:8px;padding:10px;">
