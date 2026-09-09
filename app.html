@@ -352,7 +352,7 @@
     box-shadow: 0 12px 24px rgba(200,162,74,0.20);
   }
   .btn-gold:hover {
-    background: linear-gradient(135deg, var(--gold), #fef3c7);
+    background: linear-gradient(135deg, var(--kash-gold), #fef3c7);
     transform: translateY(-1px);
   }
 
@@ -406,7 +406,7 @@
     justify-content: space-between;
     font-family: 'Space Mono', monospace;
     font-size: 0.75rem;
-    color: var(--silver);
+    color: var(--kash-silver);
     margin-bottom: 8px;
   }
 
@@ -505,7 +505,7 @@
   }
 
   .overview-card:hover {
-    border-color: var(--green-neon);
+    border-color: var(--kash-green-deep);
     box-shadow: 0 0 20px rgba(57,255,20,0.15);
     transform: translateX(4px);
   }
@@ -593,7 +593,7 @@
   }
 
   .color-dot:hover, .color-dot.selected {
-    border-color: var(--white);
+    border-color: var(--kash-text);
     transform: scale(1.2);
     box-shadow: 0 0 8px currentColor;
   }
@@ -819,8 +819,8 @@
     transition: all 0.2s;
   }
   .btn-logout:hover {
-    border-color: var(--red);
-    color: var(--red);
+    border-color: var(--kash-red);
+    color: var(--kash-red);
     background: rgba(239,68,68,0.08);
   }
   #appContent { display: none; color: var(--kash-text); }
@@ -853,7 +853,7 @@
   .auth-toggle a:hover { text-decoration: underline; }
   .auth-msg { font-family: 'Space Mono', monospace; font-size: 0.65rem; letter-spacing: 1px; margin-top: 10px; padding: 8px 12px; border-radius: 6px; display: none; }
   .auth-msg.error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #ef4444; }
-  .auth-msg.success { background: rgba(57,255,20,0.08); border: 1px solid rgba(57,255,20,0.25); color: var(--green-neon); }
+  .auth-msg.success { background: rgba(57,255,20,0.08); border: 1px solid rgba(57,255,20,0.25); color: var(--kash-green-deep); }
 
   /* ── LARGE MODAL (Help / Terms / Privacy) ─────── */
   .modal-lg {
@@ -906,25 +906,6 @@
    ======================================================================== */
 
 :root {
-  --green-neon: #0F2E2E;
-  --green-mid: #166A3A;
-  --green-dark: #0F3D2E;
-  --green-deep: #082A24;
-  --silver: #6B746E;
-  --silver-light: #EEF0EA;
-  --black: #F5F2E8;
-  --gray-dark: #FFFFFF;
-  --gray-mid: #F8F6EF;
-  --gray-light: #E9E4D8;
-  --gold: #C8A24A;
-  --white: #102A25;
-  --red: #B45145;
-  --blue: #5A7D8A;
-  --purple: #7A6F95;
-  --orange: #C47A2C;
-  --pink: #B87582;
-  --cyan: #0D686D;
-
   --kash-bg: #F5F2E8;
   --kash-surface: rgba(255,255,255,0.74);
   --kash-surface-solid: #FFFDF8;
@@ -934,12 +915,14 @@
   --kash-shadow-soft: 0 8px 24px rgba(15,46,46,0.06);
   --kash-text: #102A25;
   --kash-muted: #5E6A63;
+  --kash-silver: #6B746E;
   --kash-cream: #F5F2E8;
   --kash-cream-2: #F8F6EF;
   --kash-green: #0F3D2E;
   --kash-green-deep: #0F2E2E;
   --kash-green-bright: #166A3A;
   --kash-gold: #C8A24A;
+  --kash-red: #B45145;
 }
 
 /* Hero / goal banner — imagem de fundo (watermark) continua via CSS, resto ja vem certo do HTML */
@@ -998,7 +981,7 @@
 
 <!-- LOADING SCREEN -->
 <div id="loadingScreen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;">
-  <div style="font-family:'Orbitron',sans-serif;font-size:3rem;letter-spacing:6px;color:var(--green-neon);display:flex;align-items:center;justify-content:center;">KA<img src="https://wqrtviggoletikvtuvmp.supabase.co/storage/v1/object/public/assets/kash-logo.png" alt="S" style="height:0.85em;width:auto;vertical-align:-0.1em;margin:0 -2px;">H</div>
+  <div style="font-family:'Orbitron',sans-serif;font-size:3rem;letter-spacing:6px;color:var(--kash-green-deep);display:flex;align-items:center;justify-content:center;">KA<img src="https://wqrtviggoletikvtuvmp.supabase.co/storage/v1/object/public/assets/kash-logo.png" alt="S" style="height:0.85em;width:auto;vertical-align:-0.1em;margin:0 -2px;">H</div>
   <div id="loadingText" style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--kash-muted);letter-spacing:3px;margin-top:8px;">Loading...</div>
 </div>
 
@@ -1006,7 +989,7 @@
 <div id="loginScreen" style="display:none;">
   <div class="login-box" style="max-width:440px;">
     <div class="login-logo">
-      <span style="color:var(--green-neon);">KA</span><img src="https://wqrtviggoletikvtuvmp.supabase.co/storage/v1/object/public/assets/kash-logo.png" alt="S" style="height:0.85em;width:auto;vertical-align:-0.1em;margin:0 -2px;"><span style="color:var(--kash-green-deep);">H</span>
+      <span style="color:var(--kash-green-deep);">KA</span><img src="https://wqrtviggoletikvtuvmp.supabase.co/storage/v1/object/public/assets/kash-logo.png" alt="S" style="height:0.85em;width:auto;vertical-align:-0.1em;margin:0 -2px;"><span style="color:var(--kash-green-deep);">H</span>
     </div>
     <div class="login-tagline">Microinvest. Macroresults.</div>
 
@@ -1043,7 +1026,7 @@
 <div id="paywallScreen" style="display:none;">
   <div class="login-box" style="max-width:480px;">
     <div class="login-logo">
-      <span style="color:var(--green-neon);">KA</span><img src="https://wqrtviggoletikvtuvmp.supabase.co/storage/v1/object/public/assets/kash-logo.png" alt="S" style="height:0.85em;width:auto;vertical-align:-0.1em;margin:0 -2px;"><span style="color:var(--kash-green-deep);">H</span>
+      <span style="color:var(--kash-green-deep);">KA</span><img src="https://wqrtviggoletikvtuvmp.supabase.co/storage/v1/object/public/assets/kash-logo.png" alt="S" style="height:0.85em;width:auto;vertical-align:-0.1em;margin:0 -2px;"><span style="color:var(--kash-green-deep);">H</span>
     </div>
     <div class="login-tagline" style="margin-bottom:24px;" id="paywallTagline">Pro · $9.99/mo</div>
     <div style="font-family:'Space Mono',monospace;font-size:0.7rem;color:var(--kash-muted);letter-spacing:1px;line-height:2;margin-bottom:28px;text-align:left;" id="paywallFeatures">
@@ -1055,14 +1038,14 @@
     </div>
     <div style="margin-bottom:16px;display:flex;align-items:flex-start;gap:10px;">
       <input type="checkbox" id="termsCheckbox"
-        style="margin-top:3px;accent-color:var(--green-neon);width:16px;height:16px;cursor:pointer;flex-shrink:0;"
+        style="margin-top:3px;accent-color:var(--kash-green-deep);width:16px;height:16px;cursor:pointer;flex-shrink:0;"
         onchange="const b=document.getElementById('paywallBtn');b.disabled=!this.checked;b.style.opacity=this.checked?'1':'0.5';">
       <label for="termsCheckbox"
         style="font-family:'Space Mono',monospace;font-size:0.6rem;color:var(--kash-muted);letter-spacing:0.5px;line-height:1.7;cursor:pointer;">
         I have read and agree to the
-        <a href="/terms" target="_blank" style="color:var(--green-neon);text-decoration:none;">Terms of Service</a>
+        <a href="/terms" target="_blank" style="color:var(--kash-green-deep);text-decoration:none;">Terms of Service</a>
         and
-        <a href="/privacy" target="_blank" style="color:var(--green-neon);text-decoration:none;">Privacy Policy</a>
+        <a href="/privacy" target="_blank" style="color:var(--kash-green-deep);text-decoration:none;">Privacy Policy</a>
       </label>
     </div>
     <button id="paywallBtn" class="btn btn-primary" disabled onclick="startCheckout()" style="width:100%;justify-content:center;font-size:1.2rem;opacity:0.5;cursor:not-allowed;">
@@ -1082,11 +1065,11 @@
 <div id="accountClosedScreen" style="display:none;">
   <div class="login-box" style="max-width:480px;">
     <div class="login-logo">
-      <span style="color:var(--green-neon);">KA</span><img src="https://wqrtviggoletikvtuvmp.supabase.co/storage/v1/object/public/assets/kash-logo.png" alt="S" style="height:0.85em;width:auto;vertical-align:-0.1em;margin:0 -2px;"><span style="color:var(--kash-green-deep);">H</span>
+      <span style="color:var(--kash-green-deep);">KA</span><img src="https://wqrtviggoletikvtuvmp.supabase.co/storage/v1/object/public/assets/kash-logo.png" alt="S" style="height:0.85em;width:auto;vertical-align:-0.1em;margin:0 -2px;"><span style="color:var(--kash-green-deep);">H</span>
     </div>
     <div class="login-tagline" style="margin-bottom:20px;color:#ef4444;">Account Closed</div>
-    <div style="font-family:'Space Mono',monospace;font-size:0.75rem;color:var(--silver);letter-spacing:0.5px;line-height:1.8;margin-bottom:24px;">
-      This account's subscription has ended and is no longer active. To use KASH again, please sign up with a different e-mail address, or contact <span style="color:var(--green-neon);">kash@kashsolutions.us</span>.
+    <div style="font-family:'Space Mono',monospace;font-size:0.75rem;color:var(--kash-silver);letter-spacing:0.5px;line-height:1.8;margin-bottom:24px;">
+      This account's subscription has ended and is no longer active. To use KASH again, please sign up with a different e-mail address, or contact <span style="color:var(--kash-green-deep);">kash@kashsolutions.us</span>.
     </div>
     <button class="btn-logout" style="width:100%;" onclick="logoutUser()">Sign Out</button>
   </div>
@@ -1151,7 +1134,7 @@
         <div style="display:flex;gap:6px;align-items:center;">
           <input type="text" id="birthdate" placeholder="MM/DD/YYYY" maxlength="10" autocomplete="off" oninput="maskDateInput(this)" readonly style="flex:1;">
           <input type="date" id="birthdatePicker" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;" onchange="(function(){const v=document.getElementById('birthdatePicker').value;if(!v)return;const[y,m,d]=v.split('-');document.getElementById('birthdate').value=m+'/'+d+'/'+y;})()">
-          <button type="button" onclick="const el=document.getElementById('birthdatePicker');el.showPicker&&el.showPicker();" style="background:transparent;border:1px solid var(--green-dark);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:1rem;color:var(--green-neon);flex-shrink:0;" title="Open calendar">📅</button>
+          <button type="button" onclick="const el=document.getElementById('birthdatePicker');el.showPicker&&el.showPicker();" style="background:transparent;border:1px solid var(--kash-green);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:1rem;color:var(--kash-green-deep);flex-shrink:0;" title="Open calendar">📅</button>
         </div>
       </div>
       <div class="form-group">
@@ -1183,8 +1166,8 @@
         </div>
         <div class="form-group" style="grid-column:span 3;display:flex;flex-direction:row;align-items:center;gap:10px;padding-top:20px;">
           <input type="checkbox" id="profileTax" disabled
-            style="accent-color:var(--green-neon);width:16px;height:16px;cursor:pointer;">
-          <label for="profileTax" style="margin:0;white-space:nowrap;font-family:'Space Mono',monospace;font-size:0.7rem;color:var(--silver);letter-spacing:0.5px;cursor:pointer;">Do you file taxes in the United States?</label>
+            style="accent-color:var(--kash-green-deep);width:16px;height:16px;cursor:pointer;">
+          <label for="profileTax" style="margin:0;white-space:nowrap;font-family:'Space Mono',monospace;font-size:0.7rem;color:var(--kash-silver);letter-spacing:0.5px;cursor:pointer;">Do you file taxes in the United States?</label>
         </div>
       </div>
     </div>
@@ -1202,8 +1185,8 @@
       <!-- HEADER -->
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
         <div>
-          <div style="font-family:'Orbitron',sans-serif;font-size:1.6rem;color:var(--green-neon);letter-spacing:2px;">📈 MY ASSET PORTFOLIO</div>
-          <div style="font-size:0.82rem;color:var(--silver);margin-top:2px;">Holdings synced daily from your brokerage via Plaid · Live prices via Yahoo Finance</div>
+          <div style="font-family:'Orbitron',sans-serif;font-size:1.6rem;color:var(--kash-green-deep);letter-spacing:2px;">📈 MY ASSET PORTFOLIO</div>
+          <div style="font-size:0.82rem;color:var(--kash-silver);margin-top:2px;">Holdings synced daily from your brokerage via Plaid · Live prices via Yahoo Finance</div>
         </div>
       </div>
 
@@ -1212,7 +1195,7 @@
         <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">
           <div>
             <div id="plaidInstitutionLabel" style="font-family:'Orbitron',sans-serif;font-size:1rem;color:var(--kash-green-deep);letter-spacing:2.2px;">🔗 BROKERAGE SYNC</div>
-            <div id="plaidStatus" style="font-size:0.72rem;color:var(--silver);margin-top:2px;">Not connected</div>
+            <div id="plaidStatus" style="font-size:0.72rem;color:var(--kash-silver);margin-top:2px;">Not connected</div>
           </div>
           <div style="display:flex;gap:8px;align-items:center;">
             <button id="plaidConnectBtn" class="btn btn-secondary btn-sm" onclick="connectPlaid()">🔌 Connect</button>
@@ -1274,8 +1257,8 @@
 
       <!-- Stats footer -->
       <div style="background:rgba(255,253,248,0.80);border:1px solid var(--kash-border);color:var(--kash-text);box-shadow:var(--kash-shadow-soft);border-radius:10px;padding:12px 16px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-        <div style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--silver);letter-spacing:1px;">
-          <span style="color:var(--gold);font-weight:700;">About Active Goal</span>
+        <div style="font-family:'Space Mono',monospace;font-size:0.65rem;color:var(--kash-silver);letter-spacing:1px;">
+          <span style="color:var(--kash-gold);font-weight:700;">About Active Goal</span>
           &nbsp;·&nbsp;
           Scheduled: <strong id="ovTotalScheduled">0</strong>
           &nbsp;·&nbsp;
@@ -1331,19 +1314,19 @@
         <div class="side-title">📐 Contribution Planner</div>
         <div style="display:flex;flex-direction:column;gap:10px;">
           <div>
-            <div style="font-family:'Space Mono',monospace;font-size:0.62rem;color:var(--silver);margin-bottom:4px;">Goal amount ($)</div>
+            <div style="font-family:'Space Mono',monospace;font-size:0.62rem;color:var(--kash-silver);margin-bottom:4px;">Goal amount ($)</div>
             <input type="number" id="cpGoal" min="0" step="0.01" placeholder="e.g. 1000.00"
               oninput="cpFieldChanged('cpGoal')"
               style="width:100%;background:rgba(255,255,255,0.72);border:1px solid var(--kash-border-strong);box-shadow:inset 0 1px 0 rgba(255,255,255,0.75);border-radius:7px;padding:8px 10px;font-family:'Space Mono',monospace;font-size:0.8rem;color:var(--kash-text);outline:none;box-sizing:border-box;">
           </div>
           <div>
-            <div style="font-family:'Space Mono',monospace;font-size:0.62rem;color:var(--silver);margin-bottom:4px;">Number of days</div>
+            <div style="font-family:'Space Mono',monospace;font-size:0.62rem;color:var(--kash-silver);margin-bottom:4px;">Number of days</div>
             <input type="number" id="cpDays" min="1" step="1" placeholder="e.g. 100"
               oninput="cpFieldChanged('cpDays')"
               style="width:100%;background:rgba(255,255,255,0.72);border:1px solid var(--kash-border-strong);box-shadow:inset 0 1px 0 rgba(255,255,255,0.75);border-radius:7px;padding:8px 10px;font-family:'Space Mono',monospace;font-size:0.8rem;color:var(--kash-text);outline:none;box-sizing:border-box;">
           </div>
           <div>
-            <div style="font-family:'Space Mono',monospace;font-size:0.62rem;color:var(--silver);margin-bottom:4px;">Daily deposit ($)</div>
+            <div style="font-family:'Space Mono',monospace;font-size:0.62rem;color:var(--kash-silver);margin-bottom:4px;">Daily deposit ($)</div>
             <input type="number" id="cpDaily" min="0" step="0.01" placeholder="e.g. 10.00"
               oninput="cpFieldChanged('cpDaily')"
               style="width:100%;background:rgba(255,255,255,0.72);border:1px solid var(--kash-border-strong);box-shadow:inset 0 1px 0 rgba(255,255,255,0.75);border-radius:7px;padding:8px 10px;font-family:'Space Mono',monospace;font-size:0.8rem;color:var(--kash-text);outline:none;box-sizing:border-box;">
@@ -1352,8 +1335,8 @@
             <button type="button" onclick="resetContributionPlanner()" class="btn btn-secondary btn-sm" style="flex:1;max-width:calc(50% - 4px);">↺ Clear</button>
           </div>
           <div id="cpResult" style="display:none;margin-top:4px;background:rgba(57,255,20,0.05);border:1px solid rgba(57,255,20,0.2);border-radius:9px;padding:12px 14px;text-align:center;">
-            <div id="cpResultLabel" style="font-family:'Space Mono',monospace;font-size:0.6rem;color:var(--silver);letter-spacing:1px;margin-bottom:4px;"></div>
-            <div id="cpResultVal" style="font-family:'Orbitron',sans-serif;font-size:1.8rem;color:var(--green-neon);line-height:1;">—</div>
+            <div id="cpResultLabel" style="font-family:'Space Mono',monospace;font-size:0.6rem;color:var(--kash-silver);letter-spacing:1px;margin-bottom:4px;"></div>
+            <div id="cpResultVal" style="font-family:'Orbitron',sans-serif;font-size:1.8rem;color:var(--kash-green-deep);line-height:1;">—</div>
             <div id="cpResultSub" style="font-family:'Space Mono',monospace;font-size:0.6rem;color:var(--kash-muted);margin-top:4px;"></div>
           </div>
         </div>
@@ -1384,7 +1367,7 @@
     </div>
 
     <div id="statementContent" style="background:var(--kash-surface);color:var(--kash-text);border:1px solid var(--kash-border);box-shadow:var(--kash-shadow-soft);backdrop-filter:blur(14px);border-radius:12px;padding:20px;">
-      <div style="font-size:0.8rem;color:var(--silver);text-align:center;padding:20px;">Loading statement...</div>
+      <div style="font-size:0.8rem;color:var(--kash-silver);text-align:center;padding:20px;">Loading statement...</div>
     </div>
 
   </div>
@@ -1484,7 +1467,7 @@
       <div style="display:flex;gap:6px;align-items:center;">
         <input type="text" id="dtStart-goal" placeholder="MM/DD/YYYY" maxlength="10" autocomplete="off" oninput="maskDateInput(this)" style="letter-spacing:1px;flex:1;">
         <input type="date" id="dtStartPicker-goal" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;" onchange="(function(){const v=document.getElementById('dtStartPicker-goal').value;if(!v)return;const[y,m,d]=v.split('-');document.getElementById('dtStart-goal').value=m+'/'+d+'/'+y;})()">
-        <button type="button" onclick="const el=document.getElementById('dtStartPicker-goal');el.showPicker&&el.showPicker();" style="background:transparent;border:1px solid var(--green-dark);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:1rem;color:var(--green-neon);flex-shrink:0;" title="Open calendar">📅</button>
+        <button type="button" onclick="const el=document.getElementById('dtStartPicker-goal');el.showPicker&&el.showPicker();" style="background:transparent;border:1px solid var(--kash-green);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:1rem;color:var(--kash-green-deep);flex-shrink:0;" title="Open calendar">📅</button>
       </div>
     </div>
     <div class="form-group" style="margin-bottom:14px;">
@@ -1492,7 +1475,7 @@
       <div style="display:flex;gap:6px;align-items:center;">
         <input type="text" id="dtEnd-goal" placeholder="MM/DD/YYYY" maxlength="10" autocomplete="off" oninput="maskDateInput(this)" style="letter-spacing:1px;flex:1;">
         <input type="date" id="dtEndPicker-goal" style="position:absolute;opacity:0;pointer-events:none;width:0;height:0;" onchange="(function(){const v=document.getElementById('dtEndPicker-goal').value;if(!v)return;const[y,m,d]=v.split('-');document.getElementById('dtEnd-goal').value=m+'/'+d+'/'+y;})()">
-        <button type="button" onclick="const el=document.getElementById('dtEndPicker-goal');el.showPicker&&el.showPicker();" style="background:transparent;border:1px solid var(--green-dark);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:1rem;color:var(--green-neon);flex-shrink:0;" title="Open calendar">📅</button>
+        <button type="button" onclick="const el=document.getElementById('dtEndPicker-goal');el.showPicker&&el.showPicker();" style="background:transparent;border:1px solid var(--kash-green);border-radius:6px;padding:6px 10px;cursor:pointer;font-size:1rem;color:var(--kash-green-deep);flex-shrink:0;" title="Open calendar">📅</button>
       </div>
     </div>
     <div class="form-group" style="margin-bottom:20px;">
@@ -2380,7 +2363,7 @@ function renderOverview() {
       const totalValue = holdings.reduce((sum, h) => sum + parseFloat(h.institution_value || 0), 0);
       const totalRow = `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;">
         <span style="font-family:'Space Mono',monospace;font-size:0.85rem;color:var(--kash-muted);">Total</span>
-        <span style="font-family:'Space Mono',monospace;font-size:0.95rem;color:var(--white);font-weight:700;">${fmt(totalValue)}</span>
+        <span style="font-family:'Space Mono',monospace;font-size:0.95rem;color:var(--kash-text);font-weight:700;">${fmt(totalValue)}</span>
       </div>`;
       sideAssetList.innerHTML = totalRow;
     };
@@ -2506,8 +2489,8 @@ function renderGoalPanel() {
   if (!g || !g.target) {
     container.innerHTML = `
       <div style="text-align:center;padding:60px 20px;">
-        <div style="font-family:'Orbitron',sans-serif;font-size:2rem;color:var(--green-neon);letter-spacing:3px;margin-bottom:16px;">🎯 SET YOUR GOAL</div>
-        <div style="font-family:'Space Mono',monospace;font-size:0.8rem;color:var(--silver);margin-bottom:24px;">Define your investment target and deadline to get started.</div>
+        <div style="font-family:'Orbitron',sans-serif;font-size:2rem;color:var(--kash-green-deep);letter-spacing:3px;margin-bottom:16px;">🎯 SET YOUR GOAL</div>
+        <div style="font-family:'Space Mono',monospace;font-size:0.8rem;color:var(--kash-silver);margin-bottom:24px;">Define your investment target and deadline to get started.</div>
         <button class="btn btn-primary" onclick="openEditGoalModal()">🎯 Set Goal</button>
       </div>`;
     return;
@@ -2521,10 +2504,10 @@ function renderGoalPanel() {
 
   const alertHtml = (goalReached || deadlineReached) ? `
     <div style="background:rgba(57,255,20,0.08);border:1px solid rgba(57,255,20,0.4);border-radius:10px;padding:16px;margin-bottom:20px;text-align:center;">
-      <div style="font-family:'Orbitron',sans-serif;font-size:1.2rem;color:var(--green-neon);letter-spacing:2px;margin-bottom:8px;">
+      <div style="font-family:'Orbitron',sans-serif;font-size:1.2rem;color:var(--kash-green-deep);letter-spacing:2px;margin-bottom:8px;">
         ${goalReached ? '🎉 Goal Reached! Congratulations!' : '⏰ Deadline reached!'}
       </div>
-      <div style="font-family:'Space Mono',monospace;font-size:0.78rem;color:var(--silver);margin-bottom:12px;">Define a new goal to keep building your investment habit.</div>
+      <div style="font-family:'Space Mono',monospace;font-size:0.78rem;color:var(--kash-silver);margin-bottom:12px;">Define a new goal to keep building your investment habit.</div>
       <button class="btn btn-primary" onclick="openEditGoalModal()">🎯 Set New Goal</button>
     </div>` : '';
 
@@ -2577,7 +2560,7 @@ function renderGoalPanel() {
       ${view === 'goal' ? goalRows : statementRows}
       <div style="margin-top:14px;">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-          <div style="font-family:'Inter',sans-serif;font-size:0.95rem;color:var(--white);font-weight:600;">📈 Progress — Goal ${fmt(g.target)}</div>
+          <div style="font-family:'Inter',sans-serif;font-size:0.95rem;color:var(--kash-text);font-weight:600;">📈 Progress — Goal ${fmt(g.target)}</div>
           <button class="btn btn-secondary btn-sm" style="font-size:0.65rem;padding:3px 10px;" onclick="openEditGoalModal()">✏️ Edit Goal</button>
         </div>
         <div class="progress-wrap">
@@ -2598,8 +2581,8 @@ function renderGoalPanel() {
     <div id="goalBottomSection">
     <div class="card">
       <div class="btn-row no-print" style="margin-bottom:14px;gap:24px;align-items:center;">
-        <span onclick="setTransactionsView('goal')" style="cursor:pointer;font-family:'Orbitron',sans-serif;letter-spacing:1px;font-size:1.05rem;${view === 'goal' ? 'color:var(--green-neon);font-weight:700;' : 'color:var(--kash-muted);'}">📋 My Goal</span>
-        <span onclick="setTransactionsView('statement')" style="cursor:pointer;font-family:'Orbitron',sans-serif;letter-spacing:1px;font-size:1.05rem;${view === 'statement' ? 'color:var(--green-neon);font-weight:700;' : 'color:var(--kash-muted);'}">🔗 ${(localStorage.getItem('plaid_institution_name') || 'Brokerage').toUpperCase()} Statement</span>
+        <span onclick="setTransactionsView('goal')" style="cursor:pointer;font-family:'Orbitron',sans-serif;letter-spacing:1px;font-size:1.05rem;${view === 'goal' ? 'color:var(--kash-green-deep);font-weight:700;' : 'color:var(--kash-muted);'}">📋 My Goal</span>
+        <span onclick="setTransactionsView('statement')" style="cursor:pointer;font-family:'Orbitron',sans-serif;letter-spacing:1px;font-size:1.05rem;${view === 'statement' ? 'color:var(--kash-green-deep);font-weight:700;' : 'color:var(--kash-muted);'}">🔗 ${(localStorage.getItem('plaid_institution_name') || 'Brokerage').toUpperCase()} Statement</span>
       </div>
       ${view === 'goal' ? `
       <div class="no-print" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
@@ -2617,10 +2600,10 @@ function renderGoalPanel() {
         </label>
         ${(window._myGoalTypeFilter || window._myGoalDateFrom || window._myGoalDateTo) ? `<button class="btn btn-secondary btn-sm" style="padding:3px 10px;font-size:0.65rem;" onclick="clearMyGoalFilters()">✖ Clear Filters</button>` : ''}
         <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-family:'Space Mono',monospace;font-size:0.7rem;color:var(--kash-muted);">
-          <input type="checkbox" id="hideScheduledCheckbox" onchange="toggleHideScheduled()" ${localStorage.getItem('kash_hide_scheduled') === '1' ? 'checked' : ''} style="accent-color:var(--green-neon);cursor:pointer;">
+          <input type="checkbox" id="hideScheduledCheckbox" onchange="toggleHideScheduled()" ${localStorage.getItem('kash_hide_scheduled') === '1' ? 'checked' : ''} style="accent-color:var(--kash-green-deep);cursor:pointer;">
           Hide Scheduled
         </label>
-        <span style="margin-left:auto;font-family:'Space Mono',monospace;font-size:0.85rem;color:var(--green-neon);font-weight:700;white-space:nowrap;">Total: ${fmt(myGoalFilteredTotal)}</span>
+        <span style="margin-left:auto;font-family:'Space Mono',monospace;font-size:0.85rem;color:var(--kash-green-deep);font-weight:700;white-space:nowrap;">Total: ${fmt(myGoalFilteredTotal)}</span>
       </div>` : ''}
       <div class="table-wrap">
         <table>
@@ -2703,7 +2686,7 @@ function renderChartOfAccountsList() {
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:8px;">
       <input type="text" value="${t}" onchange="editChartOfAccountItem(${i}, this.value)" style="flex:1;background:rgba(255,255,255,0.72);border:1px solid var(--kash-border-strong);box-shadow:inset 0 1px 0 rgba(255,255,255,0.75);border-radius:6px;padding:6px 10px;color:var(--kash-text);font-family:'Inter',sans-serif;font-size:0.85rem;">
       <button class="icon-btn icon-btn-del" onclick="removeChartOfAccountItem(${i})" title="Remove">🗑</button>
-    </div>`).join('') || '<div style="color:var(--silver);font-size:0.8rem;">No types yet — add one below.</div>';
+    </div>`).join('') || '<div style="color:var(--kash-silver);font-size:0.8rem;">No types yet — add one below.</div>';
 }
 
 function addChartOfAccountItem() {
@@ -3181,10 +3164,10 @@ async function loadSuggestedEtfs(proj) {
   sideEtfList.innerHTML = results.map(r => `
     <div style="padding:9px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
       <div style="display:flex;justify-content:space-between;align-items:center;">
-        <span style="font-family:'Orbitron',sans-serif;font-size:1.05rem;color:var(--green-neon);letter-spacing:2px;">${r.ticker}</span>
-        <span style="font-family:'Space Mono',monospace;font-size:0.72rem;color:var(--green-neon);">+${r.perf3mo.toFixed(2)}% <span style="color:rgba(192,192,192,0.4);font-size:0.6rem;">3mo</span></span>
+        <span style="font-family:'Orbitron',sans-serif;font-size:1.05rem;color:var(--kash-green-deep);letter-spacing:2px;">${r.ticker}</span>
+        <span style="font-family:'Space Mono',monospace;font-size:0.72rem;color:var(--kash-green-deep);">+${r.perf3mo.toFixed(2)}% <span style="color:rgba(192,192,192,0.4);font-size:0.6rem;">3mo</span></span>
       </div>
-      <div style="font-family:'Space Mono',monospace;font-size:0.68rem;color:var(--silver);margin-top:2px;">$${r.price !== null ? r.price.toFixed(2) : '—'} / share</div>
+      <div style="font-family:'Space Mono',monospace;font-size:0.68rem;color:var(--kash-silver);margin-top:2px;">$${r.price !== null ? r.price.toFixed(2) : '—'} / share</div>
     </div>`).join('');
 }
 
@@ -3545,7 +3528,7 @@ async function initPlaid() {
 
 function setPlaidStatusText(text, isError) {
   const statusEl = document.getElementById('plaidStatus');
-  if (statusEl) { statusEl.textContent = text; statusEl.style.color = isError ? '#ef4444' : 'var(--silver)'; }
+  if (statusEl) { statusEl.textContent = text; statusEl.style.color = isError ? '#ef4444' : 'var(--kash-silver)'; }
 }
 
 function updatePlaidStatus() {
@@ -3665,7 +3648,7 @@ async function disconnectPlaid() {
     const holdingsEl = document.getElementById('plaidHoldings');
     if (holdingsEl) holdingsEl.innerHTML = '';
     const statementEl = document.getElementById('statementContent');
-    if (statementEl) statementEl.innerHTML = '<div style="font-size:0.8rem;color:var(--silver);text-align:center;padding:20px;">Connect your brokerage account in the Portfolio tab first.</div>';
+    if (statementEl) statementEl.innerHTML = '<div style="font-size:0.8rem;color:var(--kash-silver);text-align:center;padding:20px;">Connect your brokerage account in the Portfolio tab first.</div>';
     renderGoalPanel(); // atualiza Balance/Dividends do "My Goal" na hora, sem deixar valor antigo da corretora
     const perfEl = document.getElementById('performanceByHoldingTable');
     if (perfEl) perfEl.innerHTML = '';
@@ -3722,7 +3705,7 @@ async function renderPlaidHoldings(data) {
   const container = document.getElementById('plaidHoldings');
   if (!container) return;
   if (!data.holdings || data.holdings.length === 0) {
-    container.innerHTML = '<div style="font-size:0.8rem;color:var(--silver);text-align:center;padding:12px;">No holdings found.</div>';
+    container.innerHTML = '<div style="font-size:0.8rem;color:var(--kash-silver);text-align:center;padding:12px;">No holdings found.</div>';
     return;
   }
 
@@ -3776,11 +3759,11 @@ async function renderPlaidHoldings(data) {
     const price         = q?.price ?? null;
     const change        = q?.change ?? null;
     const changePct     = q?.changePercent ?? null;
-    const changeColor   = change === null ? 'var(--silver)' : change >= 0 ? '#1B8A3E' : '#ef4444';
+    const changeColor   = change === null ? 'var(--kash-silver)' : change >= 0 ? '#1B8A3E' : '#ef4444';
     const changeSign    = change !== null && change >= 0 ? '+' : '';
 
     const priceRow = price !== null
-      ? `<span style="font-family:'Space Mono',monospace;font-size:0.9rem;font-weight:700;color:var(--white);">$${price.toFixed(2)}</span>`
+      ? `<span style="font-family:'Space Mono',monospace;font-size:0.9rem;font-weight:700;color:var(--kash-text);">$${price.toFixed(2)}</span>`
       : `<span style="font-family:'Space Mono',monospace;font-size:0.75rem;color:rgba(192,192,192,0.4);">—</span>`;
 
     const changeRow = change !== null
@@ -3793,8 +3776,8 @@ async function renderPlaidHoldings(data) {
     <div style="background:rgba(255,255,255,0.74);backdrop-filter:blur(14px);border:1px solid var(--kash-border);border-radius:12px;padding:14px 16px;">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
         <div>
-          <div style="font-family:'Orbitron',sans-serif;font-size:1.15rem;color:var(--green-neon);letter-spacing:1px;line-height:1;">${ticker}</div>
-          <div style="font-family:'Space Mono',monospace;font-size:0.56rem;color:var(--silver);margin-top:3px;max-width:150px;line-height:1.3;">${name}</div>
+          <div style="font-family:'Orbitron',sans-serif;font-size:1.15rem;color:var(--kash-green-deep);letter-spacing:1px;line-height:1;">${ticker}</div>
+          <div style="font-family:'Space Mono',monospace;font-size:0.56rem;color:var(--kash-silver);margin-top:3px;max-width:150px;line-height:1.3;">${name}</div>
         </div>
         <div style="text-align:right;">
           ${priceRow}
@@ -3812,10 +3795,10 @@ async function renderPlaidHoldings(data) {
     const qty    = parseFloat(h.quantity || 0).toFixed(4);
     const value  = parseFloat(h.institution_value || 0).toFixed(2);
     return `<div style="display:grid;grid-template-columns:80px 1fr 100px 100px;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid rgba(57,255,20,0.06);">
-      <span style="font-family:'Orbitron',sans-serif;font-size:1.1rem;color:var(--green-neon);letter-spacing:1px;">${ticker}</span>
-      <span style="font-family:'Space Mono',monospace;font-size:0.78rem;color:var(--silver);">${name}</span>
-      <span style="font-family:'Space Mono',monospace;font-size:0.78rem;color:var(--silver);text-align:right;">${qty} sh</span>
-      <span style="font-family:'Space Mono',monospace;font-size:0.78rem;color:var(--green-neon);text-align:right;">$${value}</span>
+      <span style="font-family:'Orbitron',sans-serif;font-size:1.1rem;color:var(--kash-green-deep);letter-spacing:1px;">${ticker}</span>
+      <span style="font-family:'Space Mono',monospace;font-size:0.78rem;color:var(--kash-silver);">${name}</span>
+      <span style="font-family:'Space Mono',monospace;font-size:0.78rem;color:var(--kash-silver);text-align:right;">${qty} sh</span>
+      <span style="font-family:'Space Mono',monospace;font-size:0.78rem;color:var(--kash-green-deep);text-align:right;">$${value}</span>
     </div>`;
   }).join('');
 
@@ -3866,9 +3849,9 @@ async function renderPlaidHoldings(data) {
   const _gain    = _totalCurrent - _totalDeposited;
   const _gainPct = _totalDeposited > 0 ? (_gain / _totalDeposited) * 100 : 0;
   const _isSignificantDrop = _gainPct <= -5;
-  const _returnColor = _isSignificantDrop ? '#ef4444' : (_gain >= 0 ? 'var(--green-neon)' : 'var(--kash-gold)');
+  const _returnColor = _isSignificantDrop ? '#ef4444' : (_gain >= 0 ? 'var(--kash-green-deep)' : 'var(--kash-gold)');
   const _contextNote = Math.abs(_gainPct) < 2
-    ? '<div style="font-size:0.6rem;color:var(--silver);margin-top:6px;">Normal short-term fluctuation</div>'
+    ? '<div style="font-size:0.6rem;color:var(--kash-silver);margin-top:6px;">Normal short-term fluctuation</div>'
     : '';
 
   let _blendedYtd = null, _blendedY1 = null;
@@ -3885,21 +3868,21 @@ async function renderPlaidHoldings(data) {
     _blendedY1  = totalWY1  > 0 ? wSumY1  / totalWY1  : null;
   }
   const _fmtPct = v => v === null ? '—' : (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
-  const _pctColor = v => v === null ? 'var(--silver)' : v >= 0 ? 'var(--green-neon)' : '#ef4444';
+  const _pctColor = v => v === null ? 'var(--kash-silver)' : v >= 0 ? 'var(--kash-green-deep)' : '#ef4444';
 
   const assetCard = `<div style="background:rgba(0,0,0,0.3);border:1px solid rgba(57,255,20,0.2);border-radius:10px;padding:16px;margin:20px 0;">
-    <div style="font-family:'Orbitron',sans-serif;font-size:1rem;letter-spacing:2px;color:var(--green-neon);margin-bottom:12px;">📊 Asset Portfolio</div>
+    <div style="font-family:'Orbitron',sans-serif;font-size:1rem;letter-spacing:2px;color:var(--kash-green-deep);margin-bottom:12px;">📊 Asset Portfolio</div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;">
-      <div style="text-align:center;background:var(--black);border:1px solid var(--green-dark);border-radius:8px;padding:10px;">
-        <div style="font-size:0.7rem;color:var(--silver);margin-bottom:4px;">Last Sync</div>
+      <div style="text-align:center;background:var(--kash-cream);border:1px solid var(--kash-green);border-radius:8px;padding:10px;">
+        <div style="font-size:0.7rem;color:var(--kash-silver);margin-bottom:4px;">Last Sync</div>
         <div style="font-size:1rem;font-weight:700;color:${_returnColor};">$${_totalCurrent.toFixed(2)}</div>
       </div>
-      <div style="text-align:center;background:var(--black);border:1px solid var(--green-dark);border-radius:8px;padding:10px;">
-        <div style="font-size:0.7rem;color:var(--silver);margin-bottom:4px;">YTD</div>
+      <div style="text-align:center;background:var(--kash-cream);border:1px solid var(--kash-green);border-radius:8px;padding:10px;">
+        <div style="font-size:0.7rem;color:var(--kash-silver);margin-bottom:4px;">YTD</div>
         <div style="font-size:1rem;font-weight:700;color:${_pctColor(_blendedYtd)};">${_fmtPct(_blendedYtd)}</div>
       </div>
-      <div style="text-align:center;background:var(--black);border:1px solid var(--green-dark);border-radius:8px;padding:10px;">
-        <div style="font-size:0.7rem;color:var(--silver);margin-bottom:4px;">1 Year</div>
+      <div style="text-align:center;background:var(--kash-cream);border:1px solid var(--kash-green);border-radius:8px;padding:10px;">
+        <div style="font-size:0.7rem;color:var(--kash-silver);margin-bottom:4px;">1 Year</div>
         <div style="font-size:1rem;font-weight:700;color:${_pctColor(_blendedY1)};">${_fmtPct(_blendedY1)}</div>
       </div>
     </div>
@@ -3994,7 +3977,7 @@ function renderStatementFromCache() {
   if (window._lastStatementData) {
     fetchStatement(true); // re-render using cached data, no network call
   } else {
-    container.innerHTML = '<div style="font-size:0.8rem;color:var(--silver);text-align:center;padding:20px;">No statement data yet. It will load automatically at the next daily sync (6:10 PM).</div>';
+    container.innerHTML = '<div style="font-size:0.8rem;color:var(--kash-silver);text-align:center;padding:20px;">No statement data yet. It will load automatically at the next daily sync (6:10 PM).</div>';
   }
 }
 
@@ -4006,11 +3989,11 @@ async function fetchStatement(useCacheOnly) {
 
   const access_token = localStorage.getItem('plaid_access_token');
   if (!access_token) {
-    container.innerHTML = '<div style="font-size:0.8rem;color:var(--silver);text-align:center;padding:20px;">Connect your brokerage account in the Portfolio tab first.</div>';
+    container.innerHTML = '<div style="font-size:0.8rem;color:var(--kash-silver);text-align:center;padding:20px;">Connect your brokerage account in the Portfolio tab first.</div>';
     return false;
   }
 
-  container.innerHTML = '<div style="font-size:0.8rem;color:var(--silver);text-align:center;padding:20px;">⏳ Loading statement...</div>';
+  container.innerHTML = '<div style="font-size:0.8rem;color:var(--kash-silver);text-align:center;padding:20px;">⏳ Loading statement...</div>';
 
   try {
     let data;
@@ -4032,7 +4015,7 @@ async function fetchStatement(useCacheOnly) {
 
     const txns = data.investment_transactions || [];
     if (txns.length === 0) {
-      container.innerHTML = '<div style="font-size:0.8rem;color:var(--silver);text-align:center;padding:20px;">No transactions found in the last 60 days.</div>';
+      container.innerHTML = '<div style="font-size:0.8rem;color:var(--kash-silver);text-align:center;padding:20px;">No transactions found in the last 60 days.</div>';
       return true;
     }
 
@@ -4053,7 +4036,7 @@ async function fetchStatement(useCacheOnly) {
       const dateDisplay = new Date(t.date + 'T12:00:00').toLocaleDateString('en-US');
 
       return `<tr style="border-bottom:1px solid rgba(255,255,255,0.05);">
-        <td style="padding:8px 4px;color:var(--white);">${dateDisplay}</td>
+        <td style="padding:8px 4px;color:var(--kash-text);">${dateDisplay}</td>
         <td style="padding:8px 4px;color:var(--kash-text);">${sign}$${displayAmount}</td>
         <td style="padding:8px 4px;color:rgba(192,192,192,0.3);">—</td>
         <td style="padding:8px 4px;color:#888;">${cleanName}</td>
@@ -4063,7 +4046,7 @@ async function fetchStatement(useCacheOnly) {
     container.innerHTML = `
       <div class="btn-row no-print" style="margin-bottom:14px;gap:24px;">
         <span onclick="setTransactionsView('goal')" style="cursor:pointer;font-family:'Orbitron',sans-serif;letter-spacing:1px;font-size:1.05rem;color:var(--kash-muted);">📋 My Goal</span>
-        <span onclick="setTransactionsView('statement')" style="cursor:pointer;font-family:'Orbitron',sans-serif;letter-spacing:1px;font-size:1.05rem;color:var(--green-neon);font-weight:700;">🔗 ${(localStorage.getItem('plaid_institution_name') || 'Brokerage').toUpperCase()} Statement</span>
+        <span onclick="setTransactionsView('statement')" style="cursor:pointer;font-family:'Orbitron',sans-serif;letter-spacing:1px;font-size:1.05rem;color:var(--kash-green-deep);font-weight:700;">🔗 ${(localStorage.getItem('plaid_institution_name') || 'Brokerage').toUpperCase()} Statement</span>
       </div>
       <div style="font-family:'Space Mono',monospace;font-size:0.6rem;color:var(--kash-muted);letter-spacing:1px;margin-bottom:14px;">${sorted.length} TRANSACTIONS — LAST 60 DAYS</div>
       <div class="table-wrap">
